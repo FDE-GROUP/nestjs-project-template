@@ -1,6 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
-import { ConfigModule } from '../config/config.module';
-import { ConfigService } from '../config/config.service';
+import { ConfigModule } from '../../config/config.module';
+import { ConfigService } from '../../config/config.service';
 import { StorageController } from './controllers/storage.controller';
 import { AliOssStorageProvider } from './providers/alioss-storage.provider';
 import { S3StorageProvider } from './providers/s3-storage.provider';

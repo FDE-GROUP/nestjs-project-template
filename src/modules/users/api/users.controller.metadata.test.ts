@@ -1,12 +1,11 @@
 import 'reflect-metadata';
 import { describe, expect, it } from 'vitest';
-import { CreateUserDto } from '../dto/create-user.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 import { UsersController } from './users.controller';
 
-// Regression test: the previous `import type { CreateUserDto }` erasure
-// caused SWC to strip the class from `design:paramtypes`, so ValidationPipe
-// silently skipped runtime validation for @Body payloads.
-// If this test ever fails, HTTP-level DTO validation is broken again.
+// Regression test: an `import type { CreateUserDto }` erasure lets SWC strip the
+// class from `design:paramtypes`, so ValidationPipe silently skips @Body validation.
+// This locks the runtime metadata the HTTP contract depends on.
 describe('UsersController parameter metadata', () => {
   it('preserves CreateUserDto as design:paramtypes for @Body validation', () => {
     const paramTypes = Reflect.getMetadata(

@@ -31,6 +31,10 @@ export default defineConfig({
   test: {
     globals: false,
     environment: 'node',
+    // Importing the full AppModule graph (now including CqrsModule) under a cold
+    // swc transform can exceed the 5s default on the first test.
+    testTimeout: 20000,
+    hookTimeout: 20000,
     include: ['src/**/*.test.ts'],
     exclude: ['node_modules', 'dist'],
     env: {

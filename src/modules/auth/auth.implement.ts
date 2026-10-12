@@ -8,9 +8,9 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { createAuthMiddleware } from 'better-auth/api';
 import { toNodeHandler } from 'better-auth/node';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { ConfigService } from '../config/config.service';
-import type { DrizzleService } from '../database/drizzle.service';
-import * as schema from '../database/schema';
+import type { ConfigService } from '../../config/config.service';
+import type { DrizzleService } from '../../database/drizzle.service';
+import * as schema from '../../database/schema';
 
 export type AuthRequest = FastifyRequest & { originalUrl?: string; url?: string };
 export type AuthResponse = FastifyReply;

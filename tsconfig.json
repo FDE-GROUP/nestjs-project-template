@@ -28,6 +28,8 @@
     "types": ["bun-types"],
     "paths": {
       "@app/*": ["src/*"],
+      "@modules/*": ["src/modules/*"],
+      "@shared-kernel/*": ["src/shared-kernel/*"],
       "@config/*": ["src/config/*"],
       "@common/*": ["src/common/*"],
       "@shared/*": ["src/shared/*"],
