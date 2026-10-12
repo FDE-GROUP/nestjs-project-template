@@ -17,6 +17,7 @@
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "ci": "bun scripts/ci.ts",
+    "ci:quick": "bun scripts/ci.ts quick",
     "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest",

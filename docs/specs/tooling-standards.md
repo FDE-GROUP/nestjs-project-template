@@ -109,7 +109,7 @@
 
 ### 4.8 本地 CI（Local CI）
 - **定位**：本项目**不走远程 CI 做门禁**（GitHub Actions 仅部署 Swagger Pages）。质量门禁在**本地**由 `scripts/ci.ts` 一键执行，等价替代远程 CI。
-- **命令**：`bun run ci` —— 依序跑 `check` → `build:nest` → `test` 三道**硬门禁**（快速失败），随后 `bunx fallow architecture` 作**佐证**（非阻断）。
+- **命令**：`bun run ci`（full，默认）—— 依序跑 `check` → `build:nest` → `test` 三道**硬门禁**（快速失败），随后 `bunx fallow architecture` 作**佐证**（非阻断）；`bun run ci:quick` 仅跑 `check` + `test`（跳过 build 与 fallow，供快速回归）。pre-push 固定走 full。
 - **自动触发**：`.husky/pre-push` 在 push 前执行 `bun run ci`；未全绿则阻断 push。禁止 `--no-verify` 绕过（§3）。
 - **失败语义**：任一硬门禁非零退出 → 整体 `exit 1`；fallow 步骤即便有发现项或工具缺失也仅告警、不使流水线失败（遵循 §4.7「结论须二次人工核验」）。
 - **可复现性**：编排仅用 Bun Shell（`import { $ } from 'bun'`），不引入 bash/Make 等其他编排工具，遵守 §1「运行时统一 Bun」。
@@ -143,6 +143,7 @@
 | OpenAPI 导出 | `bun run openapi:export` |
 | 代码库健康/审计（fallow） | `bunx fallow` / `bunx fallow audit` / `bunx fallow dead-code` |
 | 本地 CI（全量门禁，pre-push 自动触发） | `bun run ci` |
+| 本地 CI（快速：仅 check+test） | `bun run ci:quick` |
 
 ## 8. 升级策略
 
