@@ -1,20 +1,18 @@
+import type { ReadStream } from 'node:fs';
 import { ConfigService } from '@app/config/config.service';
 import { Inject, Injectable } from '@nestjs/common';
 import * as COS from 'cos-nodejs-sdk-v5';
-import type { ReadStream } from 'fs';
-import * as path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { BaseStorageProvider } from './base-storage.provider';
 import type { FileUploadOptions, StorageProvider, UploadedFileResult } from './storage.interface';
 
 @Injectable()
-export class TencentCosStorageProvider implements StorageProvider {
+export class TencentCosStorageProvider extends BaseStorageProvider implements StorageProvider {
   private readonly cosClient: COS;
-  private readonly bucket: string;
   private readonly region: string;
-  private readonly baseUrl: string;
 
-  constructor(@Inject(ConfigService) private configService: ConfigService) {
-    const storageConfig = this.configService.getStorageConfig();
+  constructor(@Inject(ConfigService) configService: ConfigService) {
+    super(configService);
+    const storageConfig = configService.getStorageConfig();
 
     this.cosClient = new COS.default({
       SecretId: storageConfig.accessKeyId,
@@ -22,8 +20,6 @@ export class TencentCosStorageProvider implements StorageProvider {
     });
 
     this.region = storageConfig.region ?? '';
-    this.bucket = storageConfig.bucket;
-    this.baseUrl = storageConfig.baseUrl ?? '';
   }
 
   async uploadFile(
@@ -32,36 +28,9 @@ export class TencentCosStorageProvider implements StorageProvider {
     options: FileUploadOptions = {},
   ): Promise<UploadedFileResult> {
     const key = this.generateKey(filename);
-    const contentType = options.contentType || 'application/octet-stream';
+    const contentType = this.resolveContentType(options);
 
-    return new Promise((resolve, reject) => {
-      // Tencent Cloud COS SDK uses callback approach
-      this.cosClient.putObject(
-        {
-          Bucket: this.bucket,
-          Region: this.region,
-          Key: key,
-          Body: fileBuffer,
-          ContentType: contentType,
-          // Due to type issues, use any type directly
-        } as any,
-        (err, data) => {
-          if (err) {
-            reject(new Error(`Failed to upload file to Tencent COS: ${err.message}`));
-            return;
-          }
-
-          resolve({
-            key,
-            url: this.getPublicUrl(key),
-            etag: data.ETag?.replace(/"/g, ''),
-            size: fileBuffer.length,
-            mimetype: contentType,
-            originalname: filename,
-          });
-        },
-      );
-    });
+    return this.putObject(fileBuffer, key, contentType, filename, fileBuffer.length, 'file');
   }
 
   async uploadFileFromStream(
@@ -70,36 +39,9 @@ export class TencentCosStorageProvider implements StorageProvider {
     options: FileUploadOptions = {},
   ): Promise<UploadedFileResult> {
     const key = this.generateKey(filename);
-    const contentType = options.contentType || 'application/octet-stream';
+    const contentType = this.resolveContentType(options);
 
-    return new Promise((resolve, reject) => {
-      // Tencent Cloud COS SDK uses callback approach
-      this.cosClient.putObject(
-        {
-          Bucket: this.bucket,
-          Region: this.region,
-          Key: key,
-          Body: fileStream,
-          ContentType: contentType,
-          // Due to type issues, use any type directly
-        } as any,
-        (err, data) => {
-          if (err) {
-            reject(new Error(`Failed to upload file stream to Tencent COS: ${err.message}`));
-            return;
-          }
-
-          resolve({
-            key,
-            url: this.getPublicUrl(key),
-            etag: data.ETag?.replace(/"/g, ''),
-            size: -1, // Unable to directly get file size when uploading stream
-            mimetype: contentType,
-            originalname: filename,
-          });
-        },
-      );
-    });
+    return this.putObject(fileStream, key, contentType, filename, -1, 'file stream');
   }
 
   async deleteFile(key: string): Promise<boolean> {
@@ -149,23 +91,47 @@ export class TencentCosStorageProvider implements StorageProvider {
     });
   }
 
-  private getPublicUrl(key: string): string {
-    if (this.baseUrl) {
-      return `${this.baseUrl}/${key}`;
-    }
-
+  protected getDefaultPublicUrl(key: string): string {
     // Tencent Cloud COS default URL format
     return `https://${this.bucket}.cos.${this.region}.myqcloud.com/${key}`;
   }
 
-  private generateKey(filename: string): string {
-    const ext = path.extname(filename);
-    const uuid = uuidv4();
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+  private putObject(
+    body: Buffer | ReadStream,
+    key: string,
+    contentType: string,
+    filename: string,
+    size: number,
+    label: string,
+  ): Promise<UploadedFileResult> {
+    return new Promise((resolve, reject) => {
+      // Tencent Cloud COS SDK uses callback approach
+      this.cosClient.putObject(
+        {
+          Bucket: this.bucket,
+          Region: this.region,
+          Key: key,
+          Body: body,
+          ContentType: contentType,
+          // Due to type issues, use any type directly
+        } as any,
+        (err, data) => {
+          if (err) {
+            reject(new Error(`Failed to upload ${label} to Tencent COS: ${err.message}`));
+            return;
+          }
 
-    return `${year}/${month}/${day}/${uuid}${ext}`;
+          resolve(
+            this.buildResult({
+              key,
+              filename,
+              contentType,
+              size,
+              etag: this.normalizeEtag(data.ETag),
+            }),
+          );
+        },
+      );
+    });
   }
 }

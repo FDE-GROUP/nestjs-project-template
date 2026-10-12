@@ -1,19 +1,17 @@
+import type { ReadStream } from 'node:fs';
 import { ConfigService } from '@app/config/config.service';
 import { Inject, Injectable } from '@nestjs/common';
 import OSS from 'ali-oss';
-import type { ReadStream } from 'fs';
-import * as path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { BaseStorageProvider } from './base-storage.provider';
 import type { FileUploadOptions, StorageProvider, UploadedFileResult } from './storage.interface';
 
 @Injectable()
-export class AliOssStorageProvider implements StorageProvider {
+export class AliOssStorageProvider extends BaseStorageProvider implements StorageProvider {
   private readonly ossClient: OSS;
-  private readonly bucket: string;
-  private readonly baseUrl: string;
 
-  constructor(@Inject(ConfigService) private readonly configService: ConfigService) {
-    const storageConfig = this.configService.getStorageConfig();
+  constructor(@Inject(ConfigService) configService: ConfigService) {
+    super(configService);
+    const storageConfig = configService.getStorageConfig();
 
     this.ossClient = new OSS({
       region: storageConfig.region,
@@ -22,9 +20,6 @@ export class AliOssStorageProvider implements StorageProvider {
       bucket: storageConfig.bucket,
       endpoint: storageConfig.endpoint,
     });
-
-    this.bucket = storageConfig.bucket;
-    this.baseUrl = storageConfig.baseUrl || '';
   }
 
   async uploadFile(
@@ -33,56 +28,21 @@ export class AliOssStorageProvider implements StorageProvider {
     options: FileUploadOptions = {},
   ): Promise<UploadedFileResult> {
     const key = this.generateKey(filename);
-    const contentType = options.contentType || 'application/octet-stream';
+    const contentType = this.resolveContentType(options);
 
     try {
-      // Upload file
-      const headers: Record<string, string> = {};
-
-      // Set ACL
-      headers['x-oss-object-acl'] = options?.acl || 'private';
-
-      // Set Content-Type
-      headers['Content-Type'] = contentType;
-
-      // Process metadata
-      if (options?.metadata) {
-        Object.entries(options.metadata).forEach(([key, value]) => {
-          headers[`x-oss-meta-${key}`] = String(value);
-        });
-      }
-
-      const putOptions = {
-        headers,
+      const result = await this.ossClient.put(key, fileBuffer, {
+        headers: this.buildHeaders(contentType, options),
         timeout: 60000, // 60 seconds timeout
-      } as any;
+      } as any);
 
-      const result = await this.ossClient.put(key, fileBuffer, putOptions);
-
-      // Extract etag information
-      let etag: string | undefined;
-      try {
-        if (
-          result.res &&
-          typeof result.res === 'object' &&
-          result.res.headers &&
-          typeof result.res.headers === 'object' &&
-          'etag' in result.res.headers
-        ) {
-          etag = String(result.res.headers.etag).replace(/"/g, '');
-        }
-      } catch {
-        // Ignore etag extraction errors
-      }
-
-      return {
+      return this.buildResult({
         key,
-        url: this.getPublicUrl(key),
-        etag,
+        filename,
+        contentType,
         size: fileBuffer.length,
-        mimetype: contentType,
-        originalname: filename,
-      };
+        etag: this.normalizeEtag(this.extractEtag(result)),
+      });
     } catch (error) {
       throw new Error(`Failed to upload file to Ali OSS: ${error.message}`);
     }
@@ -94,56 +54,21 @@ export class AliOssStorageProvider implements StorageProvider {
     options: FileUploadOptions = {},
   ): Promise<UploadedFileResult> {
     const key = this.generateKey(filename);
-    const contentType = options.contentType || 'application/octet-stream';
+    const contentType = this.resolveContentType(options);
 
     try {
-      // Upload file stream
-      const headers: Record<string, string> = {};
-
-      // Set ACL
-      headers['x-oss-object-acl'] = options?.acl || 'private';
-
-      // Set Content-Type
-      headers['Content-Type'] = contentType;
-
-      // Process metadata
-      if (options?.metadata) {
-        Object.entries(options.metadata).forEach(([key, value]) => {
-          headers[`x-oss-meta-${key}`] = String(value);
-        });
-      }
-
-      const putOptions = {
-        headers,
+      const result = await this.ossClient.putStream(key, fileStream, {
+        headers: this.buildHeaders(contentType, options),
         timeout: 60000, // 60 seconds timeout
-      } as any;
+      } as any);
 
-      const result = await this.ossClient.putStream(key, fileStream, putOptions);
-
-      // Extract etag information
-      let etag: string | undefined;
-      try {
-        if (
-          result.res &&
-          typeof result.res === 'object' &&
-          result.res.headers &&
-          typeof result.res.headers === 'object' &&
-          'etag' in result.res.headers
-        ) {
-          etag = String(result.res.headers.etag).replace(/"/g, '');
-        }
-      } catch {
-        // Ignore etag extraction errors
-      }
-
-      return {
+      return this.buildResult({
         key,
-        url: this.getPublicUrl(key),
-        etag,
+        filename,
+        contentType,
         size: -1, // Unable to directly get file size when uploading stream
-        mimetype: contentType,
-        originalname: filename,
-      };
+        etag: this.normalizeEtag(this.extractEtag(result)),
+      });
     } catch (error) {
       throw new Error(`Failed to upload file stream to Ali OSS: ${error.message}`);
     }
@@ -171,25 +96,29 @@ export class AliOssStorageProvider implements StorageProvider {
     }
   }
 
-  private getPublicUrl(key: string): string {
-    if (this.baseUrl) {
-      return `${this.baseUrl}/${key}`;
-    }
-
-    // If baseUrl is not set, use Alibaba Cloud OSS default URL format
+  protected getDefaultPublicUrl(key: string): string {
     const storage = this.configService.getStorageConfig();
     const endpoint = storage.endpoint || `oss-${storage.region}.aliyuncs.com`;
     return `https://${this.bucket}.${endpoint}/${key}`;
   }
 
-  private generateKey(filename: string): string {
-    const ext = path.extname(filename);
-    const uuid = uuidv4();
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+  private buildHeaders(contentType: string, options: FileUploadOptions): Record<string, string> {
+    const headers: Record<string, string> = {
+      'x-oss-object-acl': options?.acl || 'private',
+      'Content-Type': contentType,
+    };
 
-    return `${year}/${month}/${day}/${uuid}${ext}`;
+    if (options?.metadata) {
+      for (const [metaKey, metaValue] of Object.entries(options.metadata)) {
+        headers[`x-oss-meta-${metaKey}`] = String(metaValue);
+      }
+    }
+
+    return headers;
+  }
+
+  private extractEtag(result: { res?: unknown }): string | undefined {
+    const headers = (result.res as { headers?: Record<string, unknown> } | undefined)?.headers;
+    return headers && 'etag' in headers ? String(headers.etag) : undefined;
   }
 }

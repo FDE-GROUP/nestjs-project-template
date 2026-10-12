@@ -1,3 +1,4 @@
+import type { ReadStream } from 'node:fs';
 import { ConfigService } from '@app/config/config.service';
 import {
   DeleteObjectCommand,
@@ -9,19 +10,17 @@ import {
 import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Inject, Injectable } from '@nestjs/common';
-import type { ReadStream } from 'fs';
-import * as path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { BaseStorageProvider } from './base-storage.provider';
 import type { FileUploadOptions, StorageProvider, UploadedFileResult } from './storage.interface';
 
 @Injectable()
-export class S3StorageProvider implements StorageProvider {
+export class S3StorageProvider extends BaseStorageProvider implements StorageProvider {
   private readonly s3Client: S3Client;
-  private readonly bucket: string;
-  private readonly baseUrl: string;
+  private readonly region: string;
 
-  constructor(@Inject(ConfigService) private readonly configService: ConfigService) {
-    const storageConfig = this.configService.getStorageConfig();
+  constructor(@Inject(ConfigService) configService: ConfigService) {
+    super(configService);
+    const storageConfig = configService.getStorageConfig();
 
     const s3Config: any = {
       region: storageConfig.region,
@@ -38,8 +37,7 @@ export class S3StorageProvider implements StorageProvider {
     }
 
     this.s3Client = new S3Client(s3Config);
-    this.bucket = storageConfig.bucket;
-    this.baseUrl = storageConfig.baseUrl || '';
+    this.region = storageConfig.region ?? '';
   }
 
   async uploadFile(
@@ -48,29 +46,21 @@ export class S3StorageProvider implements StorageProvider {
     options: FileUploadOptions = {},
   ): Promise<UploadedFileResult> {
     const key = this.generateKey(filename);
-    const contentType = options.contentType || 'application/octet-stream';
+    const contentType = this.resolveContentType(options);
 
-    const params: any = {
-      Bucket: this.bucket,
-      Key: key,
-      Body: fileBuffer,
-      ContentType: contentType,
-      Metadata: options.metadata,
-      ACL: (options.acl as ObjectCannedACL) || 'private',
-    };
+    const params = this.buildParams(key, fileBuffer, contentType, options);
 
     try {
       const command = new PutObjectCommand(params);
       const result = await this.s3Client.send(command);
 
-      return {
+      return this.buildResult({
         key,
-        url: this.getPublicUrl(key),
-        etag: result.ETag?.replace(/"/g, ''),
+        filename,
+        contentType,
         size: fileBuffer.length,
-        mimetype: contentType,
-        originalname: filename,
-      };
+        etag: this.normalizeEtag(result.ETag),
+      });
     } catch (error) {
       throw new Error(`Failed to upload file to S3: ${error.message}`);
     }
@@ -82,16 +72,9 @@ export class S3StorageProvider implements StorageProvider {
     options: FileUploadOptions = {},
   ): Promise<UploadedFileResult> {
     const key = this.generateKey(filename);
-    const contentType = options.contentType || 'application/octet-stream';
+    const contentType = this.resolveContentType(options);
 
-    const params: any = {
-      Bucket: this.bucket,
-      Key: key,
-      Body: fileStream,
-      ContentType: contentType,
-      Metadata: options.metadata,
-      ACL: (options.acl as ObjectCannedACL) || 'private',
-    };
+    const params = this.buildParams(key, fileStream, contentType, options);
 
     try {
       // Using multipart upload is better for handling large files
@@ -102,15 +85,13 @@ export class S3StorageProvider implements StorageProvider {
 
       const result = await upload.done();
 
-      // Because we're using streams, we can't determine file size, so return -1
-      return {
+      return this.buildResult({
         key,
-        url: this.getPublicUrl(key),
-        etag: result.ETag?.replace(/"/g, ''),
+        filename,
+        contentType,
         size: -1, // Unable to directly get file size when uploading stream
-        mimetype: contentType,
-        originalname: filename,
-      };
+        etag: this.normalizeEtag(result.ETag),
+      });
     } catch (error) {
       throw new Error(`Failed to upload file stream to S3: ${error.message}`);
     }
@@ -143,21 +124,23 @@ export class S3StorageProvider implements StorageProvider {
     }
   }
 
-  private getPublicUrl(key: string): string {
-    if (this.baseUrl) {
-      return `${this.baseUrl}/${key}`;
-    }
-    return `https://${this.bucket}.s3.${this.configService.getStorageConfig().region}.amazonaws.com/${key}`;
+  protected getDefaultPublicUrl(key: string): string {
+    return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
   }
 
-  private generateKey(filename: string): string {
-    const ext = path.extname(filename);
-    const uuid = uuidv4();
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-
-    return `${year}/${month}/${day}/${uuid}${ext}`;
+  private buildParams(
+    key: string,
+    body: Buffer | ReadStream,
+    contentType: string,
+    options: FileUploadOptions,
+  ): any {
+    return {
+      Bucket: this.bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      Metadata: options.metadata,
+      ACL: (options.acl as ObjectCannedACL) || 'private',
+    };
   }
 }
