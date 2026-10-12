@@ -27,8 +27,6 @@ dist/
 tmp/
 temp/
 
-# prisma
-prisma/migrations/
 .vercel
 
 # other
