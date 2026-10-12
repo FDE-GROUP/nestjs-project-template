@@ -31,9 +31,17 @@
 
 ## Documentation
 
+**Specifications** (`docs/specs/` — binding rules)
+
+- [Project Architecture](./docs/specs/architecture.md) | [Chinese](./docs/specs/architecture-zh.md)
+- [Tooling Standards](./docs/specs/tooling-standards.md)
+- [Event Sourcing Roadmap](./docs/specs/event-sourcing-roadmap.md)
+
+**Guides** (`docs/` — how-to)
+
 - [Installation and Running Guide](./docs/install&run.md)
-- [Project Architecture](./docs/architecture.md) | [Chinese](./docs/architecture-zh.md)
 - [Docker Deployment Guide](./docs/docker-deployment.md)
+- [Drizzle Migration Guide](./docs/drizzle-migration-guide.md)
 - [Cloud Storage Integration Guide (Chinese)](./docs/storage-guide.md) | [English](./docs/storage-guide-en.md)
 - [OAuth Authentication Guide (Chinese)](./docs/oauth-guide.md) | [English](./docs/oauth-guide-en.md)
 - [Mailer Module Guide (Chinese)](./docs/mailer.md) |  [English](./docs/mailer-en.md)
