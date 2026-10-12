@@ -4,17 +4,13 @@ import {
   type BetterAuthPlugin,
   betterAuth,
 } from 'better-auth';
-import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { createAuthMiddleware } from 'better-auth/api';
 import { toNodeHandler } from 'better-auth/node';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { ConfigService } from '../config/config.service';
-import type { PrismaService } from '../prisma/prisma.service';
-import {
-  AUTH_JS_ACCOUNT_COLLECTION,
-  AUTH_JS_SESSION_COLLECTION,
-  AUTH_JS_USER_COLLECTION,
-} from './auth.constant';
+import type { DrizzleService } from '../database/drizzle.service';
+import * as schema from '../database/schema';
 
 export type AuthRequest = FastifyRequest & { originalUrl?: string; url?: string };
 export type AuthResponse = FastifyReply;
@@ -33,7 +29,7 @@ export interface CreateAuthResult {
 
 export function CreateAuth(
   providers: BetterAuthOptions['socialProviders'],
-  prismaService: PrismaService,
+  drizzleService: DrizzleService,
   configService: ConfigService,
 ): CreateAuthResult {
   const appConfig = configService.getAppConfig();
@@ -42,8 +38,9 @@ export function CreateAuth(
   const basePath = `/${appConfig.apiPrefix}/${appConfig.version}/auth`;
 
   const auth = betterAuth({
-    database: prismaAdapter(prismaService, {
-      provider: 'mongodb',
+    database: drizzleAdapter(drizzleService.db, {
+      provider: 'pg',
+      schema,
     }),
     socialProviders: providers,
     basePath: basePath,
@@ -58,7 +55,7 @@ export function CreateAuth(
           after: [
             {
               matcher(context) {
-                return context.path.startsWith('/callback');
+                return context.path?.startsWith('/callback') ?? false;
               },
               handler: createAuthMiddleware(async (ctx) => {
                 const provider = ctx.params?.id || ctx.path.split('/callback')[1];
@@ -95,9 +92,9 @@ export function CreateAuth(
                 try {
                   // Use a more compatible approach by storing the info in context metadata
                   // which won't trigger type errors with the session object
-                  const metadata = ctx.context.metadata || {};
+                  const metadata = (ctx.context as any).metadata || {};
                   metadata.provider = provider;
-                  ctx.context.metadata = metadata;
+                  (ctx.context as any).metadata = metadata;
 
                   // Log the action instead of trying to update DB directly
                   await Promise.resolve(); // for eslint
@@ -122,19 +119,14 @@ export function CreateAuth(
       } satisfies BetterAuthPlugin,
     ],
     account: {
-      modelName: AUTH_JS_ACCOUNT_COLLECTION,
       accountLinking: {
         enabled: true,
         trustedProviders: ['google', 'github'],
       },
     },
-    session: {
-      modelName: AUTH_JS_SESSION_COLLECTION,
-    },
     appName: appConfig.name || 'nestjs-project-template',
     secret: authConfig.jwt.secret,
     user: {
-      modelName: AUTH_JS_USER_COLLECTION,
       additionalFields: {
         isOwner: {
           type: 'boolean',

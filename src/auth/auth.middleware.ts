@@ -1,5 +1,5 @@
 import { ConfigService } from '@app/config/config.service';
-import { PrismaService } from '@app/prisma/prisma.service';
+import { DrizzleService } from '@app/database/drizzle.service';
 import type { NestMiddleware, OnModuleInit } from '@nestjs/common';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { BetterAuthOptions } from 'better-auth';
@@ -19,7 +19,7 @@ export class AuthMiddleware implements NestMiddleware, OnModuleInit {
 
   constructor(
     @Inject(ConfigService) private readonly configService: ConfigService,
-    @Inject(PrismaService) private readonly prismaService: PrismaService,
+    @Inject(DrizzleService) private readonly drizzleService: DrizzleService,
     @Inject(AuthInstanceInjectKey)
     private readonly authInstance: InjectAuthInstance,
   ) {}
@@ -49,7 +49,7 @@ export class AuthMiddleware implements NestMiddleware, OnModuleInit {
         if (!config || !config.clientId || !config.clientSecret) continue;
 
         // Add to providers with proper typecasting
-        providers[providerType as keyof typeof providers] = {
+        (providers as Record<string, any>)[providerType] = {
           clientId: config.clientId,
           clientSecret: config.clientSecret,
           ...Object.entries(config)
@@ -58,7 +58,7 @@ export class AuthMiddleware implements NestMiddleware, OnModuleInit {
         } as any; // Using any to bypass complex type intersection
       }
 
-      const { handler, auth } = CreateAuth(providers, this.prismaService, this.configService);
+      const { handler, auth } = CreateAuth(providers, this.drizzleService, this.configService);
       this.authHandler = handler;
       this.authInstance.set(auth);
     } catch (error) {

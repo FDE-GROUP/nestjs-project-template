@@ -8,7 +8,7 @@ export default {
     apiPrefix: process.env.API_PREFIX || 'api',
   },
   database: {
-    url: process.env.DATABASE_URL || 'mongodb://localhost:27017/nestjs_practice',
+    url: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/nestjs_practice',
   },
   auth: {
     jwt: {

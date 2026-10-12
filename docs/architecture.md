@@ -27,7 +27,7 @@ src/
 ├── i18n/                 # Internationalization
 ├── logger/               # Logging service
 ├── mailer/               # Email service
-├── prisma/               # Database ORM
+├── database/             # Database ORM (Drizzle)
 ├── storage/              # Cloud storage service
 ├── stripe/               # Payment service
 └── users/                # User management
@@ -59,7 +59,7 @@ src/
 
 - **Runtime**: Bun (replaces Node.js)
 - **Framework**: NestJS + Fastify
-- **Database**: MongoDB + Prisma ORM
+- **Database**: PostgreSQL + Drizzle ORM
 - **Authentication**: Better Auth
 - **Testing**: Bun built-in test runner
 - **Linting**: Biome (replaces ESLint + Prettier)
@@ -74,7 +74,7 @@ Response ← Filters ← Interceptors ← Controller ← Service ← Database
 
 ## Deployment Architecture
 
-- **Development**: Local Bun + Docker MongoDB
-- **Production**: Docker Compose (Application + MongoDB)
+- **Development**: Local Bun + Docker PostgreSQL
+- **Production**: Docker Compose (Application + PostgreSQL)
 - **Monitoring**: Datadog integration (optional)
 - **Documentation**: Swagger/OpenAPI auto-generation

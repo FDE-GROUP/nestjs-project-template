@@ -11,37 +11,45 @@ services:
       - "7009:7009"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=mongodb://mongodb:27017/nestjs_practice
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/nestjs_practice
       - PORT=7009
       - HOST=0.0.0.0
     depends_on:
-      - mongodb
+      postgres:
+        condition: service_healthy
     networks:
       - nestjs-network
     volumes:
       - ./.env:/app/.env
       - app-logs:/app/logs
 
-  mongodb:
-    container_name: mongodb
-    image: mongo:9.0
+  postgres:
+    container_name: postgres
+    image: postgres:16-alpine
     restart: always
     environment:
-      - MONGODB_DATABASE=nestjs_practice
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=nestjs_practice
     ports:
-      - "27017:27017"
+      - "5432:5432"
     volumes:
-      - mongodb-data:/data/db
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - nestjs-network
-    command: mongod --quiet --logpath /dev/null
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nestjs_practice"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
 networks:
   nestjs-network:
     driver: bridge
 
 volumes:
-  mongodb-data:
+  postgres-data:
     driver: local
   app-logs:
-    driver: local 
+    driver: local

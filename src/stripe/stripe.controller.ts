@@ -2,8 +2,8 @@ import type { RawBodyRequest } from '@nestjs/common';
 import { Body, Controller, Get, Headers, Inject, Param, Post, Req } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
-import type { CreateCustomerDto } from './dto/create-customer.dto';
-import type { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
+import { CreateCustomerDto } from './dto/create-customer.dto';
+import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
 import { StripeService } from './stripe.service';
 
 @ApiTags('stripe')

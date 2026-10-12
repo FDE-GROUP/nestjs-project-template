@@ -1,0 +1,67 @@
+import swc from 'unplugin-swc';
+import { defineConfig } from 'vitest/config';
+
+// Vitest configuration for the Nest 12 / Bun / ESM project.
+// - `resolve.tsconfigPaths` (Vite 8+ native) resolves `@app/*` and other tsconfig paths.
+// - `unplugin-swc` transforms TS with decorator + emitDecoratorMetadata support,
+//   required for Nest's DI / reflect-metadata (esbuild alone cannot emit metadata).
+// - `test.env` supplies the minimum env vars needed at module-import time, so
+//   ConfigModule's Joi validation passes without requiring a real .env file.
+export default defineConfig({
+  resolve: {
+    tsconfigPaths: true,
+  },
+  plugins: [
+    swc.vite({
+      jsc: {
+        target: 'es2022',
+        parser: {
+          syntax: 'typescript',
+          decorators: true,
+          dynamicImport: true,
+        },
+        transform: {
+          legacyDecorator: true,
+          decoratorMetadata: true,
+        },
+        keepClassNames: true,
+      },
+    }) as never,
+  ],
+  test: {
+    globals: false,
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+    exclude: ['node_modules', 'dist'],
+    env: {
+      NODE_ENV: 'test',
+      LOG_LEVEL: 'silent',
+      DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/test-db',
+      JWT_SECRET: 'test-jwt-secret',
+      JWT_REFRESH_SECRET: 'test-jwt-refresh-secret',
+      ALLOWED_ORIGINS: 'http://localhost:3000',
+      STORAGE_REGION: 'us-east-1',
+      STORAGE_ENDPOINT: 'https://s3.example.com',
+      STORAGE_ACCESS_KEY_ID: 'test-access-key',
+      STORAGE_ACCESS_KEY_SECRET: 'test-access-secret',
+      STRIPE_SECRET_KEY: 'sk_test_placeholder',
+      STRIPE_PUBLIC_KEY: 'pk_test_placeholder',
+      STRIPE_WEBHOOK_SECRET: 'whsec_test_placeholder',
+      STRIPE_API_VERSION: '2025-02-24.acacia',
+    },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/dto/**',
+        'src/**/interfaces/**',
+        'src/main.ts',
+        'src/database/seed.ts',
+        'src/**/*.module.ts',
+      ],
+    },
+  },
+});

@@ -12,34 +12,34 @@ This guide provides instructions for deploying the NestJS application using Dock
 The project includes the following Docker configuration files:
 
 - `Dockerfile`: Defines the multi-stage build process for the application container
-- `docker-compose.yml`: Configuration for running both the application and MongoDB in production
-- `docker-compose.dev.yml`: Configuration for running only MongoDB for local development
+- `docker-compose.yml`: Configuration for running both the application and PostgreSQL in production
+- `docker-compose.dev.yml`: Configuration for running only PostgreSQL for local development
 - `.dockerignore`: Specifies which files should be excluded from the Docker build
 
 ## Development Environment
 
-### Running MongoDB in Docker (Local Development)
+### Running PostgreSQL in Docker (Local Development)
 
-If you want to run MongoDB in Docker while developing the application locally:
+If you want to run PostgreSQL in Docker while developing the application locally:
 
 ```bash
-# Start MongoDB container
+# Start PostgreSQL container
 docker compose -f docker-compose.dev.yml up -d
 
 # Check container status
 docker ps
 
-# View MongoDB logs
-docker compose -f docker-compose.dev.yml logs -f mongodb
+# View PostgreSQL logs
+docker compose -f docker-compose.dev.yml logs -f postgres
 ```
 
-With MongoDB running in Docker, update your `.env` file to connect to it:
+With PostgreSQL running in Docker, update your `.env` file to connect to it:
 
 ```
-DATABASE_URL=mongodb://localhost:27017/nestjs_practice?replicaSet=rs0
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_practice
 ```
 
-> **Note**: The development MongoDB is configured with replica set `rs0` for better compatibility with Prisma.
+> **Note**: The development PostgreSQL container exposes port `5432` with user/password `postgres`/`postgres`.
 
 You can then run the NestJS application locally:
 
@@ -47,8 +47,8 @@ You can then run the NestJS application locally:
 # Install dependencies
 bun install
 
-# Generate Prisma client
-bun prisma:generate
+# Apply schema (development)
+bun drizzle:push
 
 # Start the application in development mode
 bun start:dev
@@ -57,7 +57,7 @@ bun start:dev
 ### Stopping the Development Environment
 
 ```bash
-# Stop and remove MongoDB container
+# Stop and remove PostgreSQL container
 docker compose -f docker-compose.dev.yml down
 
 # To remove volumes as well (will delete all data)
@@ -76,7 +76,7 @@ docker build -t nestjs-app .
 ### Running with Docker Compose
 
 ```bash
-# Start the application and MongoDB
+# Start the application and PostgreSQL
 docker compose up -d
 
 # Check container status
@@ -85,8 +85,8 @@ docker ps
 # View application logs
 docker compose logs -f app
 
-# View MongoDB logs
-docker compose logs -f mongodb
+# View PostgreSQL logs
+docker compose logs -f postgres
 ```
 
 ### Environment Variables
@@ -94,7 +94,7 @@ docker compose logs -f mongodb
 When deploying with Docker, the database connection string should be:
 
 ```
-DATABASE_URL=mongodb://mongodb:27017/nestjs_practice
+DATABASE_URL=postgres://postgres:postgres@postgres:5432/nestjs_practice
 ```
 
 Other environment variables can be set in `.env` file or configured in the `docker-compose.yml` file.
@@ -121,8 +121,8 @@ docker compose down -v
 # View application logs
 docker logs -f nestjs-app
 
-# View MongoDB logs
-docker logs -f mongodb
+# View PostgreSQL logs
+docker logs -f postgres
 ```
 
 ### Entering Containers
@@ -131,11 +131,11 @@ docker logs -f mongodb
 # Access the application container shell
 docker exec -it nestjs-app sh
 
-# Access the MongoDB shell (development)
-docker exec -it mongodb-dev mongosh
+# Access the PostgreSQL shell (development)
+docker exec -it postgres-dev psql -U postgres
 
-# Access the MongoDB shell (production)
-docker exec -it mongodb mongosh
+# Access the PostgreSQL shell (production)
+docker exec -it postgres psql -U postgres
 ```
 
 ### Checking Container Health
@@ -147,27 +147,27 @@ docker inspect --format='{{.State.Health.Status}}' nestjs-app
 
 ## Data Management
 
-### MongoDB Data Persistence
+### PostgreSQL Data Persistence
 
-MongoDB data is stored in a Docker volume named `mongodb-data`. This ensures that your data persists even if the container is removed.
+PostgreSQL data is stored in a Docker volume named `postgres-data`. This ensures that your data persists even if the container is removed.
 
 ### Backup and Restore
 
 ```bash
-# Backup MongoDB data
-docker exec -it mongodb sh -c 'mongodump --archive' > mongodb-backup.archive
+# Backup PostgreSQL data
+docker exec -it postgres sh -c 'pg_dump -U postgres nestjs_practice' > postgres-backup.sql
 
-# Restore MongoDB data
-docker exec -it mongodb sh -c 'mongorestore --archive' < mongodb-backup.archive
+# Restore PostgreSQL data
+docker exec -i postgres sh -c 'psql -U postgres -d nestjs_practice' < postgres-backup.sql
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Port conflicts**: If port 7009 or 27017 is already in use, you can change the port mapping in the `docker-compose.yml` file.
+1. **Port conflicts**: If port 7009 or 5432 is already in use, you can change the port mapping in the `docker-compose.yml` file.
 
-2. **Connection issues**: If the application cannot connect to MongoDB, ensure the `DATABASE_URL` is set correctly to `mongodb://mongodb:27017/nestjs_practice` in the application container.
+2. **Connection issues**: If the application cannot connect to PostgreSQL, ensure the `DATABASE_URL` is set correctly to `postgres://postgres:postgres@postgres:5432/nestjs_practice` in the application container.
 
 3. **Permission issues**: If you encounter permission errors with volumes, you might need to run Docker commands with sudo or adjust the file permissions.
 
@@ -182,4 +182,4 @@ docker logs -f nestjs-app
 
 - [Docker Documentation](https://docs.docker.com/)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
-- [MongoDB Docker Image Documentation](https://hub.docker.com/_/mongo) 
+- [PostgreSQL Docker Image Documentation](https://hub.docker.com/_/postgres) 

@@ -4,13 +4,13 @@
   <a href="https://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-<p align="center">A modern NestJS project structure with best practices using Fastify, Prisma, MongoDB, and Bun runtime. and more</p>
+<p align="center">A modern NestJS project structure with best practices using Fastify, Drizzle, PostgreSQL, and Bun runtime. and more</p>
 
 <p align="center">
   <a href="https://github.com/nestjs/nest" target="_blank"><img src="https://img.shields.io/github/license/nestjs/nest.svg" alt="Package License" /></a>
   <a href="https://github.com/lifefloating/nestjs-project-template/tree/node-main" target="_blank"><img src="https://img.shields.io/badge/node-%3E%3D%2020.0.0%20-green.svg" alt="Node Version" /></a>
   <a href="https://bun.sh/" target="_blank"><img src="https://img.shields.io/badge/bun-%3E%3D%201.0.0-FFC0CB?style=flat&logo=bun&logoColor=white" alt="Bun Runtime" /></a>
-  <a href="https://www.mongodb.com/" target="_blank"><img src="https://img.shields.io/badge/database-MongoDB-green.svg" alt="Database" /></a>
+  <a href="https://www.postgresql.org/" target="_blank"><img src="https://img.shields.io/badge/database-PostgreSQL-green.svg" alt="Database" /></a>
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Bun-Runtime-FFC0CB?style=flat-square&logo=bun&logoColor=white" alt="Bun Runtime" />
-  <img src="https://img.shields.io/badge/Prisma-3982CE?style=flat-square&logo=prisma&logoColor=white" alt="Prisma" />
+  <img src="https://img.shields.io/badge/Drizzle-CEF4DD?style=flat-square&logo=drizzle&logoColor=%23C5F74F" alt="Drizzle" />
   <img src="https://img.shields.io/badge/Better--Auth-6366F1?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSIzIiB5PSIxMSIgd2lkdGg9IjE4IiBoZWlnaHQ9IjExIiByeD0iMiIgcnk9IjIiPjwvcmVjdD48cGF0aCBkPSJNNyA5VjdhNiA2IDAgMCAxIDEyIDBWOSI+PC9wYXRoPjwvc3ZnPg==&logoColor=white" alt="Better Auth" />
   <img src="https://img.shields.io/badge/Pino-Logger-11C877?style=flat-square&logo=pino&logoColor=white" alt="Pino" />
   <img src="https://img.shields.io/badge/MJML-Email-EB5757?style=flat-square&logo=mail.ru&logoColor=white" alt="MJML" />
@@ -46,14 +46,14 @@
 
 - **Runtime**: [Bun](https://bun.sh/) for JavaScript & TypeScript
 - **Framework**: [NestJS 10.x](https://nestjs.com/) with [Fastify](https://www.fastify.io/)
-- **Database**: [MongoDB](https://www.mongodb.com/) with [Prisma ORM](https://www.prisma.io/)
+- **Database**: [PostgreSQL](https://www.postgresql.org/) with [Drizzle ORM](https://orm.drizzle.team/)
 - ~~**Compiler**: [SWC](https://swc.rs/) for TypeScript~~ (Built into Bun)
 - ~~**Package Manager**: [pnpm](https://pnpm.io/)~~ → **Package Manager**: Built-in Bun package manager
 - **Authentication**: [Better Auth](https://github.com/better-auth/better-auth) with OAuth support
 - **Documentation**: [Swagger/OpenAPI](https://swagger.io/)
 - **Validation**: [class-validator](https://github.com/typestack/class-validator) with DTOs
 - **Logging**: [Pino](https://getpino.io/) for structured logging
-- ~~**Testing**: [Jest](https://jestjs.io/)~~ → **Testing**: Built-in Bun test runner
+- ~~**Testing**: [Jest](https://jestjs.io/)~~ → ~~**Testing**: Built-in Bun test runner~~ → **Testing**: [Vitest](https://vitest.dev/)
 - **Linting**: [Biome](https://biomejs.dev/) for fast linting and formatting
 - **Storage**: Multi-cloud storage support ([Alibaba Cloud OSS](https://www.alibabacloud.com/product/object-storage-service), [Tencent Cloud COS](https://www.tencentcloud.com/products/cos), [Amazon S3](https://aws.amazon.com/s3/))
 
@@ -62,7 +62,7 @@
 - **Architecture**: Modular architecture with proper separation of concerns
 - **Configuration**: Environment management with [@nestjs/config](https://docs.nestjs.com/techniques/configuration) and [Joi](https://joi.dev/) validation
 - **Exception Handling**: Global exception handling and request/response transformation
-- **Database**: [MongoDB](https://www.mongodb.com/) integration with [Prisma ORM](https://www.prisma.io/), migrations, and data seeding
+- **Database**: [PostgreSQL](https://www.postgresql.org/) integration with [Drizzle ORM](https://orm.drizzle.team/), migrations, and data seeding
 - **Caching**: [Redis](https://redis.io/) integration with [@nestjs/cache-manager](https://docs.nestjs.com/techniques/caching) and [ioredis](https://github.com/redis/ioredis)
 - **Logging**: Structured logging with [Pino](https://getpino.io/) and [pino-datadog-transport](https://github.com/wdalmut/pino-datadog)
 - **Documentation**: API documentation with Swagger ([@nestjs/swagger](https://docs.nestjs.com/openapi/introduction))

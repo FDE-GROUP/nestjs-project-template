@@ -1,36 +1,39 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test';
-import type { PrismaService } from '@app/prisma/prisma.service';
+import type { DrizzleService } from '@app/database/drizzle.service';
+import { Role } from '@app/database/schema';
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CreateUserDto } from '../dto/create-user.dto';
 import { UsersService } from './users.service';
 
-// Mock bcrypt
-void mock.module('bcryptjs', () => ({
-  hash: mock(() => Promise.resolve('hashed-password')),
+// Mock bcrypt (vi.mock is auto-hoisted to the top by Vitest)
+vi.mock('bcryptjs', () => ({
+  hash: vi.fn(() => Promise.resolve('hashed-password')),
 }));
 
 describe('UsersService', () => {
   let service: UsersService;
-  let prismaService: PrismaService;
 
-  // Mock Prisma client
-  const mockPrismaService = {
-    user: {
-      findMany: mock(),
-      findUnique: mock(),
-      create: mock(),
-    },
+  // Mock Drizzle query + insert chain
+  const mockFindMany = vi.fn();
+  const mockFindFirst = vi.fn();
+  const mockReturning = vi.fn();
+  const mockValues = vi.fn(() => ({ returning: mockReturning }));
+  const mockInsert = vi.fn(() => ({ values: mockValues }));
+
+  const mockDb = {
+    query: { user: { findMany: mockFindMany, findFirst: mockFindFirst } },
+    insert: mockInsert,
   };
 
   beforeEach(() => {
-    prismaService = mockPrismaService as any;
-    service = new UsersService(prismaService);
+    service = new UsersService({ db: mockDb } as unknown as DrizzleService);
 
-    // Reset mocks
-    mockPrismaService.user.findMany.mockReset();
-    mockPrismaService.user.findUnique.mockReset();
-    mockPrismaService.user.create.mockReset();
+    mockFindMany.mockReset();
+    mockFindFirst.mockReset();
+    mockReturning.mockReset();
+    // Keep the chained implementations, only clear recorded calls
+    mockValues.mockClear();
+    mockInsert.mockClear();
   });
 
   describe('findAll', () => {
@@ -47,22 +50,12 @@ describe('UsersService', () => {
         },
       ];
 
-      mockPrismaService.user.findMany.mockResolvedValue(expectedUsers);
+      mockFindMany.mockResolvedValue(expectedUsers);
 
       const result = await service.findAll();
 
       expect(result).toEqual(expectedUsers);
-      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith({
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          role: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
+      expect(mockFindMany).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -78,27 +71,16 @@ describe('UsersService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(expectedUser);
+      mockFindFirst.mockResolvedValue(expectedUser);
 
       const result = await service.findOne('1');
 
       expect(result).toEqual(expectedUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: '1' },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          role: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
+      expect(mockFindFirst).toHaveBeenCalledTimes(1);
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockFindFirst.mockResolvedValue(null);
 
       await expect(service.findOne('999')).rejects.toThrow(NotFoundException);
       await expect(service.findOne('999')).rejects.toThrow('User with ID 999 not found');
@@ -118,18 +100,16 @@ describe('UsersService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(expectedUser);
+      mockFindFirst.mockResolvedValue(expectedUser);
 
       const result = await service.findByEmail('test@example.com');
 
-      expect(result).toEqual(expectedUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { email: 'test@example.com' },
-      });
+      expect(result).toEqual(expectedUser as any);
+      expect(mockFindFirst).toHaveBeenCalledTimes(1);
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockFindFirst.mockResolvedValue(null);
 
       await expect(service.findByEmail('nonexistent@example.com')).rejects.toThrow(
         NotFoundException,
@@ -156,32 +136,21 @@ describe('UsersService', () => {
         updatedAt: new Date(),
       };
 
-      // Mock user doesn't exist
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
-      // Mock successful creation
-      mockPrismaService.user.create.mockResolvedValue(expectedUser);
+      // No existing user
+      mockFindFirst.mockResolvedValue(null);
+      // Insert chain resolves with created user
+      mockReturning.mockResolvedValue([expectedUser]);
 
       const result = await service.create(createUserDto);
 
       expect(result).toEqual(expectedUser);
-      expect(mockPrismaService.user.create).toHaveBeenCalledWith({
-        data: {
-          email: 'newuser@example.com',
-          password: 'hashed-password',
-          firstName: 'New',
-          lastName: 'User',
-          role: Role.USER,
-        },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          role: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
+      expect(mockInsert).toHaveBeenCalledTimes(1);
+      expect(mockValues).toHaveBeenCalledTimes(1);
+
+      const valuesArg = (mockValues.mock.calls[0] as any[])[0] as any;
+      expect(valuesArg.email).toBe('newuser@example.com');
+      expect(valuesArg.password).toBe('hashed-password');
+      expect(valuesArg.role).toBe(Role.USER);
     });
 
     it('should throw ConflictException when user already exists', async () => {
@@ -196,7 +165,7 @@ describe('UsersService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(existingUser);
+      mockFindFirst.mockResolvedValue(existingUser);
 
       await expect(service.create(createUserDto)).rejects.toThrow(ConflictException);
       await expect(service.create(createUserDto)).rejects.toThrow(

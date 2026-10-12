@@ -1,5 +1,5 @@
 import { ConfigModule } from '@app/config/config.module';
-import { PrismaModule } from '@app/prisma/prisma.module';
+import { DatabaseModule } from '@app/database/database.module';
 import {
   type DynamicModule,
   type MiddlewareConsumer,
@@ -33,7 +33,7 @@ export class AuthModule implements NestModule {
 
     return {
       module: AuthModule,
-      imports: [ConfigModule, PrismaModule],
+      imports: [ConfigModule, DatabaseModule],
       providers: [AuthService, authProvider],
       controllers: [AuthController],
       exports: [AuthService, authProvider],

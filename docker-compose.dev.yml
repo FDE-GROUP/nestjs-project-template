@@ -1,30 +1,31 @@
 version: '3.8'
 
 services:
-  mongodb:
-    container_name: mongodb-dev
-    image: mongo:9.0
+  postgres:
+    container_name: postgres-dev
+    image: postgres:16-alpine
     restart: always
     environment:
-      - MONGODB_DATABASE=nestjs_practice
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=nestjs_practice
     ports:
-      - "27017:27017"
+      - "5432:5432"
     volumes:
-      - mongodb-data-dev:/data/db
+      - postgres-data-dev:/var/lib/postgresql/data
     networks:
       - nestjs-network-dev
-    command: mongod --quiet --logpath /dev/null --replSet rs0 --bind_ip 0.0.0.0
     healthcheck:
-      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}) }" | mongosh --port 27017 --quiet
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nestjs_practice"]
       interval: 10s
-      timeout: 10s
+      timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 15s
 
 networks:
   nestjs-network-dev:
     driver: bridge
 
 volumes:
-  mongodb-data-dev:
-    driver: local 
+  postgres-data-dev:
+    driver: local

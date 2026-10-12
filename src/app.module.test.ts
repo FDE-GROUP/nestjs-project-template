@@ -1,22 +1,19 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 
 describe('Application', () => {
   it('should have proper module structure', async () => {
-    // Test basic imports work
-    expect(() => import('./app.module')).not.toThrow();
-    expect(() => import('./config/config.module')).not.toThrow();
-    expect(() => import('./prisma/prisma.module')).not.toThrow();
-    expect(() => import('./users/users.module')).not.toThrow();
+    await expect(import('./app.module')).resolves.toBeDefined();
+    await expect(import('./config/config.module')).resolves.toBeDefined();
+    await expect(import('./database/database.module')).resolves.toBeDefined();
+    await expect(import('./users/users.module')).resolves.toBeDefined();
   });
 
   it('should have proper service structure', async () => {
-    // Test basic service imports work
-    expect(() => import('./config/config.service')).not.toThrow();
-    expect(() => import('./users/services/users.service')).not.toThrow();
+    await expect(import('./config/config.service')).resolves.toBeDefined();
+    await expect(import('./users/services/users.service')).resolves.toBeDefined();
   });
 
   it('should have proper controller structure', async () => {
-    // Test basic controller imports work
-    expect(() => import('./users/controllers/users.controller')).not.toThrow();
+    await expect(import('./users/controllers/users.controller')).resolves.toBeDefined();
   });
 });

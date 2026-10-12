@@ -15,7 +15,9 @@ const createSchemaForEnv = (isProd: boolean) => {
     HOST: Joi.string().default('localhost'),
     API_PREFIX: Joi.string().default('api'),
     OPEN_API_VERSION: Joi.string().default('3.1.0'),
-    DATABASE_URL: Joi.string().required(),
+    DATABASE_URL: Joi.string()
+      .uri({ scheme: ['postgres', 'postgresql'] })
+      .required(),
     JWT_SECRET: Joi.string().required(),
     ALLOWED_ORIGINS: Joi.string().required(),
     JWT_EXPIRES_IN: Joi.string().default('30d'),
@@ -75,7 +77,7 @@ const configModuleOptions = {
 };
 
 @Module({
-  imports: [NestConfigModule.forRoot(configModuleOptions)],
+  imports: [NestConfigModule.forRoot(configModuleOptions as any)],
   providers: [ConfigService],
   exports: [NestConfigModule, ConfigService],
 })

@@ -11,8 +11,7 @@ RUN bun install --frozen-lockfile --production=false
 # 构建层
 FROM dependencies AS builder
 COPY . .
-RUN bun run prisma:generate
-RUN bun run build
+RUN bun run build:nest
 
 # 生产层
 FROM oven/bun:1-alpine AS runner
@@ -24,7 +23,7 @@ WORKDIR /app
 # 复制需要的文件
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/drizzle.config.ts ./
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/bunfig.toml ./
 

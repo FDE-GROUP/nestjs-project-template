@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import { Role } from '@app/database/schema';
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CreateUserDto } from '../dto/create-user.dto';
 import type { UsersService } from '../services/users.service';
 import { UsersController } from './users.controller';
@@ -11,9 +11,9 @@ describe('UsersController', () => {
 
   // Mock UsersService
   const mockUsersService = {
-    findAll: mock(),
-    findOne: mock(),
-    create: mock(),
+    findAll: vi.fn(),
+    findOne: vi.fn(),
+    create: vi.fn(),
   };
 
   beforeEach(() => {

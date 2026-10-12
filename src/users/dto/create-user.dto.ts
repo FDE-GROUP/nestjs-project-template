@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { i18nValidationMessage } from 'nestjs-i18n';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -26,9 +25,7 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(8, {
-    message: i18nValidationMessage('validate.password.minLength', {
-      minLength: 8,
-    }),
+    message: 'validate.password.minLength',
   })
   readonly password: string;
 

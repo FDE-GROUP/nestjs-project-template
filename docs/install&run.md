@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - [Bun](https://bun.sh/) v1.0 or higher
-- [MongoDB](https://www.mongodb.com/) server
+- [PostgreSQL](https://www.postgresql.org/) server
 
 > **Note:** For Node.js version (v20+) with pnpm (v8+), please check the [node-main branch](https://github.com/lifefloating/nestjs-project-template/tree/node-main)
 
@@ -23,10 +23,10 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-4. Generate Prisma client:
+4. Apply the database schema (development):
 
 ```bash
-bun prisma:generate
+bun drizzle:push
 ```
 
 5. Seed the database (optional):
@@ -40,11 +40,12 @@ bun db:seed
 ### Database Management
 
 ```bash
-# Open Prisma Studio
-bun prisma:studio
+# Open Drizzle Studio
+bun drizzle:studio
 
-# Deploy database migrations
-bun prisma:migrate
+# Generate and apply database migrations
+bun drizzle:generate
+bun drizzle:migrate
 ```
 
 ### OpenAPI Documentation
@@ -97,22 +98,24 @@ bun format
 
 ## Testing
 
+The project uses **Vitest** as the test runner. Config lives at `vitest.config.ts`.
+
 Running unit tests:
 
 ```bash
-bun test
+bun run test
 ```
 
 Running tests with coverage:
 
 ```bash
-bun test:cov
+bun run test:cov
 ```
 
 Running tests in watch mode:
 
 ```bash
-bun test:watch
+bun run test:watch
 ```
 
 ## API Documentation

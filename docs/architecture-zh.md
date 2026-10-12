@@ -27,7 +27,7 @@ src/
 ├── i18n/                 # 国际化
 ├── logger/               # 日志服务
 ├── mailer/               # 邮件服务
-├── prisma/               # 数据库 ORM
+├── database/             # 数据库 ORM (Drizzle)
 ├── storage/              # 云存储服务
 ├── stripe/               # 支付服务
 └── users/                # 用户管理
@@ -59,7 +59,7 @@ src/
 
 - **Runtime**: Bun (替代 Node.js)
 - **Framework**: NestJS + Fastify
-- **Database**: MongoDB + Prisma ORM
+- **Database**: PostgreSQL + Drizzle ORM
 - **Authentication**: Better Auth
 - **Testing**: Bun 内置测试运行器
 - **Linting**: Biome (替代 ESLint + Prettier)
@@ -74,7 +74,7 @@ Response ← Filters ← Interceptors ← Controller ← Service ← Database
 
 ## 部署架构
 
-- **开发环境**: 本地 Bun + Docker MongoDB
-- **生产环境**: Docker Compose (应用 + MongoDB)
+- **开发环境**: 本地 Bun + Docker PostgreSQL
+- **生产环境**: Docker Compose (应用 + PostgreSQL)
 - **监控**: Datadog 集成 (可选)
 - **文档**: Swagger/OpenAPI 自动生成

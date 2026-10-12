@@ -6,13 +6,12 @@ import compression from '@fastify/compress';
 import fastifyCors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import fastifyMultipart from '@fastify/multipart';
-import { Logger, VersioningType } from '@nestjs/common';
+import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { FastifyInstance } from 'fastify';
 import * as yaml from 'js-yaml';
-import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
 import { AppModule } from './app.module';
 import { ConfigService } from './config/config.service';
 
@@ -46,19 +45,18 @@ async function bootstrap() {
   });
 
   // Setup global request validation
+  // Uses Nest's stock ValidationPipe. `nestjs-i18n`'s I18nValidationPipe / ExceptionFilter are
+  // intentionally not used here because the project does not wire up `I18nModule`, and their
+  // transitive CJS require() chain trips Bun's ESM interop at boot. Translation keys stay as
+  // literal strings in the error messages until a proper i18n pipeline is added.
   app.useGlobalPipes(
-    new I18nValidationPipe({
+    new ValidationPipe({
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
       transformOptions: {
         enableImplicitConversion: true,
       },
-    }),
-  );
-  app.useGlobalFilters(
-    new I18nValidationExceptionFilter({
-      detailedErrors: false,
     }),
   );
   // cause fastify update, temp adapt
