@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  mongodb:
+    container_name: mongodb-dev
+    image: mongo:9.0
+    restart: always
+    environment:
+      - MONGODB_DATABASE=nestjs_practice
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data-dev:/data/db
+    networks:
+      - nestjs-network-dev
+    command: mongod --quiet --logpath /dev/null --replSet rs0 --bind_ip 0.0.0.0
+    healthcheck:
+      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}) }" | mongosh --port 27017 --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+networks:
+  nestjs-network-dev:
+    driver: bridge
+
+volumes:
+  mongodb-data-dev:
+    driver: local 
