@@ -16,6 +16,7 @@
     "lint:fix": "biome lint --write .",
     "check": "biome check .",
     "check:fix": "biome check --write .",
+    "ci": "bun scripts/ci.ts",
     "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest",

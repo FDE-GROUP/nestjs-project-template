@@ -33,7 +33,8 @@
 | HTTP 断言 | **supertest** | ^7.3.1 | 端到端断言（按需） | 推荐 |
 | Lint + 格式化 | **Biome** | ^2.5.15 | 单工具替代 ESLint+Prettier（文件级） | 强制（唯一） |
 | 代码库智能/静态分析 | **fallow** | 3.33.1 | 前置分析器（非判决）：跨文件仓库图给出未用代码/重复/循环/复杂度/架构边界的**候选线索**；结论须二次人工核验 | 推荐（经 `bunx`） |
-| Git Hooks | **husky** | ^9.1.7 | pre-commit → `lint:fix` | 强制 |
+| 本地 CI 编排 | **scripts/ci.ts**（Bun Shell） | — | 一键全量门禁：`check`→`build:nest`→`test` + fallow 佐证；pre-push 自动触发，**替代远程 CI** | 强制 |
+| Git Hooks | **husky** | ^9.1.7 | pre-commit → `lint:fix`；pre-push → `ci` | 强制 |
 | 提交校验 | **commitlint** | ^21.2.3 | Conventional Commits | 强制 |
 | 日志 | **pino**（+ pino-pretty） | ^10.4.0 | 结构化日志 | 强制 |
 | API 文档 | **@nestjs/swagger** | ^12.0.2 | `/apidoc` + OpenAPI 导出 | 强制 |
@@ -52,6 +53,7 @@
 - **禁止** 在依赖注入构造函数里对被注入类使用 `import type`（见 §4.3）。
 - **禁止** 未经二次人工核验即按 fallow（或任何前置分析器）的结论删除代码/依赖或重构 —— 其输出为候选线索而非判决（见 §4.7）。
 - **禁止** 用 `--no-verify` 绕过 husky/commitlint；**禁止** 修改全局 git 身份（提交用内联身份，见 §6）。
+- **禁止** 依赖远程 CI 做质量门禁 —— 本仓库 GitHub Actions 仅部署 Swagger Pages，不跑测试/构建；门禁一律在本地经 `bun run ci`（pre-push 强制，见 §4.8）。
 
 ## 4. 使用规范
 
@@ -105,6 +107,13 @@
 - **版本一致性**：当前仅全局安装（`3.33.1`，未入 `package.json`）。若需 CI/本地同版本，应固定为 devDependency 并在 `package.json` 写精确版本；在此之前，本工具为**推荐**而非强制门禁。
 - **退出码约定**：`0` 干净/仅告警，`1` 发现新增问题（正常门禁结果），`2` 输入或运行错误——脚本化时不得用 `|| true` 掩盖 `2`。
 
+### 4.8 本地 CI（Local CI）
+- **定位**：本项目**不走远程 CI 做门禁**（GitHub Actions 仅部署 Swagger Pages）。质量门禁在**本地**由 `scripts/ci.ts` 一键执行，等价替代远程 CI。
+- **命令**：`bun run ci` —— 依序跑 `check` → `build:nest` → `test` 三道**硬门禁**（快速失败），随后 `bunx fallow architecture` 作**佐证**（非阻断）。
+- **自动触发**：`.husky/pre-push` 在 push 前执行 `bun run ci`；未全绿则阻断 push。禁止 `--no-verify` 绕过（§3）。
+- **失败语义**：任一硬门禁非零退出 → 整体 `exit 1`；fallow 步骤即便有发现项或工具缺失也仅告警、不使流水线失败（遵循 §4.7「结论须二次人工核验」）。
+- **可复现性**：编排仅用 Bun Shell（`import { $ } from 'bun'`），不引入 bash/Make 等其他编排工具，遵守 §1「运行时统一 Bun」。
+
 ## 5. Biome 规范
 
 - 命令：`bun run check`（校验）、`check:fix`/`lint:fix`/`format`（写回）。pre-commit 触发 `lint:fix`。
@@ -133,9 +142,10 @@
 | 数据 seed/reset/setup | `db:seed` / `db:reset` / `db:setup` |
 | OpenAPI 导出 | `bun run openapi:export` |
 | 代码库健康/审计（fallow） | `bunx fallow` / `bunx fallow audit` / `bunx fallow dead-code` |
+| 本地 CI（全量门禁，pre-push 自动触发） | `bun run ci` |
 
 ## 8. 升级策略
 
-- 升级走单一 PR/提交，附带 `bun run check` + `test` + `build:nest` + 启动冒烟四关全绿。
+- 升级走单一 PR/提交，附带 `bun run ci`（= check + build:nest + test 三关全绿）+ 启动冒烟全绿。
 - 优先最新稳定版；`@types/*` 与实际运行时主版本对齐。
 - 任何"同类工具替换"（如换 Lint、换测试运行器）须先修订本规范 §2/§3 并评审后再动。
