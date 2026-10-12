@@ -25,6 +25,7 @@ export class Email {
     return other instanceof Email && other.value.toLowerCase() === this.value.toLowerCase();
   }
 
+  // fallow-ignore-next-line unused-class-member -- intentional value-object string coercion
   toString(): string {
     return this.value;
   }

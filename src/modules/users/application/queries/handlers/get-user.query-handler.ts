@@ -10,6 +10,7 @@ import { GetUserQuery } from '../get-user.query';
 export class GetUserQueryHandler implements IQueryHandler<GetUserQuery, UserReadModel> {
   constructor(@Inject(DrizzleService) private readonly drizzle: DrizzleService) {}
 
+  // fallow-ignore-next-line unused-class-member -- contract method invoked by the @nestjs/cqrs QueryBus
   async execute(query: GetUserQuery): Promise<UserReadModel> {
     const found = (await this.drizzle.db.query.user.findFirst({
       where: eq(user.id, query.id),

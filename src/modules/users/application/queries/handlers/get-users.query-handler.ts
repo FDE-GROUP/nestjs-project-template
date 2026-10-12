@@ -11,6 +11,7 @@ import { GetUsersQuery } from '../get-users.query';
 export class GetUsersQueryHandler implements IQueryHandler<GetUsersQuery, UserReadModel[]> {
   constructor(@Inject(DrizzleService) private readonly drizzle: DrizzleService) {}
 
+  // fallow-ignore-next-line unused-class-member -- contract method invoked by the @nestjs/cqrs QueryBus
   async execute(): Promise<UserReadModel[]> {
     return this.drizzle.db.query.user.findMany({ columns: userPublicColumns }) as Promise<
       UserReadModel[]

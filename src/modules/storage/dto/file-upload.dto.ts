@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
 
 export class FileUploadResultDto {
   @ApiProperty({ description: 'File unique identifier' })
@@ -19,15 +18,4 @@ export class FileUploadResultDto {
 
   @ApiProperty({ description: 'Original filename' })
   originalname: string;
-}
-
-export class FileUploadOptionsDto {
-  @ApiPropertyOptional({ description: 'File access control list setting' })
-  @IsString()
-  @IsOptional()
-  readonly acl?: string;
-
-  @ApiPropertyOptional({ description: 'Custom metadata for the file' })
-  @IsOptional()
-  readonly metadata?: Record<string, string>;
 }

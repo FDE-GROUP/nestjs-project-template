@@ -105,6 +105,7 @@ export class User extends AggregateRoot<string> {
     return this._state.passwordHash;
   }
 
+  // fallow-ignore-next-line unused-class-member -- intentional public read API of the aggregate
   get createdAt(): Date {
     return this._state.createdAt;
   }
@@ -137,6 +138,7 @@ export class User extends AggregateRoot<string> {
     this._state.updatedAt = updatedAt;
   }
 
+  // fallow-ignore-next-line unused-class-member -- called on the aggregate instance by command handlers
   toPublicProjection(): PublicUser {
     return {
       id: this._state.id,
