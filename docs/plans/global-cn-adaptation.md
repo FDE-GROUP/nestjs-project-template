@@ -2,7 +2,7 @@
 
 > 适用范围: `全局` ← blast radius，审计深度=人签核（`workflow.md` §3/§5）
 > 关联: [vision.md](../specs/vision.md) §4.3 计费 / §6 地域与合规约束 · [global-tenancy.md](./global-tenancy.md) FR-8/D5（已回改为多通道 provider）· [architecture.md](../specs/architecture.md)（provider 落 infrastructure/瘦适配器层）· [tooling-standards.md](../specs/tooling-standards.md)（选型 SSOT，待落）· [research/better-auth-cn-providers.md](../research/better-auth-cn-providers.md)（参考·非依据）· [workflow.md](../specs/workflow.md) §1/§3
-> 性质: **技术方案（plan）**，重写型 · 版本 0.6.0 · 日期 2026-10-13 · 状态: **已审·开发依据**（`workflow.md` §3 已过审计门，见 §12）
+> 性质: **技术方案（plan）**，重写型 · 版本 0.7.0 · 日期 2026-10-13 · 状态: **已审·开发依据**（`workflow.md` §3 已过审计门，见 §12）
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
 > 受众: **人（方案主导）+ Agent（已审后为开发依据）**
 
@@ -81,6 +81,7 @@
 | **D6** ✅ | **日志 / 监控后端** | 已裁决 | **移除 Datadog**；日志落 **文件（默认，pino transport）**，**不引入集中监控**（SLS / Loki 本期不做） |
 | **D7** ✅ | **合规落点边界** | 已裁决 | **ICP**=部署/运营前置、**不进代码门禁**（归部署文档）；**数据驻留=强制境内**（DB/存储/日志默认境内 region、不可出境）；**PIPL=代码基线**（注册告知-同意 + **按 user** 导出/删除 + 最小必要），法务/流程不代办 |
 | **D8** ✅ | **境内登录交付排序**（FR-3/D2 细化） | 已裁决 | **飞书先行实现（A1）**；**微信 / 钉钉 / 企业微信（A2/A3）仅保留 `genericOAuth` 渠道接口位（registry 登记 + env 开关），实现劣后暂缓**（依难度与资质，不阻塞主链） |
+| **D9** ✅ | **境内支付通道交付排序**（FR-1/FR-2/D1 细化） | 已裁决 | **P2 支付宝 / P3 微信支付劣后暂缓**，待商户/代扣资质到位后择机再开发；**P1 已落地的 `PaymentProvider` 端口与 `alipay`/`wechat_pay` 扩展位保留不动**（与 D8 登录同构：接口在、实现缺）；本期境内支付仅以已落地的 Stripe + 预付费时长/手动续费过渡 |
 
 ## 6. 方案设计
 
@@ -168,15 +169,15 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 - **Should**：微信 / 钉钉 / 企业微信登录——**本期只保留 `genericOAuth` 接口位（registry + env 开关），实现劣后暂缓**（D8）。
 - **Should**：FR-6 日志替换、D5 存储默认、FR-7 合规代码侧（同意 / 导出删除复用）。
 - **Could**：FR-2 周期扣款（依资质）。
-- **Won't**：手机验证码登录、海外其它支付、第三方密钥/资质代办、**集中日志监控（SLS/Loki，本期）**。
+- **Won't**（本期）：手机验证码登录、海外其它支付、第三方密钥/资质代办、**集中日志监控（SLS/Loki）**；**境内支付通道 P2 支付宝 / P3 微信支付——劣后暂缓（D9），接口位保留、资质到位后择机再开发**。
 
 ## 8. 垂直切片映射（Must/Should → 可独立交付单元）
 
 | 切片 | 需求 | 主要落点（文件/上下文） | schema 迁移 | 依赖 |
 |------|------|------------------------|------------|------|
 | **P1** ✅ 支付抽象 + Stripe 收敛（已落地） | FR-1 / NFR-1/2/4 | `src/modules/payment/{providers, services, controllers, dto, payment.module}`、`config/envs/payment` | 无（沿用现有订阅映射） | — |
-| **P2** 支付宝通道 | FR-1 / FR-2 | `alipay-payment.provider.ts` + env | 无 | P1；资质门（周期扣款桩） |
-| **P3** 微信支付通道 | FR-1 / FR-2 | `wechatpay-payment.provider.ts` + env | 无 | P1；资质门 |
+| **P2** 支付宝通道（暂缓 D9） | FR-1 / FR-2 | `alipay-payment.provider.ts` 接口位（`PaymentProviderId` 已含 `alipay`）+ env | 无 | P1；**资质门·劣后暂缓** |
+| **P3** 微信支付通道（暂缓 D9） | FR-1 / FR-2 | `wechatpay-payment.provider.ts` 接口位（`PaymentProviderId` 已含 `wechat_pay`）+ env | 无 | P1；**资质门·劣后暂缓** |
 | **A1** ✅ 飞书登录（已落地） | FR-3 | `auth/generic-oauth-channels.ts`（飞书构建器）+ `auth.implement` 挂 `genericOAuth` 插件 + `oauth.genericProviders`/`secrets.feishu` | 无（复用 `account`） | — |
 | **A2** 微信 / 钉钉登录（仅留接口·暂缓 D8） | FR-3 | `KNOWN_GENERIC_CHANNELS` 接口位（无构建器即跳过） | 无 | A1 |
 | **A3** 企业微信登录（仅留接口·暂缓 D8） | FR-3 | 同上（wecom 接口位） | 无 | A2 |
@@ -229,7 +230,7 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 
 ## 11. 未决问题（审计前须澄清或标注占位）
 
-1. **周期扣款 / 委托代扣资质**（FR-2）是否已具备？未具备则先「预付费时长 + 手动续费」过渡，不阻塞 P2/P3 主链。
+1. **周期扣款 / 委托代扣资质**（FR-2）——**已由 D9 裁决劣后暂缓**：P2/P3 待商户/代扣资质到位后择机开发，接口位（`PaymentProviderId` 含 `alipay`/`wechat_pay`）保留；不阻塞主链。
 2. **绑定 / 关联流 UX**（§6.2）细化：渠道首登无匹配时的引导页与 `accountSubject` 归属交互（方案 C 已定原则，交互待定）。
 3. **consent 粒度**（§6.6）：按「用途 × 版本」还是单条总同意；与 PIPL 告知文本的映射。
 4. **企业微信 corpid+userid 与 unionid 归属**、钉钉/飞书主体键的具体取字段（依实现期官方文档核验，research 仅参考）。
@@ -263,8 +264,9 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 | 2026-10-13 | 0.4.0 | **D8 登录交付排序裁决**（人澄清：飞书先行、余仅留接口） | §5 新增 D8；§6.2 分期改「飞书先行 / 微信钉钉企微仅留接口」；§7 Must 收敛为飞书 A1、新增 Should 暂缓行；开工 A1 |
 | 2026-10-13 | 0.5.0 | **C1 PIPL 基线落地**（人签核高危 #1 硬删 · consent `set null` 匿名保留方案 A） | §8 C1 标记已落地（具体落点 + 迁移）；§10 新增 C1 checkbox；§11-3 粒度→「用途×版本」实现确认；开工信号同步 |
 | 2026-10-13 | 0.6.0 | **C2 数据驻留启动校验落地**（人签核 分环境策略 strict/warn + env 可覆盖） | §8 C2 标记已落地；§10 新增 C2 checkbox；新增 `src/config/data-residency.ts` 与 15 例单测；`.env.example` 新增 `DATA_RESIDENCY_ENFORCE` 与 `DATA_RESIDENCY_DB_HOST_ALLOWLIST` 注释位 |
+| 2026-10-13 | 0.7.0 | **D9 支付通道交付排序裁决**（人裁决：P2/P3 劣后暂缓、后续择机再开发） | §5 新增 D9；§7 Won't 本期加 P2/P3 暂缓行；§8 P2/P3 标暂缓 D9（接口位保留）；§11-1 未决转已裁；开工信号同步 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 / v0.6.0 落地 C2（数据驻留启动校验）；v0.5.0 落地 C1、v0.4.0 裁决 D8、v0.3.0 过审计门、v0.1.0 讨论期多次澄清属同一初稿形成，不单列演变。以当前正文内容为准。
+正文已于 2026-10-13 / v0.7.0 裁决 D9（支付 P2/P3 劣后暂缓·接口位保留）；v0.6.0 落地 C2、v0.5.0 落地 C1、v0.4.0 裁决 D8、v0.3.0 过审计门、v0.1.0 讨论期多次澄清属同一初稿形成，不单列演变。以当前正文内容为准。

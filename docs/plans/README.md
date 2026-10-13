@@ -9,7 +9,7 @@
 | Plan | 主题 | 审计 | 执行状态 | 关联 |
 |------|------|------|----------|------|
 | [global-tenancy](./global-tenancy.md) | 多租户能力需求（草案 · pre-plan） | 待审计 | 未开工 | `specs/vision.md` §4.1/§7 |
-| [global-cn-adaptation](./global-cn-adaptation.md) | 中国大陆地域适配（技术方案 · 已审计） | 已审计 | 进行中（M1/L1/G1/S1/P1/A1/C1/C2 ✅；余 P2・P3；A2/A3 仅留接口·暂缓） | `specs/vision.md` §4.3/§6 · global-tenancy FR-8/D5 · `research/better-auth-cn-providers.md` |
+| [global-cn-adaptation](./global-cn-adaptation.md) | 中国大陆地域适配（技术方案 · 已审计） | 已审计 | 进行中（M1/L1/G1/S1/P1/A1/C1/C2 ✅；A2/A3 仅留接口·暂缓 D8；P2/P3 劣后暂缓 D9） | `specs/vision.md` §4.3/§6 · global-tenancy FR-8/D5 · `research/better-auth-cn-providers.md` |
 | [event-sourcing-roadmap](./event-sourcing-roadmap.md) | 事件溯源路线（技术方案 · 递延） | 待审计 | 未开工 | `specs/architecture.md` · `specs/vision.md` §7 |
 
 **列取值**
