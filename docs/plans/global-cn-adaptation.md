@@ -97,7 +97,8 @@
 
 1. 微信支付 / 支付宝**周期扣款 / 委托代扣资质**是否已具备？决定 FR-2 能否落地及订阅续费形态（否则先「预付费时长 + 手动续费」过渡）。
 2. 微信 / 企业微信 / 钉钉 / 飞书 各自账号体系如何归并到平台全局 user（unionid、corpid+userid、staffId）与 membership；同一自然人多渠道身份合并策略。
-3. Better Auth 自定义 OAuth provider 的实现成本与边界（是否够用、是否需 plugin）——宜先 `docs/research/` 调研（非依据）。
+3. **Better Auth 自定义 provider** → **调研已成文**（[research/better-auth-cn-providers.md](../research/better-auth-cn-providers.md)，非依据）：候选结论——复用 `genericOAuth` 钩子即可承载四渠道、**无需自建引擎**；难度 企业微信(高) > 微信/钉钉(中) > 飞书(低–中)，宜分期。
+4. **（research 引出）Email 缺失冲突**：微信/钉钉/飞书多**不返回 email**，与 global-tenancy D3/FR-3「email 全局唯一 + 受邀 email」冲突 → 方案级待决（email 可选化 / 首登补绑 + 跨渠道身份合并），届时联动回改 global-tenancy。
 
 ## 9. 演变记录
 
