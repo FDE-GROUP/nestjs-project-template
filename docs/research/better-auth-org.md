@@ -100,7 +100,16 @@ S0 开工（global-tenancy v0.5.0·eafab76）把 `organization()` 插件挂上�
   - **经人裁决采 A**：给 `session` 加 `ipAddress`+`userAgent`（可空 text）→ `0003` 纯 additive（`fix(auth)` c73e254），**保留 validateSchema 开**（拒 B「关校验」，避免丢 schema 漂移安全网）。复验：validateSchema 开下 signUpEmail→getSession→createOrganization→activeOrganizationId 回读→owner membership **全绿**。
   - **推论（须回灌 auth 主线，非本调研范围）**：凡以手写 Drizzle schema 承载 Better Auth，字段须与 BA 期望核心字段**逐一对齐**（`auth generate` 产出的 schema 为准），否则运行时校验拦截；本项目后续若升 BA 大版本，此校验是回归红线。
 
+## 9. S1 实测 · `hasPermission` 真实库往返（2026-10-13）
+
+S1（global-tenancy v0.7.0·f310cfc）把 Nest 侧 RBAC 守卫委派给 BA 的 `/organization/has-permission`，用一次性脚本对 dev 库跑真实往返（scratch·不入库·跑后删）：
+
+- **`hasPermission` 无“散点判定”陷阱**：BA 在每个 org 端点内部跑 `hasPermission`（ac 为唯一权限源），同时**另暴 `/organization/has-permission`**（`requireHeaders`+`orgSessionMiddleware`）供服务端主动查——body `{ organizationId?, permissions: { resource:[actions] } }`，从 `session.activeOrganizationId` 解当前租户、查 `member.role`、交 `ac` 判定。
+- **⚠️ 纠正返回体状**：实测（及源码 `createHasPermission` handler）确认端点返回 **`ctx.json({ success: <boolean> })`**——字段是 `success`（非 `hasPermission`），**无 `missingPermissions`**；非成员时抛 `UNAUTHORIZED`（`{error}` 信封）。→ 初版守卫误读 `result.hasPermission` 会错拒（同 S0 validateSchema 类地雷），已改为读 `result.success`、error/非 success 统一 fail-closed 403。
+- **owner 实测坐实**：owner 会话（已 set active org）下 `hasPermission({member:['create']})` 与 `{organization:['delete']}` 均返 `success:true`（走默认 `ownerAc`）；deny 路由由单测覆盖（mock）。
+- **推论**：RBAC 不在 Nest 侧重建权限矩阵，只声明（`@RequirePermissions`）+ 委派（守卫），单一权限源=BA `ac`（守 §9.3 禁散点）；自定义业务资源（带 `tenant_id` 表）的 ac 留 S2。
+
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 起草（v0.1.0），同日补 §6 代码级 spike（v0.2.0）、§7 离线 generate 并入核验（v0.3.0）与 §8 S0 boot 实测（v0.4.0·坐实 adapter/jsonb/D4 读路·撞出并采 A 修复 BA 1.7.7 validateSchema 与 session 缺列冲突）；结论须人二次核验后写入 plan，本文不作开发依据。
+正文已于 2026-10-13 起草（v0.1.0），同日补 §6 代码级 spike（v0.2.0）、§7 离线 generate 并入核验（v0.3.0）、§8 S0 boot 实测（v0.4.0·坐实 adapter/jsonb/D4 读路·撞出并采 A 修复 BA 1.7.7 validateSchema 与 session 缺列冲突）与 §9 S1 `hasPermission` 实测（v0.5.0·纠正返回体为 `{success:boolean}`、RBAC 委派单一权限源）；结论须人二次核验后写入 plan，本文不作开发依据。
