@@ -75,6 +75,8 @@ export interface OAuthConfig {
     type: string;
     enabled: boolean;
   }>;
+  /** 境内 genericOAuth 渠道 providerId 列表（如 'feishu'）；与标准 socialProviders 分说。 */
+  genericProviders: string[];
   baseConfig: {
     callbackUrl: string;
     cookieName: string;

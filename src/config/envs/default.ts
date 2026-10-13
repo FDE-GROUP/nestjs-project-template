@@ -68,6 +68,11 @@ export default {
         enabled: true,
       })),
     ],
+    // 境内 genericOAuth 渠道（方案 C）：逗号分隔的 providerId，未列即不注册（NFR-2）
+    genericProviders: (process.env.OAUTH_GENERIC_PROVIDERS || '')
+      .split(',')
+      .map((type) => type.trim())
+      .filter(Boolean),
     // Core OAuth settings
     baseConfig: {
       callbackUrl:
@@ -86,6 +91,11 @@ export default {
       apple: {
         clientId: process.env.APPLE_CLIENT_ID || '',
         clientSecret: process.env.APPLE_CLIENT_SECRET || '',
+      },
+      // 飞书 / Lark（境内 genericOAuth 渠道，A1）：App ID / App Secret
+      feishu: {
+        clientId: process.env.FEISHU_APP_ID || '',
+        clientSecret: process.env.FEISHU_APP_SECRET || '',
       },
       // more please refer to https://github.com/better-auth/better-auth
     },

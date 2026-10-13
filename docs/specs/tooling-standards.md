@@ -52,7 +52,7 @@
 | 能力域 | 选型 | 状态 | 说明 / 关联 |
 |--------|------|------|------------|
 | **支付通道** | Stripe（海外）+ 微信支付 + 支付宝（大陆） | **部分落地**：统一 `PaymentProvider` 端口 + Stripe 收敛已落地（P1，`src/modules/payment`）；微信/支付宝 **已决策·待落地**（P2/P3） | 与存储同构，`PaymentModule.register()` 依配置装配、未配即降级；周期扣款随资质（FR-1/FR-2 · D1） |
-| **登录渠道** | Google/GitHub（保留）+ 微信 / 企业微信 / 钉钉 / 飞书 | 海外现行；境内四渠道 **已决策·待落地** | Better Auth `genericOAuth`；方案 C 邮箱为体、社交为用；**不做**手机验证码登录（FR-3/D2/D3） |
+| **登录渠道** | Google/GitHub（保留）+ 微信 / 企业微信 / 钉钉 / 飞书 | 海外现行；**飞书已落地（A1，`genericOAuth`）**；微信/钉钉/企微 **仅留接口·劣后暂缓**（D8） | Better Auth `genericOAuth`；方案 C 邮箱为体、社交为用（`disableSignUp:true`）；**不做**手机验证码登录（FR-3/D2/D3） |
 | **依赖镜像** | npm→npmmirror（`bunfig.toml`/`.npmrc`）+ Docker 国内基础镜像 | **已落地**（M1，commit `9e27d63`） | 纯配置；Dockerfile 基础镜像经 ARG 可覆盖（FR-4/D4） |
 | **默认语言** | i18n 默认 / fallback 置 `zh`（保留 en/ja） | **部分落地**（L1：mailer 默认 zh；全量翻译待 I18n 接线） | 文档中文为准（FR-5/D4） |
 | **日志后端** | pino 默认落文件；**移除** `pino-datadog-transport` | **已落地**（G1，commit `9e27d63`） | 本期**不引**集中监控（SLS/Loki 留后）（FR-6/D6） |

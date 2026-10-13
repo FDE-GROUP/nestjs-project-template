@@ -7,6 +7,7 @@ import {
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { createAuthMiddleware } from 'better-auth/api';
 import { toNodeHandler } from 'better-auth/node';
+import { type GenericOAuthConfig, genericOAuth } from 'better-auth/plugins';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { ConfigService } from '../../config/config.service';
 import type { DrizzleService } from '../../database/drizzle.service';
@@ -29,6 +30,7 @@ export interface CreateAuthResult {
 
 export function CreateAuth(
   providers: BetterAuthOptions['socialProviders'],
+  genericConfigs: GenericOAuthConfig[],
   drizzleService: DrizzleService,
   configService: ConfigService,
 ): CreateAuthResult {
@@ -117,6 +119,8 @@ export function CreateAuth(
           },
         },
       } satisfies BetterAuthPlugin,
+      // 境内登录渠道（方案 C · FR-3/A1）：有配置才挂 genericOAuth 插件（NFR-2 未配即降级）
+      ...(genericConfigs.length > 0 ? [genericOAuth({ config: genericConfigs })] : []),
     ],
     account: {
       accountLinking: {
@@ -187,7 +191,10 @@ export function CreateAuth(
           return auth.api.getSession(params);
         },
         getProviders() {
-          return Object.keys(auth.options.socialProviders || {});
+          return [
+            ...Object.keys(auth.options.socialProviders || {}),
+            ...genericConfigs.map((c) => c.providerId),
+          ];
         },
         async listUserAccounts(params: Parameters<typeof auth.api.listUserAccounts>[0]) {
           try {

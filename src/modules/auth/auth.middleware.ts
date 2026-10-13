@@ -11,6 +11,7 @@ import {
 } from './auth.constant';
 import { CreateAuth } from './auth.implement';
 import type { InjectAuthInstance } from './auth.interface';
+import { buildGenericOAuthConfigs } from './generic-oauth-channels';
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware, OnModuleInit {
@@ -32,6 +33,9 @@ export class AuthMiddleware implements NestMiddleware, OnModuleInit {
     try {
       const oauth = this.configService.getOAuthConfig();
       const providers = {} as NonNullable<BetterAuthOptions['socialProviders']>;
+
+      // 境内登录渠道（方案 C · genericOAuth）：依启用列表 + 凭证装配，未配即不注册
+      const genericConfigs = buildGenericOAuthConfigs(oauth.genericProviders ?? [], oauth.secrets);
 
       // Get enabled providers
       const enabledProviders = oauth.providers
@@ -58,7 +62,12 @@ export class AuthMiddleware implements NestMiddleware, OnModuleInit {
         } as any; // Using any to bypass complex type intersection
       }
 
-      const { handler, auth } = CreateAuth(providers, this.drizzleService, this.configService);
+      const { handler, auth } = CreateAuth(
+        providers,
+        genericConfigs,
+        this.drizzleService,
+        this.configService,
+      );
       this.authHandler = handler;
       this.authInstance.set(auth);
     } catch (error) {

@@ -2,7 +2,7 @@
 
 > 适用范围: `全局` ← blast radius，审计深度=人签核（`workflow.md` §3/§5）
 > 关联: [vision.md](../specs/vision.md) §4.3 计费 / §6 地域与合规约束 · [global-tenancy.md](./global-tenancy.md) FR-8/D5（已回改为多通道 provider）· [architecture.md](../specs/architecture.md)（provider 落 infrastructure/瘦适配器层）· [tooling-standards.md](../specs/tooling-standards.md)（选型 SSOT，待落）· [research/better-auth-cn-providers.md](../research/better-auth-cn-providers.md)（参考·非依据）· [workflow.md](../specs/workflow.md) §1/§3
-> 性质: **技术方案（plan）**，重写型 · 版本 0.3.0 · 日期 2026-10-13 · 状态: **已审·开发依据**（`workflow.md` §3 已过审计门，见 §12）
+> 性质: **技术方案（plan）**，重写型 · 版本 0.4.0 · 日期 2026-10-13 · 状态: **已审·开发依据**（`workflow.md` §3 已过审计门，见 §12）
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
 > 受众: **人（方案主导）+ Agent（已审后为开发依据）**
 
@@ -80,6 +80,7 @@
 | **D5** ✅ | **对象存储默认通道** | 已裁决 | 默认 **阿里云 OSS**（已有专用 provider、生态最成熟）；COS / S3 作可选通道，经环境变量切换 |
 | **D6** ✅ | **日志 / 监控后端** | 已裁决 | **移除 Datadog**；日志落 **文件（默认，pino transport）**，**不引入集中监控**（SLS / Loki 本期不做） |
 | **D7** ✅ | **合规落点边界** | 已裁决 | **ICP**=部署/运营前置、**不进代码门禁**（归部署文档）；**数据驻留=强制境内**（DB/存储/日志默认境内 region、不可出境）；**PIPL=代码基线**（注册告知-同意 + **按 user** 导出/删除 + 最小必要），法务/流程不代办 |
+| **D8** ✅ | **境内登录交付排序**（FR-3/D2 细化） | 已裁决 | **飞书先行实现（A1）**；**微信 / 钉钉 / 企业微信（A2/A3）仅保留 `genericOAuth` 渠道接口位（registry 登记 + env 开关），实现劣后暂缓**（依难度与资质，不阻塞主链） |
 
 ## 6. 方案设计
 
@@ -140,7 +141,7 @@ interface GenericOAuthConfig {
 - **社交为用**：`accountSubject`（unionid / corpid+userid / 钉钉 unionId / 飞书 open_id）落 `account.accountId`、`account.providerId` 标渠道——**复用现有 `account` 表，无需 schema 变更**。
 - **绑定 / 关联流**：① 已登录 email user → 发起渠道 OAuth → 回调把该 account 关联到当前 `userId`；② 渠道首登且 `accountSubject` 无匹配 → **不建号**，引导「以 email 登录 / 注册后关联」。跨渠道因归到同一 email user 而天然统一。
 - **customFetch**：企业微信 / 钉钉的 token/userinfo 端点差异与 CORS 限制，经服务端 `customFetch` 代理吸收。
-- **分期**（依 [research](../research/better-auth-cn-providers.md) 难度，非依据）：飞书(低–中) → 微信 / 钉钉(中) → 企业微信(高)，逐渠道独立切片交付。
+- **分期**（依 [research](../research/better-auth-cn-providers.md) 难度，非依据；**已由 D8 裁决**）：**飞书(A1) 先行实现** → 微信 / 钉钉(A2) / 企业微信(A3) **仅留 `genericOAuth` 接口位、实现劣后暂缓**。渠道以 registry 常量登记（`providerId` + 端点 + 钩子），未实现的渠道不在 registry 中填充 config，env 亦不注册（NFR-1 可插拔 / NFR-2 未配即降级）。
 
 ### 6.3 依赖镜像境内化（FR-4）
 
@@ -163,7 +164,8 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 
 ## 7. 优先级（MoSCoW）
 
-- **Must**：FR-1 支付抽象、FR-3 境内登录、FR-4 镜像、FR-5 默认 zh + NFR-1/2/3/4。
+- **Must**：FR-1 支付抽象、**FR-3 境内登录（本期仅飞书 A1）**、FR-4 镜像、FR-5 默认 zh + NFR-1/2/3/4。
+- **Should**：微信 / 钉钉 / 企业微信登录——**本期只保留 `genericOAuth` 接口位（registry + env 开关），实现劣后暂缓**（D8）。
 - **Should**：FR-6 日志替换、D5 存储默认、FR-7 合规代码侧（同意 / 导出删除复用）。
 - **Could**：FR-2 周期扣款（依资质）。
 - **Won't**：手机验证码登录、海外其它支付、第三方密钥/资质代办、**集中日志监控（SLS/Loki，本期）**。
@@ -175,9 +177,9 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 | **P1** ✅ 支付抽象 + Stripe 收敛（已落地） | FR-1 / NFR-1/2/4 | `src/modules/payment/{providers, services, controllers, dto, payment.module}`、`config/envs/payment` | 无（沿用现有订阅映射） | — |
 | **P2** 支付宝通道 | FR-1 / FR-2 | `alipay-payment.provider.ts` + env | 无 | P1；资质门（周期扣款桩） |
 | **P3** 微信支付通道 | FR-1 / FR-2 | `wechatpay-payment.provider.ts` + env | 无 | P1；资质门 |
-| **A1** 飞书登录 | FR-3 | `auth.genericOAuth` feishu + 绑定流 | 无（复用 `account`） | — |
-| **A2** 微信 / 钉钉登录 | FR-3 | genericOAuth wechat/dingtalk + 绑定流 | 无 | A1 |
-| **A3** 企业微信登录 | FR-3 | genericOAuth wecom + `customFetch` | 无 | A2 |
+| **A1** ✅ 飞书登录（已落地） | FR-3 | `auth/generic-oauth-channels.ts`（飞书构建器）+ `auth.implement` 挂 `genericOAuth` 插件 + `oauth.genericProviders`/`secrets.feishu` | 无（复用 `account`） | — |
+| **A2** 微信 / 钉钉登录（仅留接口·暂缓 D8） | FR-3 | `KNOWN_GENERIC_CHANNELS` 接口位（无构建器即跳过） | 无 | A1 |
+| **A3** 企业微信登录（仅留接口·暂缓 D8） | FR-3 | 同上（wecom 接口位） | 无 | A2 |
 | **M1** 依赖镜像 | FR-4 | `bunfig.toml`/`.npmrc`、`Dockerfile`、文档 | 无 | 最低风险，可先行 |
 | **L1** 默认 zh | FR-5 | i18n fallback、校验/邮件默认 | 无 | 可先行 |
 | **G1** 去 Datadog | FR-6 / D6 | `logger.service.ts`、`config/envs`、`package.json`、`.env.example` | 无 | 移除即契约变更（观测） |
@@ -221,6 +223,7 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 - [x] **M1**（npmmirror/Docker 镜像 ARG）、**G1**（去 Datadog、日志落文件）、**L1**（mailer 默认 zh）已落地并通过本地 CI（commit `9e27d63`）；L1 全量翻译待 I18n 接线（非本片）。
 - [x] **S1** 存储默认切阿里云 OSS（境内 region/endpoint 默认、env 可切 S3/COS）已落地并通过本地 CI。
 - [x] **P1** 支付抽象已落地（expand–contract 一步到位）：新增 `src/modules/payment`（`PaymentProvider` 端口 + `StripePaymentProvider` 收敛自旧 `StripeService` + `PaymentModule.register()` 依配置装配、`PaymentService` 懒解析未配即降级 NFR-2）；旧 `src/modules/stripe` 已收缩删除、`/payment/*` 替 `/stripe/*`（公共 API/DI 变更=高危#4 已签核）；STRIPE_* 改 optional 以支持境内-only 降级；本地 CI 全绿。
+- [x] **A1** 飞书登录已落地（方案 C）：`genericOAuth` 插件挂入 `CreateAuth`（有配置才挂、NFR-2）；飞书构建器自定义 `getToken`（JSON body）/`getUserInfo`（Bearer+解包 data）/`accountSubject`（union_id→open_id）/`mapProfileToUser`；**`disableSignUp:true` 强制不独立建号**、`pkce:false`；`oauth.genericProviders`+`FEISHU_APP_*` 走 env（NFR-3）；微信/钉钉/企微仅 registry 接口位（D8 暂缓）；契约单测全 mock、本地 CI 全绿（未接真实飞书沙箱，依 NFR-4）。
 
 ## 11. 未决问题（审计前须澄清或标注占位）
 
@@ -255,8 +258,9 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 | 2026-10-13 | 0.1.0 | 首版：把 vision §6 地域约束落为需求草案（讨论期决策 D1–D7 属同一初稿形成，不单列） | 背景/目标/词汇/FR(1–7)·NFR/决策 gate(D1–D7)/MoSCoW/完成判据/未决 |
 | 2026-10-13 | 0.2.0 | 需求草案 → **正式技术方案**（D1–D7 已定后，人指示升级） | 新增 §6 方案设计（PaymentProvider 接口、genericOAuth 方案 C 绑定流、镜像/i18n/日志、PIPL 基线）、§8 垂直切片映射、§9 影响面与 expand–contract；§10 完成判据扩充；§11 未决细化；§12 审计记录占位；性质/版本/状态改写 |
 | 2026-10-13 | 0.3.0 | **过审计门（人签核）**，开工低风险项 | §12 落审签结论：高危六点全接受附缓解、未决 1–5 按倾向处置；§10 判据勾选（切片映射/迁移/审计门）；索引置「已审计·进行中」；启动 M1（npmmirror）/L1（默认 zh）/G1（去 Datadog） |
+| 2026-10-13 | 0.4.0 | **D8 登录交付排序裁决**（人澄清：飞书先行、余仅留接口） | §5 新增 D8；§6.2 分期改「飞书先行 / 微信钉钉企微仅留接口」；§7 Must 收敛为飞书 A1、新增 Should 暂缓行；开工 A1 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 / v0.3.0 过审计门（人签核·§12）并开工 M1/L1/G1；v0.1.0 讨论期多次澄清属同一初稿形成，不单列演变。以当前正文内容为准。
+正文已于 2026-10-13 / v0.4.0 裁决 D8（飞书先行、余留接口暂缓）并开工 A1；v0.3.0 过审计门、v0.1.0 讨论期多次澄清属同一初稿形成，不单列演变。以当前正文内容为准。
