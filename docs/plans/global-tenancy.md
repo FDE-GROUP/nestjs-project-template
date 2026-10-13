@@ -2,7 +2,7 @@
 
 > 适用范围: `全局` ← blast radius，审计深度=人签核（`workflow.md` §3/§5）
 > 关联: [vision.md](../specs/vision.md) §4.1 Tenancy / §7 阶段1 · [architecture.md](../specs/architecture.md)（垂直切片）· [workflow.md](../specs/workflow.md) §1/§3
-> 性质: **技术方案（起草 · 待审计）**，重写型 · 版本 0.4.0 · 日期 2026-10-13 · 状态: **决策 D1–D6 全落定**（见 §5）；**§8-2 已清**（混合复用，见 [`research/better-auth-org.md`](../research/better-auth-org.md)）；**§9–§11 为方案主体**（§9 设计 / §10 垂直切片 / §11 影响面），待过审计门（`workflow.md` §3）后开工
+> 性质: **技术方案（plan）**，重写型 · 版本 0.5.0 · 日期 2026-10-13 · 状态: **已审·开发依据**（`workflow.md` §3 已过审计门、人签核，见 §12）；D1–D6 全落定（§5）· §8-2 已清=混合复用（见 [`research/better-auth-org.md`](../research/better-auth-org.md)）· §9–§11 方案主体
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
 > 受众: **人（方案主导）+ Agent（已审后为开发依据）**
 
@@ -10,7 +10,7 @@
 
 ## 0. 文档定位
 
-本文是 [vision.md](../specs/vision.md) §7「阶段 1 · 租户域」的**需求草案**，处于主流程链「确定设计目标 →（调研）→ 技术方案」的前段——**尚非技术方案**。§5 关键决策点定了之后，在本文之下扩写「方案 / 垂直切片」章，升级为正式 plan 并过审计门（`workflow.md` §1/§3）。
+本文是 [vision.md](../specs/vision.md) §7「阶段 1 · 租户域」的**技术方案**（已从 pre-plan 升级、**已过审计门** · §12），处于主流程链「技术方案 →（审计门）→ 垂直切片实现」的**实现入口**。§9–§11 为方案主体，§10 为垂直切片（S0–S10）；依 `workflow.md` 铁律，现为**开发依据**，可开工；首片 **S0**（挂 `organization()` 插件 boot + 租户上下文骨架），其中 schema migrate 属高危#1、逐次人工审后执行。
 
 ## 1. 背景与问题
 
@@ -188,9 +188,18 @@
 - **auth 侧改造**：`auth.implement.ts` 挂 `organization({ ac, roles })` 插件；`SessionGuard` 扩展返回 `sessionUser + tenantContext`；与既有 genericOAuth(A1)/PIPL consent 共存无冲突。
 - **D6 重构波及**：monorepo 拆分改 `package.json` workspaces / `nest-cli` / 构建发布链；与 `docs/specs/architecture.md` 垂直切片布局协调（本方案 §9.5）。
 - **交叉引用**：FR-8 支付复用 [global-cn-adaptation](./global-cn-adaptation.md) `PaymentProvider`（Stripe 先行，支付宝/微信 **D9 劣后暂缓**）；受邀 email 依赖遇境内无 email 渠道（[cn-providers 风险①](../research/better-auth-cn-providers.md)）→ 需 email 外锚点，留实现期决。
-- **审计门**：本 §9–§11 为**起草待审**；`docs/plans/README` 索引保持「待审计」，人签「已审计」前不写实现码（`workflow.md` §3）。§7 判据「术语并入 specs」为签核前置、开工前补。
+- **审计门**：本 §9–§11 **已过审计门（人签核· v0.5.0）**，详 §12 审计记录；`docs/plans/README` 索引置「已审计·进行中（S0）」。开工首片 schema migrate 仍逐次守高危#1（不预授迁移）。
 
-## 12. 演变记录
+## 12. 审计记录（`workflow.md` §3）
+
+- **审计结论**：**通过**（人签核）。方案可作开发依据；按 §10 垂直切片顺序开工，首片 **S0**（租户上下文骨架）。
+- **审计人 / 日期**：FDE Team（人签核）· 2026-10-13。
+- **§9 五项提案级决定**：**全部接受**（Tenant=organization 不另建表 / workspace 不复用 team / 审批状态存 `organization.metadata.status` / D6 包名为占位可开工时微调 / 存量 `post` 回填策略）。
+- **高危项边界（重要）**：本次签核=批准**方案作为开发依据**；**不预先授权具体迁移**。开工首片的 schema migrate（`drizzle:generate` SQL 人工审 → `drizzle:migrate`）仍逐次守**高危清单 #1**（`workflow.md` §3）；`drizzle:push --force` 仅限 dev。
+- **§8 未决处置**：#2 已清（research混合复用）·#1/#3/#4 已定向、细化落 §9 设计·#5（平台用户注册与信任分级）**另开独立 plan** `global-user-registration`（本期不做）·#6/#7 已落 §9.2/§9.5。
+- **开工前置**：§7 四判据均 ✅（含术语并入 [`specs/glossary.md`](../specs/glossary.md)）；§11 风险②已离线 spike 坐实（见 [`research §7`](../research/better-auth-org.md)）。runtime adapter 映射 / `metadata` 列型待 S0 boot。
+
+## 13. 演变记录
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
@@ -198,8 +207,9 @@
 | 2026-10-13 | 0.2.0 | 地域适配决策（支付多通道）传导至本草案 | FR-8 / D5：计费挂钩由 Stripe 单挂 → 多通道 provider（Stripe/微信/支付宝，见 global-cn-adaptation） |
 | 2026-10-13 | 0.3.0 | §8-2 spike（代码级核验）发现 D4「JWT claim 为主」与实态不符，经**人裁**修正 | **D4**：JWT claim 为主 → **cookie + 服务端 DB session 为主**（active tenant = session.activeOrganizationId）；FR-2 同步改措辞；§8-2 标混合复用已产 research |
 | 2026-10-13 | 0.4.0 | 路径 C：起草技术方案主体、升级为正式 plan（待审计） | 新增 §9 方案设计（混合复用边界/数据模型/租户上下文/生命周期/两包）· §10 垂直切片映射(S0–S10)· §11 影响面与迁移；勾 §7 切片映射判据；§8-6/§8-7 落入设计 |
+| 2026-10-13 | 0.5.0 | 新建 [`specs/glossary.md`](../specs/glossary.md) 术语 SSOT（勾除 §7 最后一判据）+ §11 风险②离线 spike 坐实 + **过审计门（人签核）** | 勾 §7 术语并入判据；§11 标风险②已坐实（纯 additive）；新增 §12 审计记录、演变顺延 §13；性质/版本/状改写为「已审·开发依据」；索引置「已审计·进行中（S0）」 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 / v0.4.0 变更（路径 C：新增 §9–§11 技术方案主体，升级为正式 plan·待审计），以当前正文内容为准。
+正文已于 2026-10-13 / v0.5.0 变更（新建 glossary + §11 风险② spike 坐实 + 过审计门人签核，现为开发依据），以当前正文内容为准。
