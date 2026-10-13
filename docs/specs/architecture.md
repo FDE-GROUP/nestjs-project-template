@@ -1,12 +1,14 @@
 # Project Architecture
 
+> 受众: **人 + Agent**（`读者: Agent`——结构契约，须遵循）
+
 ## Core Design Principles
 
 - **Clean Architecture (CA)**: every bounded context is split into four layers with a strict inward dependency direction: `api → application → domain ← infrastructure`. The domain depends on nothing but the shared kernel.
 - **Domain-Driven Design (DDD)**: business logic lives in framework-free aggregates with value objects, domain events and repository ports. Infrastructure supplies adapters (Drizzle) for those ports.
 - **CQRS**: writes go through `Command → CommandHandler`, reads through `Query → QueryHandler`, dispatched over `@nestjs/cqrs` buses. Controllers never call a service directly.
 - **Vertical slices**: contexts are packaged by feature (`src/modules/<context>`), not by technical tier. Cross-context coupling only happens through domain events, never by importing another context's `domain/` or `infrastructure/`.
-- **Eventual Event Sourcing (deferred)**: this phase dispatches domain events in-process only. The command handler + aggregate `recordEvent/pullDomainEvents` seam and the event envelope are already ES-shaped. See [event-sourcing-roadmap.md](./event-sourcing-roadmap.md).
+- **Eventual Event Sourcing (deferred)**: this phase dispatches domain events in-process only. The command handler + aggregate `recordEvent/pullDomainEvents` seam and the event envelope are already ES-shaped. See [event-sourcing-roadmap.md](../plans/event-sourcing-roadmap.md).
 
 ## Directory Structure
 

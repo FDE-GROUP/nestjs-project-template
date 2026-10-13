@@ -6,7 +6,7 @@
 - **领域驱动设计（DDD）**：业务逻辑封装在零框架依赖的聚合根中，配合值对象、领域事件与仓储端口（port）；infrastructure 层提供端口的适配器（Drizzle）。
 - **CQRS**：写操作走 `Command → CommandHandler`，读操作走 `Query → QueryHandler`，经由 `@nestjs/cqrs` 的总线分发。Controller 绝不直接调用 service。
 - **垂直切片（Vertical Slice）**：按功能而非技术分层组织（`src/modules/<context>`）。上下文之间只能通过领域事件耦合，禁止 import 另一个上下文的 `domain/` 或 `infrastructure/`。
-- **Event Sourcing（缓行但必达）**：当前阶段领域事件仅进程内派发；Command→Handler 写路径、聚合的 `recordEvent/pullDomainEvents` 钩子与事件信封字段均已按 ES 形态预留。详见 [event-sourcing-roadmap.md](./event-sourcing-roadmap.md)。
+- **Event Sourcing（缓行但必达）**：当前阶段领域事件仅进程内派发；Command→Handler 写路径、聚合的 `recordEvent/pullDomainEvents` 钩子与事件信封字段均已按 ES 形态预留。详见 [event-sourcing-roadmap.md](../plans/event-sourcing-roadmap.md)。
 
 ## 目录结构
 

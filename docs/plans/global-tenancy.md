@@ -4,6 +4,7 @@
 > 关联: [vision.md](../specs/vision.md) §4.1 Tenancy / §7 阶段1 · [architecture.md](../specs/architecture.md)（垂直切片）· [workflow.md](../specs/workflow.md) §1/§3
 > 性质: **需求草案（pre-plan）**，重写型 · 版本 0.2.0 · 日期 2026-10-13 · 状态: **决策 D1–D6 全部落定**（见 §5），待升级为技术方案 + 过审计门（`workflow.md` §3）
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
+> 受众: **人（方案主导）+ Agent（已审后为开发依据）**
 
 ---
 

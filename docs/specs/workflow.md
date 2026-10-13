@@ -4,6 +4,7 @@
 > 归属: `docs/specs/`（项目宪法层 · 人/团队平面）| 性质: **重写型**（正文整体重写 + 变更戳 + 演变单列）
 > 关联: [vision.md](./vision.md)（愿景·宪法顶层，本文以其为纲）· [tooling-standards.md](./tooling-standards.md)（工具选型与命令 SSOT，本文**只引用不复制**）· [architecture.md](./architecture.md)（结构 SSOT）
 > 来源: 提炼自 `oh-my-env/spec/engineering-spec.md` §2–§5 + `experience/` 经验（E-001 授权粒度 / E-003 四区 / E-004 重写型），适配本 NestJS+Bun+Drizzle+CQRS 模板
+> 受众: **人 + Agent**（`读者: Agent`——本文约束 agent 协作与门禁行为，须遵循）
 
 规范用语：**须**=强制 · **应**=强烈建议 · **宜**=建议 · **不得**=禁止。
 
@@ -118,7 +119,7 @@
 
 ## 8. 边界（本文暂不覆盖）
 
-- **两平面解耦（`.ai/`）**：本轮**不做**（§9.6 裁决 = 选项 a）；维持单 `docs/` 平面 + `AGENTS.md` 作 L4 入口。**受众软标记亦暂不加**；待出现信号（多 agent 并行 / docs 体量拖累上下文成本）再评估是否引入 `.ai/{principles,designs,contracts,records}` 或软标记。
+- **两平面解耦（`.ai/`）**：本轮采**选项 b**（§9.6）——**不建物理 `.ai/`**，改为在各文档头加「**受众**」软标记（`受众:` 字段；约定：`读者: Agent` = 宜注入 agent 上下文，`禁入 Agent 上下文` = 纯人向叙事·讨论·演变；无标签默认人 + Agent），维持单 `docs/` 平面 + `AGENTS.md` 作 L4 入口；将来出现信号（多 agent 并行 / docs 体量拖累上下文成本）再据此平滑拆分到 `.ai/{principles,designs,contracts,records}`。
 - **`docs/specs/vision.md`（项目愿景 / 北向目标）**：已**确认定稿**（v0.2.0，含 §6 地域与合规约束）；作宪法顶层，其余 specs/plans 以其为纲。
 - **多人 + 多 Agent 编排细节**（归属 / 任务图 / agent↔agent 契约 / 合并门禁）：后续章。
 - **skills 层**：本项目暂无可复用 skill（`oh-my-env` 的 baseline-upgrade 属 Odoo 语境，不适用）。
@@ -130,7 +131,7 @@
 3. ✅ `event-sourcing-roadmap.md`：**已迁往** [`docs/plans/`](../plans/event-sourcing-roadmap.md)。
 4. ✅ **高危清单**：**增列**「改 `.env` / 密钥」项（见 §3 第 5 条）。
 5. ✅ `AGENTS.md`：**引入**作 L4 统一入口（见 §4）。
-6. ✅ `.ai/` 双平面：本轮**不做**（选项 a）——维持单 `docs/` 平面 + `AGENTS.md` 作 L4 入口；受众软标记与物理拆分**待未来信号**再评估。
+6. ✅ `.ai/` 双平面：本轮**不建物理目录**，改采**受众软标记**（选项 b）——维持单 `docs/` 平面 + `AGENTS.md` 作 L4 入口，并为各区文档头补 `受众:` 标记为将来拆分铺垫；物理 `.ai/` 待未来信号再评估。
 
 ## 10. 演变记录
 

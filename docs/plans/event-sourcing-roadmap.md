@@ -1,5 +1,7 @@
 # Event Sourcing Roadmap
 
+> 受众: **人 + Agent**（递延方案；`读者: Agent`）
+
 Event Sourcing (ES) is a committed future phase, deliberately deferred. This document
 records (a) the hooks already wired in the current CA/DDD/CQRS build, (b) the concrete
 schema and write-path switch required to turn them on, and (c) how Sagas layer on top.

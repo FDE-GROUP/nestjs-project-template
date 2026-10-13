@@ -4,6 +4,7 @@
 > 关联: [global-cn-adaptation.md](../plans/global-cn-adaptation.md) FR-3 / §8-2 / §8-3 · [global-tenancy.md](../plans/global-tenancy.md) D3/FR-3（email 全局唯一、受邀 email）· [vision.md](../specs/vision.md) §6 地域约束
 > 日期: 2026-10-13 | 证据基线: Better Auth v1.7.x（本仓 `better-auth ^1.7.7`）官方文档 `plugins/generic-oauth`
 > 本文只作制定 plan 的**参考**，结论须经人二次核验后方可写入方案（`workflow.md` §3）
+> 受众: **Agent 可参考（非依据）· 人主导判读**
 
 ---
 

@@ -4,6 +4,7 @@
 > 归属: `docs/specs/`（**宪法顶层** · 人/团队平面）| 性质: **重写型**（正文整体重写 + 变更戳 + 演变单列）
 > 地位: 本文件是项目宪法顶层——其余 `specs`（architecture / workflow / tooling-standards）与 `plans` 以其为纲；与它冲突时，**以实现/方案让位于愿景方向**（愿景只指方向，不作技术门禁）。
 > 关联: [workflow.md](./workflow.md)（工作原则）· [architecture.md](./architecture.md)（结构 SSOT）· [tooling-standards.md](./tooling-standards.md)（工具 SSOT）
+> 受众: **人 + Agent**（`读者: Agent`——方向为纲，宜注入上下文）
 
 规范用语：**须**=强制 · **应**=强烈建议 · **宜**=建议 · **不得**=禁止。
 
