@@ -1,10 +1,11 @@
 /**
  * Post repository port (domain-owned, dependency inversion).
  *
- * Deliberately exposes NO tenant parameter: the active tenant is resolved inside the
- * adapter from the trusted request context (AsyncLocalStorage), so no caller can supply
- * an arbitrary/foreign tenant id. This is the single choke-point for tenant isolation
- * (global-tenancy §9.3 / FR-5) — handlers never scatter `where organizationId` by hand.
+ * Deliberately exposes NO tenant/workspace parameter: the active tenant (and optional
+ * workspace selector) is resolved inside the adapter from the trusted request context
+ * (AsyncLocalStorage), so no caller can supply an arbitrary/foreign id. This is the single
+ * choke-point for the compound `(tenant, workspace)` isolation (global-tenancy §9.3 / FR-5,
+ * D2) — handlers never scatter `where organizationId/workspaceId` by hand.
  */
 export const POST_REPOSITORY = Symbol('POST_REPOSITORY');
 
@@ -22,6 +23,7 @@ export interface PostRecord {
   content: string | null;
   published: boolean;
   organizationId: string | null;
+  workspaceId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

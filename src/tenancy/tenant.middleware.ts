@@ -46,8 +46,17 @@ export class TenantMiddleware implements NestMiddleware {
         (
           result: { session?: { activeOrganizationId?: string }; user?: { id?: string } } | null,
         ) => {
+          // S3 · workspace 二级边界 (D2/§9.2): the active workspace is a per-request
+          // selector read from the `x-workspace-id` header (header may override — §9.2).
+          // OPTIONAL: absent → request runs at tenant scope. Cross-tenant safety never
+          // depends on this value — the repository always ANDs the trusted `tenantId`;
+          // the workspace only narrows within the tenant (workspace 间互不可见).
+          const wsHeader = req?.headers?.['x-workspace-id'];
+          const workspaceId =
+            typeof wsHeader === 'string' && wsHeader.length > 0 ? wsHeader : undefined;
           const ctx: TenantContext = {
             tenantId: result?.session?.activeOrganizationId ?? undefined,
+            workspaceId,
             userId: result?.user?.id,
           };
           tenantStorage.run(ctx, next);

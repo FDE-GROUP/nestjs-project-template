@@ -12,6 +12,7 @@ import {
   session,
   user,
   verification,
+  workspace,
 } from './schema';
 
 describe('database schema', () => {
@@ -27,6 +28,7 @@ describe('database schema', () => {
         'session',
         'user',
         'verification',
+        'workspace',
       ].sort(),
     );
   });
@@ -65,6 +67,19 @@ describe('database schema', () => {
   it('post carries the tenant column for data isolation (S2 · FR-5)', () => {
     // tenant-owned business row must expose organizationId (== tenant id) for scoped queries.
     expect(post.organizationId).toBeDefined();
+  });
+
+  it('post carries the workspace column for the second-level boundary (S3 · D2/§8-6)', () => {
+    expect(post.workspaceId).toBeDefined();
+  });
+
+  it('workspace table exposes its compound-scope columns (S3 · D2/§8-6)', () => {
+    expect(workspace.id).toBeDefined();
+    expect(workspace.organizationId).toBeDefined();
+    expect(workspace.name).toBeDefined();
+    expect(workspace.slug).toBeDefined();
+    expect(workspace.createdAt).toBeDefined();
+    expect(workspace.updatedAt).toBeDefined();
   });
 
   it('consent (PIPL ledger · C1) exposes purpose/version/grantedAt/revokedAt', () => {

@@ -20,6 +20,15 @@ export class TenantContextService {
     return tenantStorage.getStore()?.tenantId;
   }
 
+  /**
+   * Active workspace id (S3 · D2/§9.2), or undefined when the request carries no
+   * `x-workspace-id` selector. Optional by design: it only NARROWS reads/writes within
+   * the already-trusted tenant; it is never a security boundary on its own.
+   */
+  get workspaceId(): string | undefined {
+    return tenantStorage.getStore()?.workspaceId;
+  }
+
   /** Run `fn` within the given tenant context (used by the middleware / tests). */
   run<T>(ctx: TenantContext, fn: () => T): T {
     return tenantStorage.run(ctx, fn);

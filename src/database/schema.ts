@@ -123,9 +123,9 @@ export const consent = pgTable(
 // Sample business model.
 // S2 · 数据隔离强制 (FR-5/NFR-2): tenant-owned business rows carry `organizationId`
 // (== tenant id, Tenant = organization) with a composite index for tenant-scoped reads.
-// Column is added NULLABLE to keep the migration purely additive on a populated table;
-// whether to backfill a default tenant and tighten to NOT NULL is a pending human call
-// (global-tenancy §11 回填策略). Enforcement is applied at the query/guard layer.
+// S3 · workspace 二级边界 (D2/§8-6): rows may further belong to a `workspaceId`; reads
+// default to the compound `(organizationId, workspaceId)` scope. Both id columns are
+// NULLABLE to keep migrations purely additive; NOT-NULL tightening is a later signed call.
 export const post = pgTable(
   'post',
   {
@@ -136,12 +136,18 @@ export const post = pgTable(
     organizationId: text('organizationId').references(() => organization.id, {
       onDelete: 'cascade',
     }),
+    workspaceId: text('workspaceId').references(() => workspace.id, {
+      onDelete: 'set null',
+    }),
     createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
     updatedAt: timestamp('updatedAt', { mode: 'date' })
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index('post_organization_created_idx').on(table.organizationId, table.createdAt)],
+  (table) => [
+    index('post_organization_created_idx').on(table.organizationId, table.createdAt),
+    index('post_organization_workspace_idx').on(table.organizationId, table.workspaceId),
+  ],
 );
 
 // ===== Better Auth organization plugin (multi-tenancy · 混合复用 S0) =====
@@ -193,6 +199,30 @@ export const invitation = pgTable(
   (table) => [index('invitation_org_email_idx').on(table.organizationId, table.email)],
 );
 
+// ===== S3 · workspace 二级边界 (D2/§8-6) =====
+// A workspace is a sub-tenant grouping WITHIN one organization (tenant).
+// No separate role layer (D2): visibility is decided by tenant-level perms; the
+// active workspace is a per-request selector (header `x-workspace-id`). Business
+// rows carry `(organizationId, workspaceId)` and reads default to that compound scope.
+// `organizationId` is NOT NULL + cascade (a workspace always belongs to a live tenant);
+// `slug` is unique per-organization.
+export const workspace = pgTable(
+  'workspace',
+  {
+    id: text('id').primaryKey(),
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' })
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [uniqueIndex('workspace_org_slug_idx').on(table.organizationId, table.slug)],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   sessions: many(session),
@@ -230,6 +260,7 @@ export const schema = {
   organization,
   member,
   invitation,
+  workspace,
 };
 
 export type User = typeof user.$inferSelect;
@@ -244,6 +275,8 @@ export type Member = typeof member.$inferSelect;
 export type NewMember = typeof member.$inferInsert;
 export type Invitation = typeof invitation.$inferSelect;
 export type NewInvitation = typeof invitation.$inferInsert;
+export type Workspace = typeof workspace.$inferSelect;
+export type NewWorkspace = typeof workspace.$inferInsert;
 
 // Re-export a `Role` union to replace `import { Role } from '@prisma/client'`
 export const Role = {

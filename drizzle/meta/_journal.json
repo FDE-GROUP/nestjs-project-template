@@ -36,6 +36,13 @@
       "when": 1791895573669,
       "tag": "0004_broken_triathlon",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791897235711,
+      "tag": "0005_omniscient_firestar",
+      "breakpoints": true
     }
   ]
 }
