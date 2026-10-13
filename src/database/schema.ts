@@ -120,17 +120,29 @@ export const consent = pgTable(
   (table) => [index('consent_user_purpose_idx').on(table.userId, table.purpose)],
 );
 
-// Sample business model
-export const post = pgTable('post', {
-  id: text('id').primaryKey(),
-  title: text('title').notNull(),
-  content: text('content'),
-  published: boolean('published').notNull().default(false),
-  createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt', { mode: 'date' })
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+// Sample business model.
+// S2 · 数据隔离强制 (FR-5/NFR-2): tenant-owned business rows carry `organizationId`
+// (== tenant id, Tenant = organization) with a composite index for tenant-scoped reads.
+// Column is added NULLABLE to keep the migration purely additive on a populated table;
+// whether to backfill a default tenant and tighten to NOT NULL is a pending human call
+// (global-tenancy §11 回填策略). Enforcement is applied at the query/guard layer.
+export const post = pgTable(
+  'post',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    content: text('content'),
+    published: boolean('published').notNull().default(false),
+    organizationId: text('organizationId').references(() => organization.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' })
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index('post_organization_created_idx').on(table.organizationId, table.createdAt)],
+);
 
 // ===== Better Auth organization plugin (multi-tenancy · 混合复用 S0) =====
 // Table / column names MUST match Better Auth's expected field names; the drizzle

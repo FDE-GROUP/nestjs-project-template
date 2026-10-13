@@ -7,6 +7,7 @@ import { LoggerModule } from './logger/logger.module';
 import { MailerModule } from './mailer/mailer.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { PostsModule } from './modules/posts/posts.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { UsersModule } from './modules/users/users.module';
 import { TenancyModule } from './tenancy/tenancy.module';
@@ -21,6 +22,7 @@ import { TenancyModule } from './tenancy/tenancy.module';
     AuthModule.forRoot(),
     TenancyModule,
     UsersModule,
+    PostsModule,
     StorageModule.register(),
     PaymentModule.register(),
     MailerModule,

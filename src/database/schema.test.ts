@@ -62,6 +62,11 @@ describe('database schema', () => {
     expect(post.createdAt).toBeDefined();
   });
 
+  it('post carries the tenant column for data isolation (S2 · FR-5)', () => {
+    // tenant-owned business row must expose organizationId (== tenant id) for scoped queries.
+    expect(post.organizationId).toBeDefined();
+  });
+
   it('consent (PIPL ledger · C1) exposes purpose/version/grantedAt/revokedAt', () => {
     expect(consent.id).toBeDefined();
     expect(consent.userId).toBeDefined();
