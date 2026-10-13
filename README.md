@@ -76,7 +76,7 @@ src/
 - [项目愿景](./docs/specs/vision.md)
 - [项目架构](./docs/specs/architecture.md) | [中文](./docs/specs/architecture-zh.md)
 - [工具标准](./docs/specs/tooling-standards.md)
-- [开发工作流程](./docs/specs/workflow.md) _（候选稿 · 待裁决）_
+- [开发工作流程](./docs/specs/workflow.md)
 
 **方案**（`docs/plans/` — 技术方案，开发依据）
 
