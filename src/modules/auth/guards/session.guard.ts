@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { AuthInstanceInjectKey } from '../auth.constant';
 import type { InjectAuthInstance } from '../auth.interface';
+import { resolveRequestSession } from '../session-resolver';
 
 /**
  * Shape of an authenticated principal attached to the request by SessionGuard.
@@ -47,7 +48,7 @@ export class SessionGuard implements CanActivate {
     const auth = this.authInstance.get();
     if (!auth) throw new UnauthorizedException('Auth instance not initialized');
 
-    const result = await auth.api.getSession({ headers: req.headers as unknown as Headers });
+    const result = await resolveRequestSession(auth, req);
     if (!result?.user?.id) throw new UnauthorizedException('Missing or invalid session');
 
     // S6 · FR-10: platform-suspended users are fail-closed at the user layer too

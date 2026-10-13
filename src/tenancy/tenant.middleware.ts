@@ -1,5 +1,6 @@
 import { AUTH_BYPASS_PATHS, AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
+import { resolveRequestSession } from '@app/modules/auth/session-resolver';
 import { Inject, Injectable, Logger, type NestMiddleware } from '@nestjs/common';
 import { TenantStatusService } from './lifecycle/tenant-status.service';
 import { UserStatusService } from './lifecycle/user-status.service';
@@ -46,8 +47,7 @@ export class TenantMiddleware implements NestMiddleware {
       return;
     }
 
-    auth.api
-      .getSession({ headers: req.headers as Headers })
+    resolveRequestSession(auth, req as { headers: Record<string, string | string[] | undefined> })
       .then(
         (
           result: { session?: { activeOrganizationId?: string }; user?: { id?: string } } | null,

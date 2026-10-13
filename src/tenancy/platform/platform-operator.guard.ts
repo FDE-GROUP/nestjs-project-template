@@ -3,6 +3,7 @@ import { DrizzleService } from '@app/database/drizzle.service';
 import { user } from '@app/database/schema';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
+import { resolveRequestSession } from '@app/modules/auth/session-resolver';
 import { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
 import {
   type CanActivate,
@@ -41,7 +42,7 @@ export class PlatformOperatorGuard implements CanActivate {
     const auth = this.authInstance.get();
     if (!auth) throw new UnauthorizedException('Auth instance not initialized');
 
-    const result = await auth.api.getSession({ headers: req.headers as unknown as Headers });
+    const result = await resolveRequestSession(auth, req);
     const userId = result?.user?.id;
     if (!userId) throw new UnauthorizedException('Missing or invalid session');
 
