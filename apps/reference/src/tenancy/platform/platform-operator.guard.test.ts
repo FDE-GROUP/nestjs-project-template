@@ -1,10 +1,10 @@
-import type { ConfigService } from '@app/config/config.service';
 import type { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
 import type { ExecutionContext } from '@nestjs/common';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { RequestSessionReader } from '../session/request-session.port';
+import type { PlatformSettings } from './platform-config.port';
 import type { PlatformIdentityLookup } from './platform-identity.port';
 import { PlatformOperatorGuard } from './platform-operator.guard';
 
@@ -31,10 +31,8 @@ function identityReturning(email: string | undefined) {
   return { identity: { emailOf } as unknown as PlatformIdentityLookup, emailOf };
 }
 
-function configWith(operatorEmail: string) {
-  return {
-    getPlatformConfig: () => ({ operatorEmail }),
-  } as unknown as ConfigService;
+function configWith(operatorEmail: string): PlatformSettings {
+  return { operatorEmail: () => operatorEmail } as unknown as PlatformSettings;
 }
 
 function userStatusMock(blocked = false) {

@@ -12,7 +12,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { ConfigService } from '../../config/config.service';
 import type { DrizzleService } from '../../database/drizzle.service';
 import * as schema from '../../database/schema';
-import { tenantAccessControl, tenantRoles } from '../../tenancy/rbac/access-control';
+import { tenantAccessControl, tenantRoles } from './tenancy-access-control';
 
 export type AuthRequest = FastifyRequest & { originalUrl?: string; url?: string };
 export type AuthResponse = FastifyReply;
@@ -129,9 +129,10 @@ export function CreateAuth(
       ...(genericConfigs.length > 0 ? [genericOAuth({ config: genericConfigs })] : []),
       // 多租户（混合复用 · S0/S1/S3）：org 插件承载 tenant/member/invitation + RBAC，
       // 并将 activeOrganizationId 落到 session（D4 session-cookie）。以 ac + roles 为唯一
-      // 权限源（禁散点·§9.3），由 TenantPermissionGuard 经 hasPermission 判定。S3 扩展 ac
+      // 权限源（禁散点·§9.3），由 TenantPermissionGuard 经 `TenantPermissionChecker` 端口（适配落 BA
+      // hasPermission·§9.5.4①B P1b）判定。S3 扩展 ac
       // 增 `workspace` 资源（read=全成员·create/update/delete=owner+admin），roles 精确镜像
-      // BA 默认集再叠加 workspace（见 rbac/access-control.ts），故既有 org 端点行为不变。
+      // BA 默认集再叠加 workspace（见 modules/auth/tenancy-access-control.ts），故既有 org 端点行为不变。
       // S4（FR-1 审批制）：`allowUserToCreateOrganization: false` 封死 HTTP 自助即时开通
       // （任何会话调 /organization/create 一律 403·ORGANIZATION_ERROR_CODES.YOU_ARE_NOT_ALLOWED…）；
       // 建租户唯一通道 = 服务端系统动作（无 session + body.userId → isSystemAction·源码坐实不受

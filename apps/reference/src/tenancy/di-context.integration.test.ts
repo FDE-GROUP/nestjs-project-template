@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import { ConfigService } from '@app/config/config.service';
 import { DrizzleService } from '@app/database/drizzle.service';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
@@ -11,6 +10,7 @@ import { AuthSessionReader } from './infrastructure/auth-session.reader';
 import { BetterAuthTenantPermissionChecker } from './infrastructure/ba-tenant-permission.checker';
 import { TenantStatusService } from './lifecycle/tenant-status.service';
 import { UserStatusService } from './lifecycle/user-status.service';
+import { PLATFORM_SETTINGS } from './platform/platform-config.port';
 import { PLATFORM_IDENTITY_LOOKUP } from './platform/platform-identity.port';
 import { PlatformOperatorGuard } from './platform/platform-operator.guard';
 import { TenantPermissionGuard } from './rbac/tenant-permission.guard';
@@ -62,7 +62,7 @@ function drizzleStub() {
 }
 
 function configStub(email = 'admin@x.com') {
-  return { getPlatformConfig: () => ({ operatorEmail: email }) };
+  return { operatorEmail: () => email };
 }
 
 /** 在 ALS 作用域内驱动真实中间件，回传 next() 执行期间的观测值。 */
@@ -111,7 +111,7 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
           Reflector,
           { provide: AuthInstanceInjectKey, useValue: authStub(null) },
           { provide: DrizzleService, useValue: drizzleStub() },
-          { provide: ConfigService, useValue: configStub() },
+          { provide: PLATFORM_SETTINGS, useValue: configStub() },
           { provide: PLATFORM_IDENTITY_LOOKUP, useValue: { emailOf: async () => undefined } },
           // §9.5.4①B · P1b：守卫/中间件经会话/裁决端口消费·此处用真实适配类坐实 DI 解析（依赖全局 AuthInstanceInjectKey）。
           { provide: SESSION_READER, useClass: AuthSessionReader },

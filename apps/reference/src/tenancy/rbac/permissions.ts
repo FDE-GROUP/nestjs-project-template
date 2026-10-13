@@ -14,7 +14,7 @@
 /** Built-in tenant-scoped resources: Better Auth org defaults + the S3 workspace resource. */
 export type TenantResource = 'organization' | 'member' | 'invitation' | 'workspace';
 
-/** Actions available per resource (mirrors the ac statements in rbac/access-control.ts). */
+/** Actions available per resource (mirrors the ac statements in modules/auth/tenancy-access-control.ts). */
 export const TENANT_ACTIONS: Record<TenantResource, readonly string[]> = {
   organization: ['update', 'delete'],
   member: ['create', 'update', 'delete'],

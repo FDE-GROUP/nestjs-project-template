@@ -1,7 +1,7 @@
-import type { ConfigService } from '@app/config/config.service';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
 import type { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
+import type { PlatformSettings } from '@app/tenancy/platform/platform-config.port';
 import type { TenantPermissionChecker } from '@app/tenancy/rbac/tenant-permission.port';
 import type { RequestSessionReader } from '@app/tenancy/session/request-session.port';
 import { type ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
@@ -74,8 +74,8 @@ function emailDrizzle(email: string | null): PlatformIdentityLookup {
   return { emailOf: async () => email ?? undefined };
 }
 
-function config(email: string): ConfigService {
-  return { getPlatformConfig: () => ({ operatorEmail: email }) } as unknown as ConfigService;
+function config(email: string): PlatformSettings {
+  return { operatorEmail: () => email } as unknown as PlatformSettings;
 }
 
 describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校验顺序)', () => {

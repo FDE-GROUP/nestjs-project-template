@@ -1,5 +1,8 @@
-import { ConfigService } from '@app/config/config.service';
 import { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
+import {
+  PLATFORM_SETTINGS,
+  type PlatformSettings,
+} from '@app/tenancy/platform/platform-config.port';
 import {
   PLATFORM_IDENTITY_LOOKUP,
   type PlatformIdentityLookup,
@@ -30,13 +33,14 @@ import {
  *
  * §9.5.4①B · P1b：会话经 core 自有 `RequestSessionReader` 端口读取（不再 import Better Auth
  * 实例 / `@app/modules/auth`）·适配侧 `resolveRequestSession` 按请求记忆→与中间件共用一次 getSession。
+ * §9.5.3 热点③ · P1c：平台配置经 core 自有 `PlatformSettings` 端口（不再 import `@app/config`）。
  */
 @Injectable()
 export class PlatformOperatorGuard implements CanActivate {
   constructor(
     @Inject(SESSION_READER) private readonly session: RequestSessionReader,
     @Inject(PLATFORM_IDENTITY_LOOKUP) private readonly identity: PlatformIdentityLookup,
-    @Inject(ConfigService) private readonly config: ConfigService,
+    @Inject(PLATFORM_SETTINGS) private readonly settings: PlatformSettings,
     @Inject(UserStatusService) private readonly userStatus: UserStatusService,
   ) {}
 
@@ -52,7 +56,7 @@ export class PlatformOperatorGuard implements CanActivate {
     // FR-10: a suspended platform user loses platform-layer access too.
     if (await this.userStatus.isBlocked(userId)) throw new ForbiddenException('Account suspended');
 
-    const operatorEmail = this.config.getPlatformConfig().operatorEmail?.trim().toLowerCase();
+    const operatorEmail = this.settings.operatorEmail()?.trim().toLowerCase();
     if (!operatorEmail) throw new ForbiddenException('Platform operator not configured');
 
     const email = (await this.identity.emailOf(userId))?.toLowerCase();

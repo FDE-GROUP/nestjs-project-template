@@ -3,7 +3,9 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { SubscriptionsController } from './api/subscriptions.controller';
 import { CreateSubscriptionCommandHandler } from './application/commands/handlers/create-subscription.command-handler';
 import { GetSubscriptionQueryHandler } from './application/queries/handlers/get-current-subscription.query-handler';
+import { CUSTOMER_PROVISIONER } from './domain/ports/customer-provisioner.port';
 import { SUBSCRIPTION_REPOSITORY } from './domain/repositories/subscription.repository';
+import { PaymentCustomerProvisioner } from './infrastructure/payment-customer.provisioner';
 import { DrizzleSubscriptionRepository } from './infrastructure/repositories/drizzle-subscription.repository';
 
 const CommandHandlers = [CreateSubscriptionCommandHandler];
@@ -24,6 +26,8 @@ const QueryHandlers = [GetSubscriptionQueryHandler];
     ...CommandHandlers,
     ...QueryHandlers,
     { provide: SUBSCRIPTION_REPOSITORY, useClass: DrizzleSubscriptionRepository },
+    // §9.5.4①B/④ · P1c：订阅 domain/application 经端口消费客户开通，PaymentService 适配留应用侧。
+    { provide: CUSTOMER_PROVISIONER, useClass: PaymentCustomerProvisioner },
   ],
   exports: [],
 })

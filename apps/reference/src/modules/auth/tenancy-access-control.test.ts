@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tenantRoles } from './access-control';
+import { tenantRoles } from './tenancy-access-control';
 
 // Pure assertions against Better Auth's access-control `authorize` contract — no DB.
 // These lock the S3 human call and guard the "mirror defaults exactly" invariant:

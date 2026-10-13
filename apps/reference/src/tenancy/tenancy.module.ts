@@ -1,6 +1,7 @@
 import { Global, type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { AuthSessionReader } from './infrastructure/auth-session.reader';
 import { BetterAuthTenantPermissionChecker } from './infrastructure/ba-tenant-permission.checker';
+import { ConfigPlatformSettings } from './infrastructure/config-platform.settings';
 import { DrizzlePlatformIdentityLookup } from './infrastructure/drizzle-platform-identity.lookup';
 import { DrizzleQuotaStore } from './infrastructure/drizzle-quota.store';
 import { DrizzleTenantStatusStore } from './infrastructure/drizzle-tenant-status.store';
@@ -10,6 +11,7 @@ import { TENANT_STATUS_STORE } from './lifecycle/tenant-status.store';
 import { UserStatusService } from './lifecycle/user-status.service';
 import { USER_STATUS_STORE } from './lifecycle/user-status.store';
 import { PlatformAuditService } from './platform/platform-audit.service';
+import { PLATFORM_SETTINGS } from './platform/platform-config.port';
 import { PLATFORM_IDENTITY_LOOKUP } from './platform/platform-identity.port';
 import { PlatformOperatorGuard } from './platform/platform-operator.guard';
 import { QuotaGuard } from './quota/quota.guard';
@@ -57,6 +59,8 @@ import { TenantScopeGuard } from './tenant-scope.guard';
     // §9.5.4①B · P1b 会话端口倒置：core 经端口消费会话/RBAC，Better Auth 实例适配由参考应用装配。
     { provide: SESSION_READER, useClass: AuthSessionReader },
     { provide: TENANT_PERMISSION_CHECKER, useClass: BetterAuthTenantPermissionChecker },
+    // §9.5.3 热点③ · P1c 配置端口：core 经端口消费平台配置，`ConfigService` 适配留参考应用。
+    { provide: PLATFORM_SETTINGS, useClass: ConfigPlatformSettings },
   ],
   exports: [
     TenantContextService,
@@ -76,6 +80,7 @@ import { TenantScopeGuard } from './tenant-scope.guard';
     PLATFORM_IDENTITY_LOOKUP,
     SESSION_READER,
     TENANT_PERMISSION_CHECKER,
+    PLATFORM_SETTINGS,
   ],
 })
 export class TenancyModule implements NestModule {
