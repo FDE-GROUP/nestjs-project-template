@@ -70,3 +70,22 @@ export function isTenantBlocked(metadata: unknown): boolean {
     status === TENANT_STATUS.DELETED
   );
 }
+
+/**
+ * 合法迁移表（§9.4 · S5 收紧）：
+ * - pending_approval → active（审批通过）/ deleted（删除 pending）
+ * - active → suspended（暂停）/ deleted（软删）；active → active 保留（审批幂等重提）
+ * - suspended → active（恢复）/ deleted；deleted 终态（硬删留运维）
+ * 无状态记录（存量/seeded）按 active 对待（与中间件 deny-list 同口径）。
+ */
+const TRANSITIONS: Record<TenantStatus, readonly TenantStatus[]> = {
+  [TENANT_STATUS.PENDING]: [TENANT_STATUS.ACTIVE, TENANT_STATUS.DELETED],
+  [TENANT_STATUS.ACTIVE]: [TENANT_STATUS.ACTIVE, TENANT_STATUS.SUSPENDED, TENANT_STATUS.DELETED],
+  [TENANT_STATUS.SUSPENDED]: [TENANT_STATUS.ACTIVE, TENANT_STATUS.DELETED],
+  [TENANT_STATUS.DELETED]: [],
+};
+
+/** 迁移是否合法（from 缺省视同 active；终态 deleted 不接受任何迁移）。 */
+export function canTransition(from: TenantStatus | undefined, to: TenantStatus): boolean {
+  return TRANSITIONS[from ?? TENANT_STATUS.ACTIVE].includes(to);
+}

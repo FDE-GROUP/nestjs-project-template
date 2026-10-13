@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canTransition,
   isTenantActive,
   isTenantBlocked,
   readTenantStatus,
@@ -59,6 +60,30 @@ describe('tenant-lifecycle (S4 · FR-1 状态机纯函数)', () => {
       expect(isTenantBlocked({ status: 'active' })).toBe(false);
       expect(isTenantBlocked({})).toBe(false);
       expect(isTenantBlocked(undefined)).toBe(false);
+    });
+  });
+
+  describe('canTransition (S5 · §9.4 迁移表)', () => {
+    it('permits the sanctioned edges', () => {
+      expect(canTransition(TENANT_STATUS.PENDING, TENANT_STATUS.ACTIVE)).toBe(true);
+      expect(canTransition(TENANT_STATUS.PENDING, TENANT_STATUS.DELETED)).toBe(true);
+      expect(canTransition(TENANT_STATUS.ACTIVE, TENANT_STATUS.SUSPENDED)).toBe(true);
+      expect(canTransition(TENANT_STATUS.ACTIVE, TENANT_STATUS.DELETED)).toBe(true);
+      expect(canTransition(TENANT_STATUS.ACTIVE, TENANT_STATUS.ACTIVE)).toBe(true); // 幂等重提
+      expect(canTransition(TENANT_STATUS.SUSPENDED, TENANT_STATUS.ACTIVE)).toBe(true);
+      expect(canTransition(TENANT_STATUS.SUSPENDED, TENANT_STATUS.DELETED)).toBe(true);
+    });
+
+    it('treats an unrecorded status as active', () => {
+      expect(canTransition(undefined, TENANT_STATUS.SUSPENDED)).toBe(true);
+      expect(canTransition(undefined, TENANT_STATUS.PENDING)).toBe(false);
+    });
+
+    it('rejects illegal edges and the deleted terminal state', () => {
+      expect(canTransition(TENANT_STATUS.ACTIVE, TENANT_STATUS.PENDING)).toBe(false);
+      expect(canTransition(TENANT_STATUS.SUSPENDED, TENANT_STATUS.PENDING)).toBe(false);
+      expect(canTransition(TENANT_STATUS.DELETED, TENANT_STATUS.ACTIVE)).toBe(false);
+      expect(canTransition(TENANT_STATUS.DELETED, TENANT_STATUS.DELETED)).toBe(false);
     });
   });
 });

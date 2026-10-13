@@ -61,6 +61,11 @@ export default {
   payment: {
     provider: process.env.PAYMENT_PROVIDER || 'stripe',
   },
+  // 平台经营者（FR-13 · S5）：全局唯一 operator 由开发者经配置设定，seed 保障其行存在；
+  // 平台级动作判据 = 会话用户 email 命中此配置（泛 ADMIN 不再持有平台权）。
+  platform: {
+    operatorEmail: process.env.PLATFORM_OPERATOR_EMAIL || 'admin@example.com',
+  },
   oauth: {
     providers: [
       ...(process.env.OAUTH_PROVIDERS || 'github').split(',').map((type) => ({

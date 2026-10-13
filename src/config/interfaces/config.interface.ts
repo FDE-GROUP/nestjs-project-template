@@ -86,6 +86,11 @@ export interface OAuthConfig {
   secrets: Record<string, Record<string, string>>;
 }
 
+export interface PlatformConfig {
+  /** 全局唯一平台经营者 email（FR-13 · S5）；平台级守卫唯一判据。 */
+  operatorEmail: string;
+}
+
 export interface Config {
   app: AppConfig;
   auth: AuthConfig;
@@ -96,5 +101,6 @@ export interface Config {
   storage: StorageConfig;
   stripe: StripeConfig;
   payment: PaymentConfig;
+  platform: PlatformConfig;
   oauth: OAuthConfig;
 }

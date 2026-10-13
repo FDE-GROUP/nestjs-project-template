@@ -1,3 +1,4 @@
+import type { ConfigService } from '@app/config/config.service';
 import type { DrizzleService } from '@app/database/drizzle.service';
 import { user } from '@app/database/schema';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
@@ -13,7 +14,7 @@ function ctxWith(headers: Record<string, string>): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
-function drizzleReturningRows(rows: { role: string }[]) {
+function drizzleReturningRows(rows: { email: string }[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn().mockReturnValue({ limit });
   const from = vi.fn().mockReturnValue({ where });
@@ -21,7 +22,13 @@ function drizzleReturningRows(rows: { role: string }[]) {
   return { drizzle: { db: { select } } as unknown as DrizzleService, where };
 }
 
-describe('PlatformOperatorGuard (S4 · FR-11/13 过渡判据)', () => {
+function configWith(operatorEmail: string) {
+  return {
+    getPlatformConfig: () => ({ operatorEmail }),
+  } as unknown as ConfigService;
+}
+
+describe('PlatformOperatorGuard (S5 · FR-13 正式判据：email 命中配置)', () => {
   const getSession = vi.fn();
   const authInstance = {
     get: () => ({ api: { getSession } }) as never,
@@ -32,42 +39,49 @@ describe('PlatformOperatorGuard (S4 · FR-11/13 过渡判据)', () => {
     getSession.mockReset();
   });
 
-  it('allows a session user whose DB role is ADMIN', async () => {
+  it('allows the session user whose DB email matches the configured operator (case-insensitive)', async () => {
     getSession.mockResolvedValue({ user: { id: 'u1' } });
-    const { drizzle } = drizzleReturningRows([{ role: 'ADMIN' }]);
-    await expect(
-      new PlatformOperatorGuard(authInstance, drizzle).canActivate(ctxWith({})),
-    ).resolves.toBe(true);
+    const { drizzle } = drizzleReturningRows([{ email: 'Admin@Example.com' }]);
+    const guard = new PlatformOperatorGuard(authInstance, drizzle, configWith('admin@example.com'));
+    await expect(guard.canActivate(ctxWith({}))).resolves.toBe(true);
   });
 
-  it('rejects a non-admin (USER) with 403', async () => {
+  it('rejects a generic ADMIN-named user whose email does not match (S4 判据已弃用)', async () => {
     getSession.mockResolvedValue({ user: { id: 'u2' } });
-    const { drizzle } = drizzleReturningRows([{ role: 'USER' }]);
-    await expect(
-      new PlatformOperatorGuard(authInstance, drizzle).canActivate(ctxWith({})),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    const { drizzle } = drizzleReturningRows([{ email: 'someone-else@example.com' }]);
+    const guard = new PlatformOperatorGuard(authInstance, drizzle, configWith('admin@example.com'));
+    await expect(guard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('fails closed when no user row is found', async () => {
     getSession.mockResolvedValue({ user: { id: 'ghost' } });
     const { drizzle } = drizzleReturningRows([]);
-    await expect(
-      new PlatformOperatorGuard(authInstance, drizzle).canActivate(ctxWith({})),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    const guard = new PlatformOperatorGuard(authInstance, drizzle, configWith('admin@example.com'));
+    await expect(guard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('fails closed when the operator email is not configured', async () => {
+    getSession.mockResolvedValue({ user: { id: 'u1' } });
+    const { drizzle } = drizzleReturningRows([{ email: 'admin@example.com' }]);
+    const guard = new PlatformOperatorGuard(authInstance, drizzle, configWith(''));
+    await expect(guard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('throws 401 when there is no session', async () => {
     getSession.mockResolvedValue(null);
-    const { drizzle } = drizzleReturningRows([{ role: 'ADMIN' }]);
-    await expect(
-      new PlatformOperatorGuard(authInstance, drizzle).canActivate(ctxWith({})),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+    const { drizzle } = drizzleReturningRows([{ email: 'admin@example.com' }]);
+    const guard = new PlatformOperatorGuard(authInstance, drizzle, configWith('admin@example.com'));
+    await expect(guard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
-  it('queries the role scoped to the session user id', async () => {
+  it('queries the email scoped to the session user id', async () => {
     getSession.mockResolvedValue({ user: { id: 'u9' } });
-    const { drizzle, where } = drizzleReturningRows([{ role: 'ADMIN' }]);
-    await new PlatformOperatorGuard(authInstance, drizzle).canActivate(ctxWith({}));
+    const { drizzle, where } = drizzleReturningRows([{ email: 'admin@example.com' }]);
+    await new PlatformOperatorGuard(
+      authInstance,
+      drizzle,
+      configWith('admin@example.com'),
+    ).canActivate(ctxWith({}));
     expect(where.mock.calls[0][0]).toEqual(eq(user.id, 'u9'));
   });
 });

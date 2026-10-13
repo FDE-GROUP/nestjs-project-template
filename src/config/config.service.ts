@@ -51,4 +51,8 @@ export class ConfigService {
   getPaymentConfig() {
     return this.get<Config['payment']>('payment');
   }
+
+  getPlatformConfig() {
+    return this.get<Config['platform']>('platform');
+  }
 }

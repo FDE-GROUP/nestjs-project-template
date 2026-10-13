@@ -60,11 +60,14 @@ export class TenantsController {
   @ApiResponse({ status: 200, description: 'Tenant activated.' })
   @ApiResponse({ status: 403, description: 'Not a platform operator.' })
   @ApiResponse({ status: 404, description: 'Tenant not found.' })
-  async approve(@Param('id') id: string): Promise<TenantApplicationReadModel> {
+  async approve(
+    @Param('id') id: string,
+    @CurrentUser() user: SessionUser,
+  ): Promise<TenantApplicationReadModel> {
     const result = await this.commandBus.execute<
       ApproveTenantCommand,
       TenantApplicationReadModel | null
-    >(new ApproveTenantCommand(id));
+    >(new ApproveTenantCommand(id, user.id));
     if (!result) throw new NotFoundException('Tenant application not found');
     return result;
   }
@@ -76,9 +79,9 @@ export class TenantsController {
   @ApiResponse({ status: 204, description: 'Pending tenant discarded.' })
   @ApiResponse({ status: 403, description: 'Not a platform operator.' })
   @ApiResponse({ status: 404, description: 'Tenant not found.' })
-  async reject(@Param('id') id: string): Promise<void> {
+  async reject(@Param('id') id: string, @CurrentUser() user: SessionUser): Promise<void> {
     const removed = await this.commandBus.execute<RejectTenantCommand, boolean>(
-      new RejectTenantCommand(id),
+      new RejectTenantCommand(id, user.id),
     );
     if (!removed) throw new NotFoundException('Tenant application not found');
   }

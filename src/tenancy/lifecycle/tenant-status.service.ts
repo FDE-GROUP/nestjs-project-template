@@ -4,11 +4,18 @@ import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 
 import {
+  canTransition,
   isTenantBlocked,
   readTenantStatus,
   type TenantStatus,
   withTenantStatus,
 } from './tenant-lifecycle';
+
+/** 严格迁移结果结合（S5）：ok 携 previous 供审计；not-found/illegal 由调用方转 404/409。 */
+export type TenantTransitionResult =
+  | { kind: 'ok'; previous: TenantStatus | undefined; status: TenantStatus }
+  | { kind: 'not-found' }
+  | { kind: 'illegal'; from: TenantStatus | undefined; to: TenantStatus };
 
 /**
  * 租户状态读写唯一卡点（S4 · FR-1）：直接落 `organization.metadata`（jsonb），
@@ -47,21 +54,24 @@ export class TenantStatusService {
   }
 
   /**
-   * 迁移状态（合并写回 metadata·保留其余键）并返回新状态；行不存在 → null。
-   * 平台级动作专用（approve/reject），调用方负责平台权限裁决（PlatformOperatorGuard）。
+   * 严格状态迁移（S5 收紧）：按 §9.4 迁移表裁决合法边，非法 → illegal（调用方转 409）；
+   * 行不存在 → not-found（转 404）；合法则合并写回 metadata（保留其余键）并返回 previous
+   * 供审计。平台级动作专用（approve/suspend/resume/delete），权限裁决归 PlatformOperatorGuard。
    */
-  async transition(organizationId: string, status: TenantStatus): Promise<TenantStatus | null> {
+  async transition(organizationId: string, to: TenantStatus): Promise<TenantTransitionResult> {
     const rows = await this.drizzle.db
       .select({ metadata: organization.metadata })
       .from(organization)
       .where(eq(organization.id, organizationId))
       .limit(1);
-    if (!rows.length) return null;
-    const metadata = withTenantStatus(rows[0]?.metadata, status);
+    if (!rows.length) return { kind: 'not-found' };
+    const previous = readTenantStatus(rows[0]?.metadata);
+    if (!canTransition(previous, to)) return { kind: 'illegal', from: previous, to };
+    const metadata = withTenantStatus(rows[0]?.metadata, to);
     await this.drizzle.db
       .update(organization)
       .set({ metadata, updatedAt: new Date() })
       .where(eq(organization.id, organizationId));
-    return status;
+    return { kind: 'ok', previous, status: to };
   }
 }

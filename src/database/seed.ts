@@ -69,8 +69,13 @@ async function createUsers(options: SeedOptions) {
 
   const adminPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 10);
 
+  // FR-13 / S5: the Platform Operator is the GLOBAL-UNIQUE cross-tenant identity, resolved by
+  // the guard via DB email === platform.operatorEmail. Seed MUST guarantee that email's row
+  // exists, else a non-default operator email would fail closed with no operator at all.
+  const operatorEmail = process.env.PLATFORM_OPERATOR_EMAIL || 'admin@example.com';
+
   const existingAdmin = await db.query.user.findFirst({
-    where: eq(user.email, 'admin@example.com'),
+    where: eq(user.email, operatorEmail),
   });
 
   if (existingAdmin) {
@@ -83,12 +88,12 @@ async function createUsers(options: SeedOptions) {
         lastName: 'User',
         role: Role.ADMIN,
       })
-      .where(eq(user.email, 'admin@example.com'));
+      .where(eq(user.email, operatorEmail));
   } else {
     await db.insert(user).values({
       id: randomUUID(),
       name: 'Admin User',
-      email: 'admin@example.com',
+      email: operatorEmail,
       password: adminPassword,
       firstName: 'Admin',
       lastName: 'User',
@@ -96,7 +101,7 @@ async function createUsers(options: SeedOptions) {
     });
   }
 
-  console.log('✅ Created admin user: admin@example.com');
+  console.log(`✅ Seeded platform operator: ${operatorEmail}`);
 
   const userCount = options.userCount || 2;
   if (options.includeTestData && userCount > 1) {

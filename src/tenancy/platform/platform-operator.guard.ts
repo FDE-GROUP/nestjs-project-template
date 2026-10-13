@@ -1,3 +1,4 @@
+import { ConfigService } from '@app/config/config.service';
 import { DrizzleService } from '@app/database/drizzle.service';
 import { user } from '@app/database/schema';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
@@ -13,19 +14,19 @@ import {
 import { eq } from 'drizzle-orm';
 
 /**
- * 平台级权限守卫（FR-11 三层之顶层 · FR-13 · S4 过渡判据）。
+ * 平台级权限守卫（FR-11 三层之顶层 · FR-13 · S5 正式判据）。
  *
- * 认证会话用户 + `users.role === 'ADMIN'`（roleEnum）方放行执行平台级动作（审批/驳回等跨租户
- * 治理）；否则 403。据实读 DB 的 role（非依赖 session 回传字段），fail-closed。
- *
- * ⚠️ S4 阶段为「过渡判据」：仍以既有 `roleEnum.ADMIN` 为准。S5 将 seed **全局唯一** Platform
- * Operator（FR-13·不可自助注册 / 不由他人任命）并正式化平台级裁决，届时本守卫收敛为经营者身份判定。
+ * 全局唯一 Platform Operator = 会话用户的 **DB email 命中 `platform.operatorEmail` 配置**
+ * （开发者设定 · seed 保障该行存在 · 不可自助注册 / 不由他人任命）。泛 `role=ADMIN` 不再
+ * 持有平台权（S4 过渡判据已收敛）。email 据实读 DB（非依赖 session 回传字段），fail-closed：
+ * 无会话 401 · 未配置 / 不命中 / 查无此人 403。变更经营者 = 开发者改配置（FR-13，无互任机制）。
  */
 @Injectable()
 export class PlatformOperatorGuard implements CanActivate {
   constructor(
     @Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance,
     @Inject(DrizzleService) private readonly drizzle: DrizzleService,
+    @Inject(ConfigService) private readonly config: ConfigService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -39,12 +40,16 @@ export class PlatformOperatorGuard implements CanActivate {
     const userId = result?.user?.id;
     if (!userId) throw new UnauthorizedException('Missing or invalid session');
 
+    const operatorEmail = this.config.getPlatformConfig().operatorEmail?.trim().toLowerCase();
+    if (!operatorEmail) throw new ForbiddenException('Platform operator not configured');
+
     const rows = await this.drizzle.db
-      .select({ role: user.role })
+      .select({ email: user.email })
       .from(user)
       .where(eq(user.id, String(userId)))
       .limit(1);
-    if (rows[0]?.role !== 'ADMIN') throw new ForbiddenException('Platform operator only');
+    const email = rows[0]?.email?.toLowerCase();
+    if (!email || email !== operatorEmail) throw new ForbiddenException('Platform operator only');
     return true;
   }
 }

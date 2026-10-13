@@ -1,5 +1,6 @@
 import { Global, type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { TenantStatusService } from './lifecycle/tenant-status.service';
+import { PlatformAuditService } from './platform/platform-audit.service';
 import { PlatformOperatorGuard } from './platform/platform-operator.guard';
 import { TenantPermissionGuard } from './rbac/tenant-permission.guard';
 import { TenantMiddleware } from './tenant.middleware';
@@ -13,6 +14,7 @@ import { TenantScopeGuard } from './tenant-scope.guard';
  * - `TenantPermissionGuard` (S1 · FR-4): tenant RBAC, delegates to Better Auth ac.
  * - `TenantScopeGuard` (S2 · FR-5): fail-closed gate requiring an active tenant.
  * - `PlatformOperatorGuard` (S4 · FR-11/13): platform-level (cross-tenant) actions.
+ * - `PlatformAuditService` (S5 · FR-6): structured audit choke-point for governance actions.
  * Row-level filtering is enforced in each aggregate's repository adapter (single
  * choke-point, 禁散点); promoting these guards to a global APP_GUARD is a separate
  * signed decision (高危#4).
@@ -25,6 +27,7 @@ import { TenantScopeGuard } from './tenant-scope.guard';
     TenantPermissionGuard,
     TenantScopeGuard,
     PlatformOperatorGuard,
+    PlatformAuditService,
   ],
   exports: [
     TenantContextService,
@@ -32,6 +35,7 @@ import { TenantScopeGuard } from './tenant-scope.guard';
     TenantPermissionGuard,
     TenantScopeGuard,
     PlatformOperatorGuard,
+    PlatformAuditService,
   ],
 })
 export class TenancyModule implements NestModule {
