@@ -26,6 +26,7 @@ coverage
 # build
 build/
 dist/
+*.tsbuildinfo
 tmp/
 temp/
 
