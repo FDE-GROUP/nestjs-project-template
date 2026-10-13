@@ -1,67 +1,51 @@
-import type { DrizzleService } from '@app/database/drizzle.service';
 import { TENANT_STATUS } from '@app/tenancy/lifecycle/tenant-lifecycle';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { USER_STATUS, UserStatusService } from './user-status.service';
-
-/** select().from().where().limit() → resolves the queued rows when awaited. */
-function chain(rows: unknown[]) {
-  const c: Record<string, unknown> = {
-    from: () => c,
-    where: () => c,
-    limit: () => c,
-  };
-  // Bracket assignment (not an object-literal `then` key) mimics drizzle's awaitable builder.
-  c['then'] = (res: (v: unknown[]) => unknown) => Promise.resolve(rows).then(res);
-  return c;
-}
+import type { UserStatusStore } from './user-status.store';
 
 /**
- * `transition` reads twice (user existence, then user_status); `read`/`isBlocked` once.
- * A queue feeds each select call in order.
+ * 桩 `UserStatusStore`（§9.5.4①B 端口倒置后·服务不再感知 Drizzle/schema）。
+ * `exists` 控 user 存在性；`status` 控 user_status 行状态（undefined=无行）。
  */
-function makeService(queues: unknown[][]) {
-  let call = 0;
-  const select = vi.fn(() => chain(queues[call++] ?? []));
-  const onConflictDoUpdate = vi.fn(() => Promise.resolve());
-  const values = vi.fn((_v: unknown) => ({ onConflictDoUpdate }));
-  const insert = vi.fn(() => ({ values }));
-  const db = { select, insert } as unknown as DrizzleService['db'];
-  const drizzle = { db } as unknown as DrizzleService;
-  return { svc: new UserStatusService(drizzle), select, insert, values, onConflictDoUpdate };
+function makeService(opts: { exists?: boolean; status?: string } = {}) {
+  const upsert = vi.fn(async (_id: string, _s: string, _r: string | null) => {});
+  const userExists = vi.fn(async (_id: string) => opts.exists ?? true);
+  const readStatus = vi.fn(async (_id: string) => opts.status);
+  const store = { readStatus, userExists, upsert } as unknown as UserStatusStore;
+  return { svc: new UserStatusService(store), upsert, userExists, readStatus };
 }
 
 describe('UserStatusService.transition (S6 · FR-10 用户暂停单点)', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('upserts a suspended row and returns ok (missing prior row → treated active)', async () => {
-    const { svc, insert, values } = makeService([[{ id: 'u1' }], []]);
+    const { svc, upsert } = makeService({ exists: true, status: undefined });
     const result = await svc.transition('u1', USER_STATUS.SUSPENDED, { reason: 'fraud' });
     expect(result).toEqual({
       kind: 'ok',
       previous: undefined,
       status: USER_STATUS.SUSPENDED,
     });
-    expect(insert).toHaveBeenCalledTimes(1);
-    const patch = values.mock.calls[0][0] as { userId: string; status: string; reason: string };
-    expect(patch).toMatchObject({ userId: 'u1', status: 'suspended', reason: 'fraud' });
+    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(upsert).toHaveBeenCalledWith('u1', 'suspended', 'fraud');
   });
 
   it('returns not-found when the platform user does not exist', async () => {
-    const { svc, insert } = makeService([[]]);
+    const { svc, upsert } = makeService({ exists: false });
     const result = await svc.transition('ghost', USER_STATUS.SUSPENDED);
     expect(result).toEqual({ kind: 'not-found' });
-    expect(insert).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
   });
 
   it('returns illegal without writing when the edge is disallowed (deleted is terminal)', async () => {
-    const { svc, insert } = makeService([[{ id: 'u1' }], [{ status: 'deleted' }]]);
+    const { svc, upsert } = makeService({ exists: true, status: TENANT_STATUS.DELETED });
     const result = await svc.transition('u1', USER_STATUS.SUSPENDED);
     expect(result).toEqual({
       kind: 'illegal',
       from: TENANT_STATUS.DELETED,
       to: USER_STATUS.SUSPENDED,
     });
-    expect(insert).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
   });
 });
 
@@ -69,12 +53,12 @@ describe('UserStatusService.isBlocked / read (deny-list)', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('blocks explicit suspended / deleted', async () => {
-    expect(await makeService([[{ status: 'suspended' }]]).svc.isBlocked('u1')).toBe(true);
-    expect(await makeService([[{ status: 'deleted' }]]).svc.isBlocked('u1')).toBe(true);
+    expect(await makeService({ status: 'suspended' }).svc.isBlocked('u1')).toBe(true);
+    expect(await makeService({ status: 'deleted' }).svc.isBlocked('u1')).toBe(true);
   });
 
   it('does not block a missing row (treated active)', async () => {
-    const { svc } = makeService([[]]);
+    const { svc } = makeService({ status: undefined });
     expect(await svc.isBlocked('u1')).toBe(false);
     expect(await svc.read('u1')).toBeUndefined();
   });

@@ -1,12 +1,16 @@
 import { Global, type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
+import { DrizzleQuotaStore } from './infrastructure/drizzle-quota.store';
 import { DrizzleTenantStatusStore } from './infrastructure/drizzle-tenant-status.store';
+import { DrizzleUserStatusStore } from './infrastructure/drizzle-user-status.store';
 import { TenantStatusService } from './lifecycle/tenant-status.service';
 import { TENANT_STATUS_STORE } from './lifecycle/tenant-status.store';
 import { UserStatusService } from './lifecycle/user-status.service';
+import { USER_STATUS_STORE } from './lifecycle/user-status.store';
 import { PlatformAuditService } from './platform/platform-audit.service';
 import { PlatformOperatorGuard } from './platform/platform-operator.guard';
 import { QuotaGuard } from './quota/quota.guard';
 import { QuotaService } from './quota/quota.service';
+import { QUOTA_STORE } from './quota/quota.store';
 import { TenantPermissionGuard } from './rbac/tenant-permission.guard';
 import { TenantMiddleware } from './tenant.middleware';
 import { TenantContextService } from './tenant-context.service';
@@ -41,6 +45,8 @@ import { TenantScopeGuard } from './tenant-scope.guard';
     QuotaGuard,
     // §9.5.4①B 端口倒置：core 服务经端口消费持久化，Drizzle 适配由本（参考）应用装配。
     { provide: TENANT_STATUS_STORE, useClass: DrizzleTenantStatusStore },
+    { provide: USER_STATUS_STORE, useClass: DrizzleUserStatusStore },
+    { provide: QUOTA_STORE, useClass: DrizzleQuotaStore },
   ],
   exports: [
     TenantContextService,

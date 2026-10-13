@@ -1,9 +1,6 @@
-import { DrizzleService } from '@app/database/drizzle.service';
-import { user, userStatus } from '@app/database/schema';
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
-
 import { canTransition, TENANT_STATUS, type TenantStatus } from './tenant-lifecycle';
+import { USER_STATUS_STORE, type UserStatusStore } from './user-status.store';
 
 /**
  * 用户生命周期状态复用租户状态机的 active/suspended/deleted 子集
@@ -30,16 +27,11 @@ export type UserTransitionResult =
  */
 @Injectable()
 export class UserStatusService {
-  constructor(@Inject(DrizzleService) private readonly drizzle: DrizzleService) {}
+  constructor(@Inject(USER_STATUS_STORE) private readonly store: UserStatusStore) {}
 
   /** 读取用户当前生命周期状态；无记录行 → undefined（视同 active）。 */
   async read(userId: string): Promise<UserStatus | undefined> {
-    const rows = await this.drizzle.db
-      .select({ status: userStatus.status })
-      .from(userStatus)
-      .where(eq(userStatus.userId, userId))
-      .limit(1);
-    return rows[0]?.status as UserStatus | undefined;
+    return (await this.store.readStatus(userId)) as UserStatus | undefined;
   }
 
   /** 是否被拦（deny-list）：仅显式 suspended/deleted 为真；无行 → 不拦。 */
@@ -58,24 +50,12 @@ export class UserStatusService {
     to: UserStatus,
     opts?: { reason?: string },
   ): Promise<UserTransitionResult> {
-    const exists = await this.drizzle.db
-      .select({ id: user.id })
-      .from(user)
-      .where(eq(user.id, userId))
-      .limit(1);
-    if (!exists.length) return { kind: 'not-found' };
+    if (!(await this.store.userExists(userId))) return { kind: 'not-found' };
 
     const previous = await this.read(userId);
     if (!canTransition(previous, to)) return { kind: 'illegal', from: previous, to };
 
-    const now = new Date();
-    await this.drizzle.db
-      .insert(userStatus)
-      .values({ userId, status: to, reason: opts?.reason ?? null, createdAt: now, updatedAt: now })
-      .onConflictDoUpdate({
-        target: userStatus.userId,
-        set: { status: to, reason: opts?.reason ?? null, updatedAt: now },
-      });
+    await this.store.upsert(userId, to, opts?.reason ?? null);
     return { kind: 'ok', previous, status: to };
   }
 }

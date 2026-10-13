@@ -1,9 +1,7 @@
-import { DrizzleService } from '@app/database/drizzle.service';
-import { member, tenantSubscription } from '@app/database/schema';
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq } from 'drizzle-orm';
 
-import { FREE_PLAN, SUBSCRIPTION_STATUS } from './tenant-plans';
+import { type ActiveSubscriptionView, QUOTA_STORE, type QuotaStore } from './quota.store';
+import { FREE_PLAN } from './tenant-plans';
 
 /** 一次座位配额裁决的结果（used/limit 供审计与回显）。 */
 export interface SeatQuotaVerdict {
@@ -30,22 +28,11 @@ export interface SeatQuotaSnapshot {
  */
 @Injectable()
 export class QuotaService {
-  constructor(@Inject(DrizzleService) private readonly drizzle: DrizzleService) {}
+  constructor(@Inject(QUOTA_STORE) private readonly store: QuotaStore) {}
 
   /** 当前生效订阅（最新 active 行 by periodStart desc），无 → null。 */
-  async currentSubscription(tenantId: string) {
-    const rows = await this.drizzle.db
-      .select()
-      .from(tenantSubscription)
-      .where(
-        and(
-          eq(tenantSubscription.tenantId, tenantId),
-          eq(tenantSubscription.status, SUBSCRIPTION_STATUS.ACTIVE),
-        ),
-      )
-      .orderBy(desc(tenantSubscription.periodStart))
-      .limit(1);
-    return rows[0] ?? null;
+  async currentSubscription(tenantId: string): Promise<ActiveSubscriptionView | null> {
+    return this.store.currentActiveSubscription(tenantId);
   }
 
   /** 生效座位限额：有 active 订阅 → 其 seatsLimit；无 → FREE_PLAN 限额。 */
@@ -56,11 +43,7 @@ export class QuotaService {
 
   /** 当前用量 = 该租户成员数。 */
   async currentSeats(tenantId: string): Promise<number> {
-    const [{ value }] = await this.drizzle.db
-      .select({ value: count() })
-      .from(member)
-      .where(eq(member.organizationId, tenantId));
-    return Number(value);
+    return this.store.countMembers(tenantId);
   }
 
   /** 纯裁决（不抛）：used + adding 是否仍在限额内。 */
