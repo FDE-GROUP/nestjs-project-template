@@ -1,4 +1,5 @@
 import { Public } from '@core/tenancy/public.decorator';
+import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
 import type { RawBodyRequest } from '@nestjs/common';
 import { Body, Controller, Get, Headers, Inject, Param, Post, Req } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -9,6 +10,9 @@ import { RefundPaymentDto } from '../dto/refund-payment.dto';
 import { PaymentService } from '../services/payment.service';
 
 @ApiTags('payment')
+// S11 复合全局：payment 非 webhook 属用户级（Stripe customer/checkout·不经租户仓储）→ 类级豁免租户墙（仍需会话）；
+// webhook 方法级 @Public 自动兼豁免会话+租户墙。
+@TenantExempt()
 @Controller('payment')
 export class PaymentController {
   constructor(@Inject(PaymentService) private readonly payment: PaymentService) {}

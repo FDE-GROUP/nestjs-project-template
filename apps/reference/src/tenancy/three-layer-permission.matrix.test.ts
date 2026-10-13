@@ -95,7 +95,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
 
     it('租户级：ALS 无 tenant → TenantScopeGuard 403', () => {
       const tcs = new TenantContextService();
-      const guard = new TenantScopeGuard(tcs);
+      const guard = new TenantScopeGuard(tcs, reflectorStub());
       const { ctx } = ctxWith();
       expect(() => tcs.run({ userId: 'u1' }, () => guard.canActivate(ctx))).toThrow(
         ForbiddenException,
@@ -117,7 +117,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
   describe('② 互不授予', () => {
     it('平台 operator 有效会话但无 activeOrganizationId → 进不了租户路由（平台权不授予租户作用域）', () => {
       const tcs = new TenantContextService();
-      const scope = new TenantScopeGuard(tcs);
+      const scope = new TenantScopeGuard(tcs, reflectorStub());
       // operator 已认证（有会话），但未选定任何租户 → ALS 无 tenantId
       const { ctx } = ctxWith();
       expect(() => tcs.run({ userId: 'op-1' }, () => scope.canActivate(ctx))).toThrow(
@@ -148,7 +148,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
       expect(req.sessionUser).toEqual({ id: 'u9', email: 'u9@x.com' });
       // 认证 ≠ 租户访问：紧随其后的租户守卫在无 tenant 绑定时仍 403
       const tcs = new TenantContextService();
-      const scope = new TenantScopeGuard(tcs);
+      const scope = new TenantScopeGuard(tcs, reflectorStub());
       expect(() => tcs.run({ userId: 'u9' }, () => scope.canActivate(ctx))).toThrow(
         ForbiddenException,
       );
@@ -190,7 +190,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
 
     it('租户层：中间件对暂停用户不绑 tenant/identity → TenantScopeGuard 403', () => {
       const tcs = new TenantContextService();
-      const scope = new TenantScopeGuard(tcs);
+      const scope = new TenantScopeGuard(tcs, reflectorStub());
       const { ctx } = ctxWith();
       // deny-list 结果：blocked 用户 → tenantId/userId 均 undefined
       expect(() => tcs.run({}, () => scope.canActivate(ctx))).toThrow(ForbiddenException);

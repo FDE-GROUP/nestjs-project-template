@@ -16,6 +16,7 @@ import { TenantMiddleware } from '@core/tenancy/tenant.middleware';
 import { TenantContextService } from '@core/tenancy/tenant-context.service';
 import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
 import { Global, type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { AuthSessionReader } from './infrastructure/auth-session.reader';
 import { BetterAuthTenantPermissionChecker } from './infrastructure/ba-tenant-permission.checker';
 import { ConfigPlatformSettings } from './infrastructure/config-platform.settings';
@@ -36,8 +37,12 @@ import { DrizzleUserStatusStore } from './infrastructure/drizzle-user-status.sto
  * - `QuotaService` + `QuotaGuard` (S7 · FR-7): tenant seat-quota choke-point (subscription
  *   limit vs live member count); opt-in per-route via `@Quota`, not a global APP_GUARD.
  * Row-level filtering is enforced in each aggregate's repository adapter (single
- * choke-point, 禁散点); promoting these guards to a global APP_GUARD is a separate
- * signed decision (高危#4).
+ * choke-point, 禁散点).
+ *
+ * S11 · 高危#4 复合全局：`TenantScopeGuard` 已升为全局 `APP_GUARD`（deny-by-default 租户墙），
+ * 经 `AppModule` 中 `AuthModule`（会话墙）先于本模块解析 → 会话 401 先于租户 403。`@Public`/`@TenantExempt`
+ * 显式旁路（见 `tenant-scope.guard`）。`TenantPermissionGuard`/`PlatformOperatorGuard`/`QuotaGuard`
+ * 仍逐路由 opt-in（语义异质·不宜全局）。
  */
 @Global()
 @Module({
@@ -61,6 +66,10 @@ import { DrizzleUserStatusStore } from './infrastructure/drizzle-user-status.sto
     { provide: TENANT_PERMISSION_CHECKER, useClass: BetterAuthTenantPermissionChecker },
     // §9.5.3 热点③ · P1c 配置端口：core 经端口消费平台配置，`ConfigService` 适配留参考应用。
     { provide: PLATFORM_SETTINGS, useClass: ConfigPlatformSettings },
+    // S11 · 高危#4 复合全局：全局租户墙（deny-by-default）。TenantScopeGuard 已在本模块 provide，
+    // 其依赖（TenantContextService 本地 · Reflector 由 Nest core 自动提供）均可解析；useExisting 复用同实例。
+    // @Public/@TenantExempt 路由经 Reflector 旁路。注册于 AuthModule 会话墙之后（AppModule import 顺序）。
+    { provide: APP_GUARD, useExisting: TenantScopeGuard },
   ],
   exports: [
     TenantContextService,

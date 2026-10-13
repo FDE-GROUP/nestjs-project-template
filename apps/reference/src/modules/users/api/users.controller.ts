@@ -1,3 +1,4 @@
+import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
 import {
   Body,
   Controller,
@@ -26,6 +27,8 @@ import type { PublicUser } from '../domain/entities/user.aggregate';
 import { CreateUserDto } from './dto/create-user.dto';
 
 @ApiTags('users')
+// S11 复合全局：users 全路由属用户级（不经租户仓储）·需登录但合法无租户 → 类级豁免全局租户墙。
+@TenantExempt()
 @Controller('users')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);

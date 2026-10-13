@@ -1,3 +1,4 @@
+import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
 import {
   BadRequestException,
   Controller,
@@ -16,6 +17,8 @@ import type { FileUploadResultDto } from '../dto/file-upload.dto';
 import { StorageService } from '../services/storage.service';
 
 @ApiTags('storage')
+// S11 复合全局：storage 属用户级（上传/下载·不经租户仓储 requireTenantId）→ 类级豁免全局租户墙（仍靠会话墙）。
+@TenantExempt()
 @Controller('storage')
 export class StorageController {
   private readonly logger = new Logger(StorageController.name);

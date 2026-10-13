@@ -2,6 +2,7 @@ import { CurrentUser } from '@app/modules/auth/decorators/current-user.decorator
 import type { SessionUser } from '@app/modules/auth/guards/session.guard';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
 import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
+import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
 import {
   Body,
   Controller,
@@ -35,6 +36,8 @@ import { CreateTenantApplicationDto } from './dto/create-tenant-application.dto'
  * routes fail closed until an operator approves it (S4 middleware deny-list).
  */
 @ApiTags('tenants')
+// S11 复合全局：建租申请（此刻无 active 租·鸡生蛋）+ approve/reject（跨租平台治理）皆合法无租户 → 类级豁免租户墙。
+@TenantExempt()
 @Controller('tenants')
 export class TenantsController {
   constructor(@Inject(CommandBus) private readonly commandBus: CommandBus) {}

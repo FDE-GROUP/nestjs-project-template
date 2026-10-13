@@ -165,8 +165,11 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
         seen.tenant = tcs.tenantId;
         seen.workspace = tcs.workspaceId;
         seen.required = tcs.requireTenantId();
-        // TenantScopeGuard 读同一 ALS store（canActivate 忽略 context 参数）。
-        seen.ok = scope.canActivate({} as never);
+        // TenantScopeGuard 读同一 ALS store + 路由元数据（S11 全局化后需 getHandler/getClass·无豁免键则不旁路）。
+        seen.ok = scope.canActivate({
+          getHandler: () => () => {},
+          getClass: () => class {},
+        } as never);
       });
 
       expect(seen.tenant).toBe('org_1');
@@ -183,7 +186,7 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
       await driveMiddleware(mw, req, () => {
         tenantInView = tcs.tenantId;
         try {
-          scope.canActivate({} as never);
+          scope.canActivate({ getHandler: () => () => {}, getClass: () => class {} } as never);
         } catch (err) {
           thrown = err;
         }
@@ -224,7 +227,7 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
       await driveMiddleware(mw, req, () => {
         tenantInView = tcs.tenantId;
         try {
-          scope.canActivate({} as never);
+          scope.canActivate({ getHandler: () => () => {}, getClass: () => class {} } as never);
         } catch (err) {
           thrown = err;
         }

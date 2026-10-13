@@ -5,6 +5,7 @@ import type {
   UserGovernanceResult,
 } from '@app/modules/tenants/application/read-models/platform-user.read-model';
 import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
+import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
 import {
   Body,
   Controller,
@@ -35,6 +36,8 @@ import { SuspendUserDto } from './dto/suspend-user.dto';
  * resume (suspended→active) lifts the deny-list. Each success/failure emits a structured audit line (FR-6).
  */
 @ApiTags('platform')
+// S11 复合全局：跨租平台治理（operator 行动时无关租户上下文）→ 类级豁免租户墙（仍由 PlatformOperatorGuard 逐路由卡）。
+@TenantExempt()
 @Controller('platform/users')
 @UseGuards(PlatformOperatorGuard)
 export class PlatformUsersController {

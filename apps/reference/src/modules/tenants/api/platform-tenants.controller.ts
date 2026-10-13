@@ -6,6 +6,7 @@ import type {
   TenantDiagnostics,
 } from '@app/modules/tenants/application/read-models/platform-tenant.read-model';
 import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
+import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
 import {
   Controller,
   Delete,
@@ -43,6 +44,8 @@ import { ListPlatformTenantsDto } from './dto/list-platform-tenants.dto';
  * delete (soft→deleted terminal). Each success/failure emits a structured audit line (FR-6).
  */
 @ApiTags('platform')
+// S11 复合全局：跨租平台治理（列表/详情/诊断/suspend·resume·delete）无关单一租户上下文 → 类级豁免租户墙。
+@TenantExempt()
 @Controller('platform/tenants')
 @UseGuards(PlatformOperatorGuard)
 export class PlatformTenantsController {
