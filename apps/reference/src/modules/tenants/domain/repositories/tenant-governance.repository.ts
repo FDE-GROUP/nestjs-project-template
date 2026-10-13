@@ -1,4 +1,4 @@
-import type { TenantStatus } from '@app/tenancy/lifecycle/tenant-lifecycle';
+import type { TenantStatus } from '@core/tenancy/lifecycle/tenant-lifecycle';
 
 /**
  * Platform governance repository port (domain-owned · global-tenancy S5 · FR-6).

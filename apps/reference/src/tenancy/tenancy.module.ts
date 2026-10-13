@@ -1,3 +1,20 @@
+import { TenantStatusService } from '@core/tenancy/lifecycle/tenant-status.service';
+import { TENANT_STATUS_STORE } from '@core/tenancy/lifecycle/tenant-status.store';
+import { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
+import { USER_STATUS_STORE } from '@core/tenancy/lifecycle/user-status.store';
+import { PlatformAuditService } from '@core/tenancy/platform/platform-audit.service';
+import { PLATFORM_SETTINGS } from '@core/tenancy/platform/platform-config.port';
+import { PLATFORM_IDENTITY_LOOKUP } from '@core/tenancy/platform/platform-identity.port';
+import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
+import { QuotaGuard } from '@core/tenancy/quota/quota.guard';
+import { QuotaService } from '@core/tenancy/quota/quota.service';
+import { QUOTA_STORE } from '@core/tenancy/quota/quota.store';
+import { TenantPermissionGuard } from '@core/tenancy/rbac/tenant-permission.guard';
+import { TENANT_PERMISSION_CHECKER } from '@core/tenancy/rbac/tenant-permission.port';
+import { SESSION_READER } from '@core/tenancy/session/request-session.port';
+import { TenantMiddleware } from '@core/tenancy/tenant.middleware';
+import { TenantContextService } from '@core/tenancy/tenant-context.service';
+import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
 import { Global, type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { AuthSessionReader } from './infrastructure/auth-session.reader';
 import { BetterAuthTenantPermissionChecker } from './infrastructure/ba-tenant-permission.checker';
@@ -6,23 +23,6 @@ import { DrizzlePlatformIdentityLookup } from './infrastructure/drizzle-platform
 import { DrizzleQuotaStore } from './infrastructure/drizzle-quota.store';
 import { DrizzleTenantStatusStore } from './infrastructure/drizzle-tenant-status.store';
 import { DrizzleUserStatusStore } from './infrastructure/drizzle-user-status.store';
-import { TenantStatusService } from './lifecycle/tenant-status.service';
-import { TENANT_STATUS_STORE } from './lifecycle/tenant-status.store';
-import { UserStatusService } from './lifecycle/user-status.service';
-import { USER_STATUS_STORE } from './lifecycle/user-status.store';
-import { PlatformAuditService } from './platform/platform-audit.service';
-import { PLATFORM_SETTINGS } from './platform/platform-config.port';
-import { PLATFORM_IDENTITY_LOOKUP } from './platform/platform-identity.port';
-import { PlatformOperatorGuard } from './platform/platform-operator.guard';
-import { QuotaGuard } from './quota/quota.guard';
-import { QuotaService } from './quota/quota.service';
-import { QUOTA_STORE } from './quota/quota.store';
-import { TenantPermissionGuard } from './rbac/tenant-permission.guard';
-import { TENANT_PERMISSION_CHECKER } from './rbac/tenant-permission.port';
-import { SESSION_READER } from './session/request-session.port';
-import { TenantMiddleware } from './tenant.middleware';
-import { TenantContextService } from './tenant-context.service';
-import { TenantScopeGuard } from './tenant-scope.guard';
 
 /**
  * Multi-tenancy能力模块（global-tenancy S0/S1/S2/S3/S4 · 混合复用骨架）。

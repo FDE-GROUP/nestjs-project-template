@@ -6,7 +6,7 @@ import {
   readTenantStatus,
   TENANT_STATUS,
   type TenantStatus,
-} from '@app/tenancy/lifecycle/tenant-lifecycle';
+} from '@core/tenancy/lifecycle/tenant-lifecycle';
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import type {

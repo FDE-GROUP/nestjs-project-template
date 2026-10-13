@@ -1,9 +1,8 @@
 import { DrizzleService } from '@app/database/drizzle.service';
 import { user } from '@app/database/schema';
+import type { PlatformIdentityLookup } from '@core/tenancy/platform/platform-identity.port';
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-
-import type { PlatformIdentityLookup } from '../platform/platform-identity.port';
 
 /**
  * `PlatformIdentityLookup` 的 Drizzle 适配（参考应用侧·§9.5.4①B）：据实读 Better Auth

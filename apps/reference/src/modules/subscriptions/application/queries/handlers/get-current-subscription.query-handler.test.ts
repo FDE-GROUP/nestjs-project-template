@@ -1,5 +1,5 @@
-import type { QuotaService, SeatQuotaSnapshot } from '@app/tenancy/quota/quota.service';
-import type { TenantContextService } from '@app/tenancy/tenant-context.service';
+import type { QuotaService, SeatQuotaSnapshot } from '@core/tenancy/quota/quota.service';
+import type { TenantContextService } from '@core/tenancy/tenant-context.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GetSubscriptionQueryHandler } from './get-current-subscription.query-handler';
 

@@ -1,6 +1,6 @@
-import { QuotaService } from '@app/tenancy/quota/quota.service';
-import { resolvePlanDef } from '@app/tenancy/quota/tenant-plans';
-import { TenantContextService } from '@app/tenancy/tenant-context.service';
+import { QuotaService } from '@core/tenancy/quota/quota.service';
+import { resolvePlanDef } from '@core/tenancy/quota/tenant-plans';
+import { TenantContextService } from '@core/tenancy/tenant-context.service';
 import { Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import {

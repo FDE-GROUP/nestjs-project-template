@@ -1,16 +1,16 @@
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
-import type { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
-import type { PlatformSettings } from '@app/tenancy/platform/platform-config.port';
-import type { TenantPermissionChecker } from '@app/tenancy/rbac/tenant-permission.port';
-import type { RequestSessionReader } from '@app/tenancy/session/request-session.port';
+import type { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
+import type { PlatformSettings } from '@core/tenancy/platform/platform-config.port';
+import type { PlatformIdentityLookup } from '@core/tenancy/platform/platform-identity.port';
+import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
+import { TenantPermissionGuard } from '@core/tenancy/rbac/tenant-permission.guard';
+import type { TenantPermissionChecker } from '@core/tenancy/rbac/tenant-permission.port';
+import type { RequestSessionReader } from '@core/tenancy/session/request-session.port';
+import { TenantContextService } from '@core/tenancy/tenant-context.service';
+import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
 import { type ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PlatformIdentityLookup } from './platform/platform-identity.port';
-import { PlatformOperatorGuard } from './platform/platform-operator.guard';
-import { TenantPermissionGuard } from './rbac/tenant-permission.guard';
-import { TenantContextService } from './tenant-context.service';
-import { TenantScopeGuard } from './tenant-scope.guard';
 
 /**
  * S8 · FR-11 三层权限收口矩阵。

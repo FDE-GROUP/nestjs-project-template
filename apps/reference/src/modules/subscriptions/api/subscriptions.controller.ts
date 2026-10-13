@@ -1,6 +1,6 @@
-import { RequirePermissions } from '@app/tenancy/rbac/require-permissions.decorator';
-import { TenantPermissionGuard } from '@app/tenancy/rbac/tenant-permission.guard';
-import { TenantScopeGuard } from '@app/tenancy/tenant-scope.guard';
+import { RequirePermissions } from '@core/tenancy/rbac/require-permissions.decorator';
+import { TenantPermissionGuard } from '@core/tenancy/rbac/tenant-permission.guard';
+import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
 import {
   Body,
   Controller,

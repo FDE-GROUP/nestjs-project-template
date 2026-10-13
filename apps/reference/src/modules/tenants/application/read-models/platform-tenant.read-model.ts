@@ -1,4 +1,4 @@
-import type { TenantStatus } from '@app/tenancy/lifecycle/tenant-lifecycle';
+import type { TenantStatus } from '@core/tenancy/lifecycle/tenant-lifecycle';
 
 /**
  * Platform governance read-model projections (FR-6 · S5 · CQRS read side).

@@ -1,9 +1,9 @@
+import type { TenantStatusService } from '@core/tenancy/lifecycle/tenant-status.service';
+import type { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
+import type { RequestSessionReader } from '@core/tenancy/session/request-session.port';
+import { TenantMiddleware } from '@core/tenancy/tenant.middleware';
+import { type TenantContext, tenantStorage } from '@core/tenancy/tenant-context';
 import { describe, expect, it, vi } from 'vitest';
-import type { TenantStatusService } from './lifecycle/tenant-status.service';
-import type { UserStatusService } from './lifecycle/user-status.service';
-import type { RequestSessionReader } from './session/request-session.port';
-import { TenantMiddleware } from './tenant.middleware';
-import { type TenantContext, tenantStorage } from './tenant-context';
 
 /**
  * §9.5.4①B · P1b：中间件经 `RequestSessionReader` 端口消费会话（不再打桩 Better Auth 实例）。

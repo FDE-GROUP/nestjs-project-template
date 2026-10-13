@@ -1,6 +1,6 @@
-import { TENANT_STATUS } from '@app/tenancy/lifecycle/tenant-lifecycle';
-import { TenantStatusService } from '@app/tenancy/lifecycle/tenant-status.service';
-import { PlatformAuditService } from '@app/tenancy/platform/platform-audit.service';
+import { TENANT_STATUS } from '@core/tenancy/lifecycle/tenant-lifecycle';
+import { TenantStatusService } from '@core/tenancy/lifecycle/tenant-status.service';
+import { PlatformAuditService } from '@core/tenancy/platform/platform-audit.service';
 import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import {

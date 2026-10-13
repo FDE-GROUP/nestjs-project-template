@@ -5,7 +5,7 @@ import type {
   PlatformTenantRow,
   TenantDiagnostics,
 } from '@app/modules/tenants/application/read-models/platform-tenant.read-model';
-import { PlatformOperatorGuard } from '@app/tenancy/platform/platform-operator.guard';
+import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
 import {
   Controller,
   Delete,

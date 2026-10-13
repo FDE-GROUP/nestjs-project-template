@@ -1,4 +1,4 @@
-import { TENANT_PLANS } from '@app/tenancy/quota/tenant-plans';
+import { TENANT_PLANS } from '@core/tenancy/quota/tenant-plans';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEmail, IsIn, IsInt, IsOptional, Min } from 'class-validator';

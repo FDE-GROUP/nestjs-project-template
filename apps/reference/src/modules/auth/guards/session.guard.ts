@@ -1,4 +1,4 @@
-import { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
+import { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
 import {
   type CanActivate,
   type ExecutionContext,

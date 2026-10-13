@@ -1,4 +1,4 @@
-import { TenantScopeGuard } from '@app/tenancy/tenant-scope.guard';
+import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
 import {
   Body,
   Controller,

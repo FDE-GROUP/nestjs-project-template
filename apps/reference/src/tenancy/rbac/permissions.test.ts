@@ -1,5 +1,5 @@
+import { TENANT_ACTIONS, toPermissionMap } from '@core/tenancy/rbac/permissions';
 import { describe, expect, it } from 'vitest';
-import { TENANT_ACTIONS, toPermissionMap } from './permissions';
 
 describe('tenant rbac permissions', () => {
   it('groups resource:action strings into Better Auth permission maps', () => {

@@ -1,4 +1,4 @@
-import type { TenantStatus } from '@app/tenancy/lifecycle/tenant-lifecycle';
+import type { TenantStatus } from '@core/tenancy/lifecycle/tenant-lifecycle';
 
 /**
  * Read-model projection for the tenant application/approval flow (CQRS read side).

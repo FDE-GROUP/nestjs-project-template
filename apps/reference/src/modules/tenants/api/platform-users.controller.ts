@@ -4,7 +4,7 @@ import type {
   PlatformUserPage,
   UserGovernanceResult,
 } from '@app/modules/tenants/application/read-models/platform-user.read-model';
-import { PlatformOperatorGuard } from '@app/tenancy/platform/platform-operator.guard';
+import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
 import {
   Body,
   Controller,

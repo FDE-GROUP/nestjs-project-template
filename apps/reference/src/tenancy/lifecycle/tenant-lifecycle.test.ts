@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import {
   canTransition,
   isTenantActive,
@@ -6,7 +5,8 @@ import {
   readTenantStatus,
   TENANT_STATUS,
   withTenantStatus,
-} from './tenant-lifecycle';
+} from '@core/tenancy/lifecycle/tenant-lifecycle';
+import { describe, expect, it } from 'vitest';
 
 describe('tenant-lifecycle (S4 · FR-1 状态机纯函数)', () => {
   describe('readTenantStatus', () => {

@@ -1,4 +1,4 @@
-import type { TenantStatus } from '@app/tenancy/lifecycle/tenant-lifecycle';
+import type { TenantStatus } from '@core/tenancy/lifecycle/tenant-lifecycle';
 import { Injectable, Logger } from '@nestjs/common';
 
 /** 平台级治理动作（FR-6 · S4/S5）：审批/驳回 + 暂停/恢复/删除。 */

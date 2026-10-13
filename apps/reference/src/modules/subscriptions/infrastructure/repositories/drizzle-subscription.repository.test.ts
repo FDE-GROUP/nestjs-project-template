@@ -1,6 +1,6 @@
 import type { DrizzleService } from '@app/database/drizzle.service';
 import { tenantSubscription } from '@app/database/schema';
-import type { TenantContextService } from '@app/tenancy/tenant-context.service';
+import type { TenantContextService } from '@core/tenancy/tenant-context.service';
 import { ForbiddenException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

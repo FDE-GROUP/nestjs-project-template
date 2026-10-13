@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { DrizzleService } from '@app/database/drizzle.service';
 import { tenantSubscription } from '@app/database/schema';
-import { SUBSCRIPTION_STATUS } from '@app/tenancy/quota/tenant-plans';
-import { TenantContextService } from '@app/tenancy/tenant-context.service';
+import { SUBSCRIPTION_STATUS } from '@core/tenancy/quota/tenant-plans';
+import { TenantContextService } from '@core/tenancy/tenant-context.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { desc, eq } from 'drizzle-orm';
 import type {

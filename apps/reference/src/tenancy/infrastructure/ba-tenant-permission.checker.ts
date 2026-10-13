@@ -1,7 +1,7 @@
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
+import type { TenantPermissionChecker } from '@core/tenancy/rbac/tenant-permission.port';
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
-import type { TenantPermissionChecker } from '../rbac/tenant-permission.port';
 
 /**
  * `TenantPermissionChecker` 的参考应用侧适配（§9.5.4①B · P1b）。

@@ -1,9 +1,9 @@
 import { DrizzleService } from '@app/database/drizzle.service';
 import { member, tenantSubscription } from '@app/database/schema';
+import type { ActiveSubscriptionView, QuotaStore } from '@core/tenancy/quota/quota.store';
+import { SUBSCRIPTION_STATUS } from '@core/tenancy/quota/tenant-plans';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, count, desc, eq } from 'drizzle-orm';
-import type { ActiveSubscriptionView, QuotaStore } from '../quota/quota.store';
-import { SUBSCRIPTION_STATUS } from '../quota/tenant-plans';
 
 /**
  * `QuotaStore` 的 Drizzle 适配（参考应用侧·§9.5.4①B）：读 `tenant_subscription` 生效行、

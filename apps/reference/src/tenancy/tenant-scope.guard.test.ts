@@ -1,8 +1,8 @@
+import type { TenantContextService } from '@core/tenancy/tenant-context.service';
+import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
 import type { ExecutionContext } from '@nestjs/common';
 import { ForbiddenException } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
-import type { TenantContextService } from './tenant-context.service';
-import { TenantScopeGuard } from './tenant-scope.guard';
 
 const ctx = { switchToHttp: () => ({}) } as unknown as ExecutionContext;
 

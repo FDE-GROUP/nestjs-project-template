@@ -1,12 +1,12 @@
-import type { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
+import type { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
+import type { PlatformSettings } from '@core/tenancy/platform/platform-config.port';
+import type { PlatformIdentityLookup } from '@core/tenancy/platform/platform-identity.port';
+import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
+
+import type { RequestSessionReader } from '@core/tenancy/session/request-session.port';
 import type { ExecutionContext } from '@nestjs/common';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
-
-import type { RequestSessionReader } from '../session/request-session.port';
-import type { PlatformSettings } from './platform-config.port';
-import type { PlatformIdentityLookup } from './platform-identity.port';
-import { PlatformOperatorGuard } from './platform-operator.guard';
 
 function ctxWith(headers: Record<string, string> = {}): ExecutionContext {
   return {

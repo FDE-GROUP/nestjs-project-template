@@ -1,8 +1,8 @@
+import { QuotaService } from '@core/tenancy/quota/quota.service';
+import type { ActiveSubscriptionView, QuotaStore } from '@core/tenancy/quota/quota.store';
+import { FREE_PLAN } from '@core/tenancy/quota/tenant-plans';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { QuotaService } from './quota.service';
-import type { ActiveSubscriptionView, QuotaStore } from './quota.store';
-import { FREE_PLAN } from './tenant-plans';
 
 /**
  * 桩 `QuotaStore`（§9.5.4①B 端口倒置后·服务不再感知 Drizzle/schema）。

@@ -1,7 +1,7 @@
+import { TENANT_STATUS } from '@core/tenancy/lifecycle/tenant-lifecycle';
+import { PlatformAuditService } from '@core/tenancy/platform/platform-audit.service';
 import { Logger } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TENANT_STATUS } from '../lifecycle/tenant-lifecycle';
-import { PlatformAuditService } from './platform-audit.service';
 
 describe('PlatformAuditService (S5 · FR-6 结构化审计单点)', () => {
   let logSpy: ReturnType<typeof vi.spyOn>;

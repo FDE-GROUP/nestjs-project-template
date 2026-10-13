@@ -2,23 +2,23 @@ import 'reflect-metadata';
 import { DrizzleService } from '@app/database/drizzle.service';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
+import { TenantStatusService } from '@core/tenancy/lifecycle/tenant-status.service';
+import { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
+import { PLATFORM_SETTINGS } from '@core/tenancy/platform/platform-config.port';
+import { PLATFORM_IDENTITY_LOOKUP } from '@core/tenancy/platform/platform-identity.port';
+import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
+import { TenantPermissionGuard } from '@core/tenancy/rbac/tenant-permission.guard';
+import { TENANT_PERMISSION_CHECKER } from '@core/tenancy/rbac/tenant-permission.port';
+import { SESSION_READER } from '@core/tenancy/session/request-session.port';
+import { TenantMiddleware } from '@core/tenancy/tenant.middleware';
+import { TenantContextService } from '@core/tenancy/tenant-context.service';
+import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
 import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthSessionReader } from './infrastructure/auth-session.reader';
 import { BetterAuthTenantPermissionChecker } from './infrastructure/ba-tenant-permission.checker';
-import { TenantStatusService } from './lifecycle/tenant-status.service';
-import { UserStatusService } from './lifecycle/user-status.service';
-import { PLATFORM_SETTINGS } from './platform/platform-config.port';
-import { PLATFORM_IDENTITY_LOOKUP } from './platform/platform-identity.port';
-import { PlatformOperatorGuard } from './platform/platform-operator.guard';
-import { TenantPermissionGuard } from './rbac/tenant-permission.guard';
-import { TENANT_PERMISSION_CHECKER } from './rbac/tenant-permission.port';
-import { SESSION_READER } from './session/request-session.port';
-import { TenantMiddleware } from './tenant.middleware';
-import { TenantContextService } from './tenant-context.service';
-import { TenantScopeGuard } from './tenant-scope.guard';
 
 /**
  * S9 · NFR-7 DI / 租户上下文集成测试（对齐 `design:paramtypes` 回归）。

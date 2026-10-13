@@ -1,4 +1,4 @@
-import type { UserStatus } from '@app/tenancy/lifecycle/user-status.service';
+import type { UserStatus } from '@core/tenancy/lifecycle/user-status.service';
 
 /**
  * Platform user-governance read-model projections (FR-6/FR-10 · S6 · CQRS read side).

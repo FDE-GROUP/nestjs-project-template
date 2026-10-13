@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { DrizzleService } from '@app/database/drizzle.service';
 import { post } from '@app/database/schema';
-import { TenantContextService } from '@app/tenancy/tenant-context.service';
+import { TenantContextService } from '@core/tenancy/tenant-context.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq } from 'drizzle-orm';
 import type {

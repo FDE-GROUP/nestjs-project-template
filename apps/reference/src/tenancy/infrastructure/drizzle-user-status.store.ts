@@ -1,9 +1,8 @@
 import { DrizzleService } from '@app/database/drizzle.service';
 import { user, userStatus } from '@app/database/schema';
+import type { UserStatusStore } from '@core/tenancy/lifecycle/user-status.store';
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-
-import type { UserStatusStore } from '../lifecycle/user-status.store';
 
 /**
  * `UserStatusStore` 的 Drizzle 适配（参考应用侧·§9.5.4①B）：落独立表 `user_status`

@@ -1,7 +1,7 @@
+import { TenantPermissionGuard } from '@core/tenancy/rbac/tenant-permission.guard';
+import type { TenantPermissionChecker } from '@core/tenancy/rbac/tenant-permission.port';
 import { type ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TenantPermissionGuard } from './tenant-permission.guard';
-import type { TenantPermissionChecker } from './tenant-permission.port';
 
 function makeContext(
   headers: Record<string, unknown> = { cookie: 'session=abc' },

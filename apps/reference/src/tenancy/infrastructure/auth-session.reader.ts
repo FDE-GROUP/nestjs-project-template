@@ -1,12 +1,12 @@
 import { AUTH_BYPASS_PATHS, AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { resolveRequestSession } from '@app/modules/auth/session-resolver';
-import { Inject, Injectable } from '@nestjs/common';
 import type {
   RequestSessionReader,
   SessionRequestLike,
   SessionView,
-} from '../session/request-session.port';
+} from '@core/tenancy/session/request-session.port';
+import { Inject, Injectable } from '@nestjs/common';
 
 /**
  * `RequestSessionReader` 的参考应用侧适配（§9.5.4①B · P1b）。

@@ -1,10 +1,10 @@
-import type { TenantContextService } from '@app/tenancy/tenant-context.service';
+import { QuotaGuard } from '@core/tenancy/quota/quota.guard';
+import type { QuotaService } from '@core/tenancy/quota/quota.service';
+import type { TenantContextService } from '@core/tenancy/tenant-context.service';
 import type { ExecutionContext } from '@nestjs/common';
 import { ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
 import type { Reflector } from '@nestjs/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { QuotaGuard } from './quota.guard';
-import type { QuotaService } from './quota.service';
 
 /** Only getHandler/getClass are exercised by the guard (no request access). */
 function ctx(): ExecutionContext {

@@ -1,7 +1,7 @@
-import { TENANT_STATUS } from '@app/tenancy/lifecycle/tenant-lifecycle';
+import { TENANT_STATUS } from '@core/tenancy/lifecycle/tenant-lifecycle';
+import { TenantStatusService } from '@core/tenancy/lifecycle/tenant-status.service';
+import type { TenantStatusStore } from '@core/tenancy/lifecycle/tenant-status.store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TenantStatusService } from './tenant-status.service';
-import type { TenantStatusStore } from './tenant-status.store';
 
 /**
  * 桩 `TenantStatusStore`（§9.5.4①B 端口倒置后·服务不再感知 Drizzle/schema）。

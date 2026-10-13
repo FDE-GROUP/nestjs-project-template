@@ -1,4 +1,4 @@
-import type { TenantStatus } from '@app/tenancy/lifecycle/tenant-lifecycle';
+import type { TenantStatus } from '@core/tenancy/lifecycle/tenant-lifecycle';
 
 /**
  * Tenant provisioning gateway port (domain-owned · global-tenancy S4 · FR-1).

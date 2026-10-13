@@ -1,9 +1,8 @@
 import { DrizzleService } from '@app/database/drizzle.service';
 import { organization } from '@app/database/schema';
+import type { TenantStatusStore } from '@core/tenancy/lifecycle/tenant-status.store';
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-
-import type { TenantStatusStore } from '../lifecycle/tenant-status.store';
 
 /**
  * `TenantStatusStore` 的 Drizzle 适配（参考应用侧·§9.5.4①B）：直接落 Better Auth 的

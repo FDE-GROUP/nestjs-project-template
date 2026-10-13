@@ -1,4 +1,4 @@
-import type { UserStatus } from '@app/tenancy/lifecycle/user-status.service';
+import type { UserStatus } from '@core/tenancy/lifecycle/user-status.service';
 
 /**
  * Platform user-governance repository port (domain-owned · global-tenancy S6 · FR-6/FR-10).

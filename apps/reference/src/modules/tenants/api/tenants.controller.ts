@@ -1,7 +1,7 @@
 import { CurrentUser } from '@app/modules/auth/decorators/current-user.decorator';
 import type { SessionUser } from '@app/modules/auth/guards/session.guard';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
-import { PlatformOperatorGuard } from '@app/tenancy/platform/platform-operator.guard';
+import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
 import {
   Body,
   Controller,

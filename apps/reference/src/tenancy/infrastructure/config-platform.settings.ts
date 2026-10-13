@@ -1,6 +1,6 @@
 import { ConfigService } from '@app/config/config.service';
+import type { PlatformSettings } from '@core/tenancy/platform/platform-config.port';
 import { Inject, Injectable } from '@nestjs/common';
-import type { PlatformSettings } from '../platform/platform-config.port';
 
 /**
  * `PlatformSettings` 的参考应用侧适配（§9.5.3 热点③ · P1c）。
