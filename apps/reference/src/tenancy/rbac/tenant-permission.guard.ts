@@ -1,5 +1,3 @@
-import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
-import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import {
   type CanActivate,
   type ExecutionContext,
@@ -10,6 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { TenantContextService } from '../tenant-context.service';
 import { REQUIRED_PERMISSIONS_KEY, toPermissionMap } from './permissions';
+import { TENANT_PERMISSION_CHECKER, type TenantPermissionChecker } from './tenant-permission.port';
 
 interface PermissionRequest {
   headers: Record<string, string | string[] | undefined>;
@@ -21,15 +20,16 @@ interface PermissionRequest {
  * data-isolation guard that runs everywhere lands in S2).
  *
  * Fail-closed: without an active tenant context the request is rejected outright. The
- * actual permission decision is delegated to Better Auth's organization access control
- * (`auth.api.hasPermission`), so role→permission mapping has exactly one source of truth.
+ * actual permission decision is delegated to the core-owned `TenantPermissionChecker`
+ * port (§9.5.4①B · P1b) — the Better Auth `hasPermission` call stays on the app side, so
+ * role→permission mapping has exactly one source of truth and core imports no auth impl.
  */
 @Injectable()
 export class TenantPermissionGuard implements CanActivate {
   constructor(
     @Inject(Reflector) private readonly reflector: Reflector,
     @Inject(TenantContextService) private readonly tenantContext: TenantContextService,
-    @Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance,
+    @Inject(TENANT_PERMISSION_CHECKER) private readonly checker: TenantPermissionChecker,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -45,18 +45,11 @@ export class TenantPermissionGuard implements CanActivate {
     // Authenticated + in-tenant is enough when the route declares no specific capability.
     if (!required || required.length === 0) return true;
 
-    const auth = this.authInstance.get();
-    if (!auth) throw new ForbiddenException('Auth instance not initialized');
-
     const req = context.switchToHttp().getRequest<PermissionRequest>();
-    // Better Auth returns `{ success: boolean }` (and an `error` envelope when the caller
-    // is not a member of the active organization); both outcomes fail closed to a 403.
-    const result = await auth.api.hasPermission({
-      headers: req.headers as unknown as Headers,
-      body: { permissions: toPermissionMap(required) },
-    });
-
-    if (!result?.success) {
+    // Standardise the flat `resource:action` list into the grouped `{ resource: actions[] }`
+    // shape, then delegate the allow/deny decision to the port (fail-closed → 403).
+    const allowed = await this.checker.hasPermission(req.headers, toPermissionMap(required));
+    if (!allowed) {
       throw new ForbiddenException(`Missing tenant permission: ${required.join(', ')}`);
     }
     return true;

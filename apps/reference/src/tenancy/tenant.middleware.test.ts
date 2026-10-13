@@ -1,24 +1,29 @@
-import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { describe, expect, it, vi } from 'vitest';
 import type { TenantStatusService } from './lifecycle/tenant-status.service';
 import type { UserStatusService } from './lifecycle/user-status.service';
+import type { RequestSessionReader } from './session/request-session.port';
 import { TenantMiddleware } from './tenant.middleware';
 import { type TenantContext, tenantStorage } from './tenant-context';
 
+/**
+ * §9.5.4①B · P1b：中间件经 `RequestSessionReader` 端口消费会话（不再打桩 Better Auth 实例）。
+ * 会话解析（cookie / 旁路 / getSession）细节改由 `AuthSessionReader` 适配单测覆盖。
+ */
 function makeMiddleware(opts: {
   activeOrganizationId?: string;
   userId?: string;
   blocked?: boolean | 'throw';
   userBlocked?: boolean;
+  noSession?: boolean;
 }) {
-  const getSession = vi.fn().mockResolvedValue({
-    session: { activeOrganizationId: opts.activeOrganizationId },
-    user: { id: opts.userId ?? 'u1' },
-  });
-  const authInstance = {
-    get: () => ({ api: { getSession } }) as never,
-    set: () => {},
-  } as unknown as InjectAuthInstance;
+  const read = vi
+    .fn()
+    .mockResolvedValue(
+      opts.noSession
+        ? null
+        : { activeOrganizationId: opts.activeOrganizationId, userId: opts.userId ?? 'u1' },
+    );
+  const session = { read } as unknown as RequestSessionReader;
 
   const isBlocked =
     opts.blocked === 'throw'
@@ -29,11 +34,7 @@ function makeMiddleware(opts: {
   const userIsBlocked = vi.fn().mockResolvedValue(opts.userBlocked ?? false);
   const userStatus = { isBlocked: userIsBlocked } as unknown as UserStatusService;
 
-  return {
-    mw: new TenantMiddleware(authInstance, status, userStatus),
-    isBlocked,
-    userIsBlocked,
-  };
+  return { mw: new TenantMiddleware(session, status, userStatus), isBlocked, userIsBlocked, read };
 }
 
 function reqWith(headers: Record<string, unknown> = {}) {
@@ -45,11 +46,9 @@ async function run(mw: TenantMiddleware, req: unknown): Promise<TenantContext | 
   await new Promise<void>((resolve) => {
     mw.use(req, {}, () => {
       store = tenantStorage.getStore();
-      // Let the middleware's internal promise chain settle before reading isBlocked results.
       resolve();
     });
   });
-  // The context is bound synchronously inside tenantStorage.run(next), so `store` is set.
   return store;
 }
 
@@ -86,6 +85,13 @@ describe('TenantMiddleware · S4 approval fail-closed (deny-list)', () => {
     const store = await run(mw, reqWith({ 'x-workspace-id': 'ws7' }));
     expect(store?.tenantId).toBe('orgA');
     expect(store?.workspaceId).toBe('ws7');
+  });
+
+  it('passes straight through (no ALS bind) when the port reports no session context', async () => {
+    const { mw, read } = makeMiddleware({ noSession: true });
+    const store = await run(mw, reqWith());
+    expect(read).toHaveBeenCalled();
+    expect(store).toBeUndefined();
   });
 });
 

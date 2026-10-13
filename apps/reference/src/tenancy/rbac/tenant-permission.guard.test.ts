@@ -1,7 +1,7 @@
-import type { ExecutionContext } from '@nestjs/common';
-import { ForbiddenException } from '@nestjs/common';
+import { type ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TenantPermissionGuard } from './tenant-permission.guard';
+import type { TenantPermissionChecker } from './tenant-permission.port';
 
 function makeContext(
   headers: Record<string, unknown> = { cookie: 'session=abc' },
@@ -13,55 +13,61 @@ function makeContext(
   } as unknown as ExecutionContext;
 }
 
+/**
+ * §9.5.4①B · P1b：守卫经 `TenantPermissionChecker` 端口消费裁决——桩 `hasPermission` 返回布尔。
+ * 「是否落到 BA `hasPermission` 的 `{ headers, body:{permissions} }` 形状」由适配单测覆盖。
+ */
 function makeGuard({
   tenantId,
   required,
-  hasPermission,
+  allowed,
 }: {
   tenantId?: string;
   required?: string[];
-  hasPermission?: { success?: boolean; error?: unknown };
+  allowed?: boolean;
 }) {
   const reflector = { getAllAndOverride: vi.fn().mockReturnValue(required) };
   const tenantContext = { tenantId } as never;
-  const api = { hasPermission: vi.fn().mockResolvedValue(hasPermission) };
-  const authInstance = { get: () => ({ api }) } as never;
-  const guard = new TenantPermissionGuard(reflector as never, tenantContext, authInstance);
-  return { guard, api, reflector };
+  const hasPermission = vi.fn().mockResolvedValue(allowed ?? false);
+  const checker = { hasPermission } as unknown as TenantPermissionChecker;
+  const guard = new TenantPermissionGuard(reflector as never, tenantContext, checker);
+  return { guard, hasPermission, reflector };
 }
 
 describe('TenantPermissionGuard', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('fail-closed: rejects when there is no active tenant', async () => {
-    const { guard } = makeGuard({ tenantId: undefined, required: ['member:create'] });
+    const { guard, hasPermission } = makeGuard({
+      tenantId: undefined,
+      required: ['member:create'],
+    });
     await expect(guard.canActivate(makeContext())).rejects.toBeInstanceOf(ForbiddenException);
+    expect(hasPermission).not.toHaveBeenCalled();
   });
 
   it('allows an in-tenant request that declares no specific permission', async () => {
-    const { guard, api } = makeGuard({ tenantId: 'org_1', required: undefined });
+    const { guard, hasPermission } = makeGuard({ tenantId: 'org_1', required: undefined });
     await expect(guard.canActivate(makeContext())).resolves.toBe(true);
-    expect(api.hasPermission).not.toHaveBeenCalled();
+    expect(hasPermission).not.toHaveBeenCalled();
   });
 
-  it('grants when Better Auth reports the permission is satisfied', async () => {
-    const { guard, api } = makeGuard({
+  it('grants when the checker reports the permission is satisfied', async () => {
+    const { guard, hasPermission } = makeGuard({
       tenantId: 'org_1',
       required: ['member:create'],
-      hasPermission: { success: true },
+      allowed: true,
     });
     await expect(guard.canActivate(makeContext())).resolves.toBe(true);
-    expect(api.hasPermission).toHaveBeenCalledWith({
-      headers: { cookie: 'session=abc' },
-      body: { permissions: { member: ['create'] } },
-    });
+    // Guard standardises the flat list into the grouped `{ resource: actions[] }` map for the port.
+    expect(hasPermission).toHaveBeenCalledWith({ cookie: 'session=abc' }, { member: ['create'] });
   });
 
   it('rejects (403) when the member lacks the required permission', async () => {
     const { guard } = makeGuard({
       tenantId: 'org_1',
       required: ['organization:delete'],
-      hasPermission: { success: false },
+      allowed: false,
     });
     await expect(guard.canActivate(makeContext())).rejects.toBeInstanceOf(ForbiddenException);
   });

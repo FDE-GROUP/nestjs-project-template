@@ -1,12 +1,13 @@
 import { ConfigService } from '@app/config/config.service';
-import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
-import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
-import { resolveRequestSession } from '@app/modules/auth/session-resolver';
 import { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
 import {
   PLATFORM_IDENTITY_LOOKUP,
   type PlatformIdentityLookup,
 } from '@app/tenancy/platform/platform-identity.port';
+import {
+  type RequestSessionReader,
+  SESSION_READER,
+} from '@app/tenancy/session/request-session.port';
 import {
   type CanActivate,
   type ExecutionContext,
@@ -26,11 +27,14 @@ import {
  *
  * S6 · FR-10/FR-11①：经营者自身亦为用户，若被暂停则平台层访问同样 fail-closed（纵深防御·
  * 与 session 硬删互补，防重登绕过）。
+ *
+ * §9.5.4①B · P1b：会话经 core 自有 `RequestSessionReader` 端口读取（不再 import Better Auth
+ * 实例 / `@app/modules/auth`）·适配侧 `resolveRequestSession` 按请求记忆→与中间件共用一次 getSession。
  */
 @Injectable()
 export class PlatformOperatorGuard implements CanActivate {
   constructor(
-    @Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance,
+    @Inject(SESSION_READER) private readonly session: RequestSessionReader,
     @Inject(PLATFORM_IDENTITY_LOOKUP) private readonly identity: PlatformIdentityLookup,
     @Inject(ConfigService) private readonly config: ConfigService,
     @Inject(UserStatusService) private readonly userStatus: UserStatusService,
@@ -40,21 +44,18 @@ export class PlatformOperatorGuard implements CanActivate {
     const req = context
       .switchToHttp()
       .getRequest<{ headers: Record<string, string | string[] | undefined> }>();
-    const auth = this.authInstance.get();
-    if (!auth) throw new UnauthorizedException('Auth instance not initialized');
 
-    const result = await resolveRequestSession(auth, req);
-    const userId = result?.user?.id;
+    const view = await this.session.read(req);
+    const userId = view?.userId;
     if (!userId) throw new UnauthorizedException('Missing or invalid session');
 
     // FR-10: a suspended platform user loses platform-layer access too.
-    if (await this.userStatus.isBlocked(String(userId)))
-      throw new ForbiddenException('Account suspended');
+    if (await this.userStatus.isBlocked(userId)) throw new ForbiddenException('Account suspended');
 
     const operatorEmail = this.config.getPlatformConfig().operatorEmail?.trim().toLowerCase();
     if (!operatorEmail) throw new ForbiddenException('Platform operator not configured');
 
-    const email = (await this.identity.emailOf(String(userId)))?.toLowerCase();
+    const email = (await this.identity.emailOf(userId))?.toLowerCase();
     if (!email || email !== operatorEmail) throw new ForbiddenException('Platform operator only');
     return true;
   }

@@ -1,17 +1,26 @@
 import type { ConfigService } from '@app/config/config.service';
-import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import type { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
 import type { ExecutionContext } from '@nestjs/common';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import type { RequestSessionReader } from '../session/request-session.port';
 import type { PlatformIdentityLookup } from './platform-identity.port';
 import { PlatformOperatorGuard } from './platform-operator.guard';
 
-function ctxWith(headers: Record<string, string>): ExecutionContext {
+function ctxWith(headers: Record<string, string> = {}): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => ({ headers }) }),
   } as unknown as ExecutionContext;
+}
+
+/**
+ * §9.5.4①B · P1b：会话经 `RequestSessionReader` 端口消费——桩 `read` 返回可信会话视图（或 null）。
+ */
+function sessionReader(userId: string | undefined): RequestSessionReader {
+  return {
+    read: vi.fn(async () => (userId ? { userId } : null)),
+  } as unknown as RequestSessionReader;
 }
 
 /**
@@ -33,97 +42,80 @@ function userStatusMock(blocked = false) {
 }
 
 describe('PlatformOperatorGuard (S5 · FR-13 正式判据：email 命中配置)', () => {
-  const getSession = vi.fn();
-  const authInstance = {
-    get: () => ({ api: { getSession } }) as never,
-    set: () => {},
-  } satisfies InjectAuthInstance;
-
-  beforeEach(() => {
-    getSession.mockReset();
-  });
-
   it('allows the session user whose DB email matches the configured operator (case-insensitive)', async () => {
-    getSession.mockResolvedValue({ user: { id: 'u1' } });
     const { identity } = identityReturning('Admin@Example.com');
     const guard = new PlatformOperatorGuard(
-      authInstance,
+      sessionReader('u1'),
       identity,
       configWith('admin@example.com'),
       userStatusMock(),
     );
-    await expect(guard.canActivate(ctxWith({}))).resolves.toBe(true);
+    await expect(guard.canActivate(ctxWith())).resolves.toBe(true);
   });
 
   it('rejects a generic ADMIN-named user whose email does not match (S4 判据已弃用)', async () => {
-    getSession.mockResolvedValue({ user: { id: 'u2' } });
     const { identity } = identityReturning('someone-else@example.com');
     const guard = new PlatformOperatorGuard(
-      authInstance,
+      sessionReader('u2'),
       identity,
       configWith('admin@example.com'),
       userStatusMock(),
     );
-    await expect(guard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(guard.canActivate(ctxWith())).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('fails closed when no user row is found', async () => {
-    getSession.mockResolvedValue({ user: { id: 'ghost' } });
     const { identity } = identityReturning(undefined);
     const guard = new PlatformOperatorGuard(
-      authInstance,
+      sessionReader('ghost'),
       identity,
       configWith('admin@example.com'),
       userStatusMock(),
     );
-    await expect(guard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(guard.canActivate(ctxWith())).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('fails closed when the operator email is not configured', async () => {
-    getSession.mockResolvedValue({ user: { id: 'u1' } });
     const { identity } = identityReturning('admin@example.com');
     const guard = new PlatformOperatorGuard(
-      authInstance,
+      sessionReader('u1'),
       identity,
       configWith(''),
       userStatusMock(),
     );
-    await expect(guard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(guard.canActivate(ctxWith())).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('fails closed when the operator themselves is suspended (S6 · FR-10 platform layer)', async () => {
-    getSession.mockResolvedValue({ user: { id: 'u1' } });
     const { identity } = identityReturning('admin@example.com');
     const guard = new PlatformOperatorGuard(
-      authInstance,
+      sessionReader('u1'),
       identity,
       configWith('admin@example.com'),
       userStatusMock(true),
     );
-    await expect(guard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(guard.canActivate(ctxWith())).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('throws 401 when there is no session', async () => {
-    getSession.mockResolvedValue(null);
     const { identity } = identityReturning('admin@example.com');
     const guard = new PlatformOperatorGuard(
-      authInstance,
+      sessionReader(undefined),
       identity,
       configWith('admin@example.com'),
       userStatusMock(),
     );
-    await expect(guard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(guard.canActivate(ctxWith())).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('looks up the email scoped to the session user id', async () => {
-    getSession.mockResolvedValue({ user: { id: 'u9' } });
     const { identity, emailOf } = identityReturning('admin@example.com');
     await new PlatformOperatorGuard(
-      authInstance,
+      sessionReader('u9'),
       identity,
       configWith('admin@example.com'),
       userStatusMock(),
-    ).canActivate(ctxWith({}));
+    ).canActivate(ctxWith());
     expect(emailOf).toHaveBeenCalledWith('u9');
   });
 });

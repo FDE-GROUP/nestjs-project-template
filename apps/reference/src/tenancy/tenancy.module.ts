@@ -1,4 +1,6 @@
 import { Global, type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
+import { AuthSessionReader } from './infrastructure/auth-session.reader';
+import { BetterAuthTenantPermissionChecker } from './infrastructure/ba-tenant-permission.checker';
 import { DrizzlePlatformIdentityLookup } from './infrastructure/drizzle-platform-identity.lookup';
 import { DrizzleQuotaStore } from './infrastructure/drizzle-quota.store';
 import { DrizzleTenantStatusStore } from './infrastructure/drizzle-tenant-status.store';
@@ -14,6 +16,8 @@ import { QuotaGuard } from './quota/quota.guard';
 import { QuotaService } from './quota/quota.service';
 import { QUOTA_STORE } from './quota/quota.store';
 import { TenantPermissionGuard } from './rbac/tenant-permission.guard';
+import { TENANT_PERMISSION_CHECKER } from './rbac/tenant-permission.port';
+import { SESSION_READER } from './session/request-session.port';
 import { TenantMiddleware } from './tenant.middleware';
 import { TenantContextService } from './tenant-context.service';
 import { TenantScopeGuard } from './tenant-scope.guard';
@@ -50,6 +54,9 @@ import { TenantScopeGuard } from './tenant-scope.guard';
     { provide: USER_STATUS_STORE, useClass: DrizzleUserStatusStore },
     { provide: QUOTA_STORE, useClass: DrizzleQuotaStore },
     { provide: PLATFORM_IDENTITY_LOOKUP, useClass: DrizzlePlatformIdentityLookup },
+    // §9.5.4①B · P1b 会话端口倒置：core 经端口消费会话/RBAC，Better Auth 实例适配由参考应用装配。
+    { provide: SESSION_READER, useClass: AuthSessionReader },
+    { provide: TENANT_PERMISSION_CHECKER, useClass: BetterAuthTenantPermissionChecker },
   ],
   exports: [
     TenantContextService,
@@ -67,6 +74,8 @@ import { TenantScopeGuard } from './tenant-scope.guard';
     USER_STATUS_STORE,
     QUOTA_STORE,
     PLATFORM_IDENTITY_LOOKUP,
+    SESSION_READER,
+    TENANT_PERMISSION_CHECKER,
   ],
 })
 export class TenancyModule implements NestModule {

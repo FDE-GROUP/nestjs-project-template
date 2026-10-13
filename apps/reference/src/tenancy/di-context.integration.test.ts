@@ -7,11 +7,15 @@ import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { AuthSessionReader } from './infrastructure/auth-session.reader';
+import { BetterAuthTenantPermissionChecker } from './infrastructure/ba-tenant-permission.checker';
 import { TenantStatusService } from './lifecycle/tenant-status.service';
 import { UserStatusService } from './lifecycle/user-status.service';
 import { PLATFORM_IDENTITY_LOOKUP } from './platform/platform-identity.port';
 import { PlatformOperatorGuard } from './platform/platform-operator.guard';
 import { TenantPermissionGuard } from './rbac/tenant-permission.guard';
+import { TENANT_PERMISSION_CHECKER } from './rbac/tenant-permission.port';
+import { SESSION_READER } from './session/request-session.port';
 import { TenantMiddleware } from './tenant.middleware';
 import { TenantContextService } from './tenant-context.service';
 import { TenantScopeGuard } from './tenant-scope.guard';
@@ -90,7 +94,7 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
       const types = Reflect.getMetadata('design:paramtypes', TenantPermissionGuard) as unknown[];
       expect(types[0]).toBe(Reflector);
       expect(types[1]).toBe(TenantContextService);
-      // 第三参 authInstance 经 @Inject(AuthInstanceInjectKey) token 注入，元数据可为 Object（属预期）。
+      // 第三参 checker 经 @Inject(TENANT_PERMISSION_CHECKER) token 注入，元数据可为 Object（属预期）。
     });
   });
 
@@ -109,6 +113,9 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
           { provide: DrizzleService, useValue: drizzleStub() },
           { provide: ConfigService, useValue: configStub() },
           { provide: PLATFORM_IDENTITY_LOOKUP, useValue: { emailOf: async () => undefined } },
+          // §9.5.4①B · P1b：守卫/中间件经会话/裁决端口消费·此处用真实适配类坐实 DI 解析（依赖全局 AuthInstanceInjectKey）。
+          { provide: SESSION_READER, useClass: AuthSessionReader },
+          { provide: TENANT_PERMISSION_CHECKER, useClass: BetterAuthTenantPermissionChecker },
           { provide: UserStatusService, useValue: { isBlocked: async () => false } },
           { provide: TenantStatusService, useValue: { isBlocked: async () => false } },
         ],
@@ -139,6 +146,8 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
             provide: AuthInstanceInjectKey,
             useValue: authStub({ session: { activeOrganizationId: 'org_1' }, user: { id: 'u1' } }),
           },
+          // 中间件经真实 AuthSessionReader 适配→保留 getSession→ALS 端到端传播保真度。
+          { provide: SESSION_READER, useClass: AuthSessionReader },
           { provide: UserStatusService, useValue: { isBlocked: async () => false } },
           { provide: TenantStatusService, useValue: { isBlocked: async () => false } },
         ],
@@ -199,6 +208,7 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
               user: { id: 'u2' },
             }),
           },
+          { provide: SESSION_READER, useClass: AuthSessionReader },
           { provide: UserStatusService, useValue: { isBlocked: async () => false } },
           { provide: TenantStatusService, useValue: { isBlocked: async () => true } },
         ],

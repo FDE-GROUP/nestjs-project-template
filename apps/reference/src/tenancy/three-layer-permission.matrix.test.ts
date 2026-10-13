@@ -2,6 +2,8 @@ import type { ConfigService } from '@app/config/config.service';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
 import type { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
+import type { TenantPermissionChecker } from '@app/tenancy/rbac/tenant-permission.port';
+import type { RequestSessionReader } from '@app/tenancy/session/request-session.port';
 import { type ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlatformIdentityLookup } from './platform/platform-identity.port';
@@ -47,6 +49,23 @@ function authWith(session: SessionResult | null, hasPermission?: { success: bool
   return { get: () => ({ api }), set: () => {} } as unknown as InjectAuthInstance;
 }
 
+/**
+ * §9.5.4①B · P1b：平台/租户守卫经 core 端口消费会话与裁决（SessionGuard 仍属 auth 模块·用 authInstance）。
+ */
+function sessionReader(session: SessionResult | null): RequestSessionReader {
+  const view = session
+    ? {
+        userId: session.user?.id ? String(session.user.id) : undefined,
+        activeOrganizationId: session.session?.activeOrganizationId,
+      }
+    : null;
+  return { read: async () => view } as unknown as RequestSessionReader;
+}
+
+function permissionChecker(allowed: boolean): TenantPermissionChecker {
+  return { hasPermission: async () => allowed } as unknown as TenantPermissionChecker;
+}
+
 function userStatus(blocked = false): UserStatusService {
   return { isBlocked: async () => blocked } as unknown as UserStatusService;
 }
@@ -81,7 +100,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
     it('平台级：无会话 → PlatformOperatorGuard 401', async () => {
       const { ctx } = ctxWith();
       const guard = new PlatformOperatorGuard(
-        authWith(null),
+        sessionReader(null),
         emailDrizzle('admin@x.com'),
         config('admin@x.com'),
         userStatus(),
@@ -105,7 +124,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
       const { ctx } = ctxWith();
       // 会话有效、处于某租户，但 DB email 不命中 operator 配置 → 平台层拒绝
       const guard = new PlatformOperatorGuard(
-        authWith({ user: { id: 'tm-1' }, session: { activeOrganizationId: 'org_1' } }),
+        sessionReader({ user: { id: 'tm-1' }, session: { activeOrganizationId: 'org_1' } }),
         emailDrizzle('tenant-admin@corp.com'),
         config('admin@x.com'),
         userStatus(),
@@ -132,14 +151,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
     it('租户权限缺失时 BA hasPermission=false → TenantPermissionGuard 403（租户权不外溢）', async () => {
       const tcs = new TenantContextService();
       const reflector = { getAllAndOverride: () => ['organization:delete'] };
-      const guard = new TenantPermissionGuard(
-        reflector as never,
-        tcs,
-        authWith(
-          { user: { id: 'm' }, session: { activeOrganizationId: 'org_1' } },
-          { success: false },
-        ),
-      );
+      const guard = new TenantPermissionGuard(reflector as never, tcs, permissionChecker(false));
       const { ctx } = ctxWith({ cookie: 's' });
       await expect(
         tcs.run({ tenantId: 'org_1', userId: 'm' }, () => guard.canActivate(ctx)),
@@ -162,7 +174,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
     it('平台层：暂停用户即便 email 命中 operator 亦 403（纵深防御）', async () => {
       const { ctx } = ctxWith();
       const guard = new PlatformOperatorGuard(
-        authWith(blockedSession),
+        sessionReader(blockedSession),
         emailDrizzle('admin@x.com'),
         config('admin@x.com'),
         userStatus(true),
