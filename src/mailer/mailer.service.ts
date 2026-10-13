@@ -2,9 +2,12 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
 import mjml from 'mjml';
-// import { I18nService } from 'nestjs-i18n'; // Temporarily disabled until I18n module is properly configured
+import { I18nService } from 'nestjs-i18n';
 import * as nodemailer from 'nodemailer';
 import * as path from 'path';
+
+// Body translation keys per email template (matches src/i18n/<lang>/emails.json structure).
+const EMAIL_BODY_KEYS = ['title', 'greeting', 'message', 'button', 'footer'] as const;
 
 @Injectable()
 export class MailerService {
@@ -13,7 +16,7 @@ export class MailerService {
 
   constructor(
     @Inject(ConfigService) private readonly configService: ConfigService,
-    // @Inject(I18nService) private readonly i18n: I18nService, // Temporarily disabled
+    @Inject(I18nService) private readonly i18n: I18nService,
   ) {
     this.transporter = nodemailer.createTransport({
       host: this.configService.get('MAIL_HOST'),
@@ -27,8 +30,7 @@ export class MailerService {
   }
 
   // 默认入口语言置中文（依 global-cn-adaptation L1 / vision §6 地域约束）。
-  // 注：`I18nModule` 尚未接线，`getEmailTranslations` 仍为占位英文——此处只定「默认
-  // 语言」基准，全量翻译（校验消息 / 邮件正文）待 I18n 管道接入后启用。
+  // I18nModule 已接线（MailerModule.forRoot），正文/主题按 lang 从 src/i18n/<lang>/emails.json 取。
   private async renderTemplate(
     templateName: string,
     context: Record<string, any>,
@@ -66,22 +68,23 @@ export class MailerService {
     }
   }
 
-  private async getEmailTranslations(
-    _templateName: string,
-    _lang: string,
-    _context: Record<string, any>,
-  ): Promise<Record<string, string>> {
-    // TODO: Implement proper I18n translations when I18n module is configured
-    // For now, return default English translations
-    const translations: Record<string, string> = {
-      title: 'Email Title',
-      greeting: 'Hello',
-      message: 'This is a message',
-      button: 'Click Here',
-      footer: 'Email Footer',
-    };
-
+  private getEmailTranslations(
+    templateName: string,
+    lang: string,
+    context: Record<string, any>,
+  ): Record<string, string> {
+    const translations: Record<string, string> = {};
+    for (const key of EMAIL_BODY_KEYS) {
+      translations[key] = this.i18n.translate(`emails.${templateName}.${key}`, {
+        lang,
+        args: context,
+      });
+    }
     return translations;
+  }
+
+  private getEmailSubject(templateName: string, lang: string): string {
+    return this.i18n.translate(`emails.${templateName}.subject`, { lang });
   }
 
   async sendVerificationEmail(
@@ -98,7 +101,7 @@ export class MailerService {
 
       const html = await this.renderTemplate('verification', context, lang);
 
-      const subject = 'Email Verification'; // TODO: Use I18n when available
+      const subject = this.getEmailSubject('verification', lang);
 
       await this.transporter.sendMail({
         from: this.configService.get('MAIL_FROM'),
@@ -123,7 +126,7 @@ export class MailerService {
 
       const html = await this.renderTemplate('welcome', context, lang);
 
-      const subject = 'Welcome'; // TODO: Use I18n when available
+      const subject = this.getEmailSubject('welcome', lang);
 
       await this.transporter.sendMail({
         from: this.configService.get('MAIL_FROM'),
@@ -154,7 +157,7 @@ export class MailerService {
 
       const html = await this.renderTemplate('forgot-password', context, lang);
 
-      const subject = 'Forgot Password'; // TODO: Use I18n when available
+      const subject = this.getEmailSubject('forgot-password', lang);
 
       await this.transporter.sendMail({
         from: this.configService.get('MAIL_FROM'),

@@ -2,7 +2,7 @@
 
 > 适用范围: `全局` ← blast radius，审计深度=人签核（`workflow.md` §3/§5）
 > 关联: [vision.md](../specs/vision.md) §4.3 计费 / §6 地域与合规约束 · [global-tenancy.md](./global-tenancy.md) FR-8/D5（已回改为多通道 provider）· [architecture.md](../specs/architecture.md)（provider 落 infrastructure/瘦适配器层）· [tooling-standards.md](../specs/tooling-standards.md)（选型 SSOT，待落）· [research/better-auth-cn-providers.md](../research/better-auth-cn-providers.md)（参考·非依据）· [workflow.md](../specs/workflow.md) §1/§3
-> 性质: **技术方案（plan）**，重写型 · 版本 0.7.0 · 日期 2026-10-13 · 状态: **已审·开发依据**（`workflow.md` §3 已过审计门，见 §12）
+> 性质: **技术方案（plan）**，重写型 · 版本 0.8.0 · 日期 2026-10-13 · 状态: **已审·开发依据**（`workflow.md` §3 已过审计门，见 §12）
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
 > 受众: **人（方案主导）+ Agent（已审后为开发依据）**
 
@@ -152,6 +152,8 @@ interface GenericOAuthConfig {
 
 i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback locale 置 `zh`；校验消息、邮件模板中文为准。仅改默认、不删 en/ja。
 
+> **落地（L1·分阶 A）**：`nestjs-i18n@10` 接线 `I18nModule.forRoot`（于 `MailerModule`，fallback `zh`、loader 读 `src/i18n`、无 HTTP resolver）。**邮件正文/主题已按 `lang` 真本地化**（`MailerService` 注入 `I18nService`、`getEmailTranslations`/subject 均取真实 `emails.<tpl>.*` 翻译，单花括号 `{var}` 插值）——经实证 dev boot/生产 SWC 资源拷贝/typeCheck 均无碍。**校验消息本地化（I18nValidationPipe/ExceptionFilter）递延**（涉及对外错误响应契约变更，需单独签核）。
+
 ### 6.5 日志去 Datadog（FR-6 / D6）
 
 `src/logger/logger.service.ts` 移除 `pino-datadog-transport` target → **dev** `pino-pretty`(console)、**prod** `pino/file`(可 `pino-roll` 滚动)；移除 `config.getDatadogConfig` 与 `default.ts` 的 `datadog` 块、`package.json` 依赖、`.env.example` 的 `DATADOG_*`。本期不接集中监控。
@@ -182,7 +184,7 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 | **A2** 微信 / 钉钉登录（仅留接口·暂缓 D8） | FR-3 | `KNOWN_GENERIC_CHANNELS` 接口位（无构建器即跳过） | 无 | A1 |
 | **A3** 企业微信登录（仅留接口·暂缓 D8） | FR-3 | 同上（wecom 接口位） | 无 | A2 |
 | **M1** 依赖镜像 | FR-4 | `bunfig.toml`/`.npmrc`、`Dockerfile`、文档 | 无 | 最低风险，可先行 |
-| **L1** 默认 zh | FR-5 | i18n fallback、校验/邮件默认 | 无 | 可先行 |
+| **L1** ✅ 默认 zh（已落地·分阶 A） | FR-5 | i18n fallback `zh` + **mailer 本地化**（`I18nModule` 接线、正文/主题按 lang）；校验本地化递延 | 无 | 可先行 |
 | **G1** 去 Datadog | FR-6 / D6 | `logger.service.ts`、`config/envs`、`package.json`、`.env.example` | 无 | 移除即契约变更（观测） |
 | **C1** ✅ PIPL 同意+导出/删除（已落地） | FR-7 | `database/schema.consent` + `users/api/{GET me/data-export, DELETE me}` + `auth/guards/session.guard` + `@CurrentUser` + CQRS `DeleteUserCommand`/`ExportUserDataQuery` | **有（expand 新表 · `drizzle/0001_*.sql`）** | users 上下文 · 硬删 user 与 consent `onDelete: set null` 匿名保留 |
 | **C2** ✅ 数据驻留校验（已落地） | FR-7 / D7 | `config/data-residency.ts` + `main.ts` bootstrap 接入 · DB host 与 storage region 境内 allowlist | 无 | C1 |
@@ -221,7 +223,8 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 - [ ] `PaymentProvider` / `GenericOAuthConfig` 接口签名经实现切片时代码评审定稿（非阻断 M1/L1/G1）；
 - [x] expand–contract 迁移与回滚步骤经审计确认可执行；
 - [x] **审计门通过 + 人签核**（见 §12），已可开工（低风险项 M1/L1/G1 先行）。
-- [x] **M1**（npmmirror/Docker 镜像 ARG）、**G1**（去 Datadog、日志落文件）、**L1**（mailer 默认 zh）已落地并通过本地 CI（commit `9e27d63`）；L1 全量翻译待 I18n 接线（非本片）。
+- [x] **M1**（npmmirror/Docker 镜像 ARG）、**G1**（去 Datadog、日志落文件）、**L1**（mailer 默认 zh）已落地并通过本地 CI（commit `9e27d63`）。
+- [x] **L1 全量翻译·分阶 A** 已落地（分阶 B 递延）：`nestjs-i18n@10` 接线 `I18nModule.forRoot`（`MailerModule`、fallback zh、loader 读 `src/i18n`、无 HTTP resolver）；`MailerService` 注入 `I18nService`，正文与 subject 均取真实 `emails.<tpl>.*` 翻译（`{var}` 插值）；本地 CI 全绿（mailer 单测 + 真实 JSON 装载集成测）。**校验消息本地化（I18nValidationPipe/ExceptionFilter）递延**（需单独签核对外错响应契约）。
 - [x] **S1** 存储默认切阿里云 OSS（境内 region/endpoint 默认、env 可切 S3/COS）已落地并通过本地 CI。
 - [x] **P1** 支付抽象已落地（expand–contract 一步到位）：新增 `src/modules/payment`（`PaymentProvider` 端口 + `StripePaymentProvider` 收敛自旧 `StripeService` + `PaymentModule.register()` 依配置装配、`PaymentService` 懒解析未配即降级 NFR-2）；旧 `src/modules/stripe` 已收缩删除、`/payment/*` 替 `/stripe/*`（公共 API/DI 变更=高危#4 已签核）；STRIPE_* 改 optional 以支持境内-only 降级；本地 CI 全绿。
 - [x] **A1** 飞书登录已落地（方案 C）：`genericOAuth` 插件挂入 `CreateAuth`（有配置才挂、NFR-2）；飞书构建器自定义 `getToken`（JSON body）/`getUserInfo`（Bearer+解包 data）/`accountSubject`（union_id→open_id）/`mapProfileToUser`；**`disableSignUp:true` 强制不独立建号**、`pkce:false`；`oauth.genericProviders`+`FEISHU_APP_*` 走 env（NFR-3）；微信/钉钉/企微仅 registry 接口位（D8 暂缓）；契约单测全 mock、本地 CI 全绿（未接真实飞书沙箱，依 NFR-4）。
@@ -265,8 +268,9 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 | 2026-10-13 | 0.5.0 | **C1 PIPL 基线落地**（人签核高危 #1 硬删 · consent `set null` 匿名保留方案 A） | §8 C1 标记已落地（具体落点 + 迁移）；§10 新增 C1 checkbox；§11-3 粒度→「用途×版本」实现确认；开工信号同步 |
 | 2026-10-13 | 0.6.0 | **C2 数据驻留启动校验落地**（人签核 分环境策略 strict/warn + env 可覆盖） | §8 C2 标记已落地；§10 新增 C2 checkbox；新增 `src/config/data-residency.ts` 与 15 例单测；`.env.example` 新增 `DATA_RESIDENCY_ENFORCE` 与 `DATA_RESIDENCY_DB_HOST_ALLOWLIST` 注释位 |
 | 2026-10-13 | 0.7.0 | **D9 支付通道交付排序裁决**（人裁决：P2/P3 劣后暂缓、后续择机再开发） | §5 新增 D9；§7 Won't 本期加 P2/P3 暂缓行；§8 P2/P3 标暂缓 D9（接口位保留）；§11-1 未决转已裁；开工信号同步 |
+| 2026-10-13 | 0.8.0 | **L1 全量翻译·分阶 A 落地**（人裁决：先 mailer、校验本地化递延） | §6.4 补落地说明；§8 L1 标 ✅；§10 L1 拆为默认 zh + 分阶 A 两项；新增 `nestjs-i18n` 接线 MailerModule、MailerService 本地化、mailer 单测/集成测；可行性实证（dev boot/生产资源/typeCheck）清障 main.ts 旧“CJS 链崩”注释假设 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 / v0.7.0 裁决 D9（支付 P2/P3 劣后暂缓·接口位保留）；v0.6.0 落地 C2、v0.5.0 落地 C1、v0.4.0 裁决 D8、v0.3.0 过审计门、v0.1.0 讨论期多次澄清属同一初稿形成，不单列演变。以当前正文内容为准。
+正文已于 2026-10-13 / v0.8.0 落地 L1 全量翻译·分阶 A（mailer 本地化、校验递延）；v0.7.0 裁决 D9、v0.6.0 落地 C2、v0.5.0 落地 C1、v0.4.0 裁决 D8、v0.3.0 过审计门、v0.1.0 讨论期多次澄清属同一初稿形成，不单列演变。以当前正文内容为准。

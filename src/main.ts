@@ -80,10 +80,11 @@ async function bootstrap() {
   });
 
   // Setup global request validation
-  // Uses Nest's stock ValidationPipe. `nestjs-i18n`'s I18nValidationPipe / ExceptionFilter are
-  // intentionally not used here because the project does not wire up `I18nModule`, and their
-  // transitive CJS require() chain trips Bun's ESM interop at boot. Translation keys stay as
-  // literal strings in the error messages until a proper i18n pipeline is added.
+  // Uses Nest's stock ValidationPipe. `nestjs-i18n` is wired for mailer localization
+  // (see MailerModule); the I18nValidationPipe / ExceptionFilter are intentionally still
+  // unused here because switching to them changes the shape of API validation error
+  // responses (a public contract change) and needs a per-request locale resolver —
+  // deferred per L1 staged rollout. Validation messages remain literal English for now.
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
