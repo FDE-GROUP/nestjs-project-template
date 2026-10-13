@@ -48,7 +48,7 @@
 
 ## 3. 主要风险 / 待决（须进 plan，非本文裁决）
 
-1. **JWT vs session activeOrganizationId 接缝**（结构级）：本仓 Better Auth 走 JWT，org 插件以 `session.activeOrganizationId` 承载当前租户。D4 要求「JWT claim 为主 + header 覆盖」——须核验如何把 active org 落入 JWT claim / 切换接口是否可用。**此接缝决定复用深度，须最小 spike 坐实**（同 [cn-providers §4](./better-auth-cn-providers.md) 纪律）。
+1. **JWT vs session activeOrganizationId 接缝**（结构级）：~~待核~~ → **已代码级核验（见 §6 spike 补记）：非阻塞、反而天然对齐**。本仓实为 cookie + 服务端 DB session（`SessionGuard` 走 `auth.api.getSession({headers})`），org 插件把 `activeOrganizationId` 存于 **session 字段**、由同一 `getSession` 带出——注入租户上下文只需读 `session.activeOrganizationId`，无需 JWT claim 管道。**副作用：与 [global-tenancy D4「JWT claim 为主」前提不符，须上报人裁（见 §6）**。
 2. **手写 Drizzle schema 的集成成本**：本仓 auth 表为**手写维护**（`src/database/schema.ts` 单文件，`user` 已手加 `isOwner`/`handle` 等 Better Auth additionalFields）。org 插件要新增 `organization`/`member`/`invitation` + 改 `session`——须核验其在**手写 schema + 单一 `database/schema.ts` 布局**下的生成 / 迁移路径（文档字段清单为渲染组件、未取精确列，以实际生成表为准）。
 3. **RBAC 粒度**：`member.role` 为**单字符串角色** + `ac` 的 resource:action。FR-4/FR-11「角色与权限点分离」「三层各自 fail-closed」——须核 `ac` 表达力是否足够，`organizationRole` 动态角色是否引入额外复杂度。
 4. **受邀 email 依赖**：`invitation` 以 email 为锚，与 [cn-providers 风险1](./better-auth-cn-providers.md)（微信/钉钉/飞书常无 email）叠加——境内场景下受邀流可能需要 email 之外的锚点。
@@ -70,7 +70,18 @@
 - 文档 `DatabaseTable` 组件渲染的字段清单未取到精确列；**实际字段须以生成的 Drizzle 表为准**，本文不作断言。
 - 关联既有调研：[better-auth-cn-providers.md](./better-auth-cn-providers.md)（境内登录渠道、email 缺失风险）。
 
+## 6. Spike 补记（代码/类型级核验 · 2026-10-13）
+
+针对风险①的 JWT↔activeOrganizationId 接缝，以**本仓 node_modules（`better-auth@1.7.7`）源码/类型 + 仓内 auth 实现**为真值核验（未跑 DB boot）：
+
+- **本仓验活形态**：`src/modules/auth/guards/session.guard.ts:46` → `auth.api.getSession({ headers: req.headers })`；`auth.implement.ts` **未挂 `jwt()` 插件**，`authConfig.jwt.secret` 仅作 Better Auth 内部 session cookie 签名密钥。**结论：本仓 = cookie + 服务端 DB session，非无状态 JWT。**
+- **org 插件 activeOrg 位置**：`plugins/organization/schema.d.mts` 的 `SessionDefaultFields.activeOrganizationId`（string, required:false, input:false）——**挂在 session 记录上**，由 `getSession` 一并返回。→ 与本仓 session 模型**天然对齐**，注入租户上下文 = guard 读 `result.session.activeOrganizationId` → AsyncLocalStorage，**无需 claim 改造**。
+- **切换 active org**：端点 `/organization/set-active`（写 session.activeOrganizationId）存在；全套端点涵盖 `create/update/delete/list`、`set-active`/`set-active-team`、`invite-member`/`accept-invitation`/`reject-invitation`/`cancel-invitation`、`update-member-role`/`remove-member`/`leave`/`get-active-member(-role)`/`list-members`、动态角色 `create/list/update/delete-role`。
+- **未验（留 plan 待 spike）**：风险②（组插件新增 `organization`/`member`/`invitation` + `session` 列在**手写单文件 Drizzle schema** 下的 `drizzle-kit generate`/migrate 具体路径）需真实 DB 才能坐实；不推翻结构结论。
+
+> **副作用（须人裁）**：本次核验发现 [global-tenancy D4](../plans/global-tenancy.md) 「JWT claim 为主 + 可覆盖 header」与**代码实态（cookie+DB session）不符**。这不是 org 插件的限制，而是需求前提需修正：session-cookie 对本项目反而更优（FR-10 fail-closed 暂停可直接失效 session 行）。**D4 已✅签核，属人决策权限（P7），本文仅上报事实、不擅改。**
+
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 起草（v0.1.0 · 调研参考稿），结论须人二次核验后写入 plan，本文不作开发依据。
+正文已于 2026-10-13 起草（v0.1.0），同日补 §6 代码级 spike 核验（v0.2.0）；结论须人二次核验后写入 plan，本文不作开发依据。
