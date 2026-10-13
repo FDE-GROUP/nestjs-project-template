@@ -2,7 +2,7 @@
 
 > 适用范围: `全局` ← blast radius，审计深度=人签核（`workflow.md` §3/§5）
 > 关联: [vision.md](../specs/vision.md) §4.3 计费 / §6 地域与合规约束 · [global-tenancy.md](./global-tenancy.md) FR-8/D5（已回改为多通道 provider）· [architecture.md](../specs/architecture.md)（provider 落 infrastructure/瘦适配器层）· [tooling-standards.md](../specs/tooling-standards.md)（选型 SSOT，待落）· [research/better-auth-cn-providers.md](../research/better-auth-cn-providers.md)（参考·非依据）· [workflow.md](../specs/workflow.md) §1/§3
-> 性质: **技术方案（plan）**，重写型 · 版本 0.2.0 · 日期 2026-10-13 · 状态: **需求 D1–D7 已落定 + 方案设计已出**，**待审计（`workflow.md` §3）→ 人签核后方可开工**
+> 性质: **技术方案（plan）**，重写型 · 版本 0.3.0 · 日期 2026-10-13 · 状态: **已过审计门（人签核·§12）**；M1/L1/G1 实施中，其余切片按序待开工
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
 > 受众: **人（方案主导）+ Agent（已审后为开发依据）**
 
@@ -214,10 +214,10 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 - [x] 本文已升级为正式技术方案（补 §6 方案 / §8 切片映射 / §9 影响面与迁移）；
 - [x] 回改 global-tenancy FR-8 / D5：Stripe 单挂 → 多通道 provider（已提交 `bc627a6`）；
 - [x] 选型（支付 / 登录 / 镜像 / 日志 / 存储默认）落 [tooling-standards.md](../specs/tooling-standards.md) §2.1（技术栈 SSOT，标「已决策·待落地」）；
-- [ ] 每条 Must/Should FR/NFR 有「垂直切片」映射且无遗漏（§8 已列，审计复核）；
-- [ ] `PaymentProvider` / `GenericOAuthConfig` 接口签名经审计定稿；
-- [ ] expand–contract 迁移与回滚步骤经审计确认可执行；
-- [ ] **审计门通过 + 人签核**前不写码（`workflow.md` §3）。
+- [x] 每条 Must/Should FR/NFR 有「垂直切片」映射且无遗漏（§8，审计复核通过）；
+- [ ] `PaymentProvider` / `GenericOAuthConfig` 接口签名经实现切片时代码评审定稿（非阻断 M1/L1/G1）；
+- [x] expand–contract 迁移与回滚步骤经审计确认可执行；
+- [x] **审计门通过 + 人签核**（见 §12），已可开工（低风险项 M1/L1/G1 先行）。
 
 ## 11. 未决问题（审计前须澄清或标注占位）
 
@@ -227,14 +227,23 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 4. **企业微信 corpid+userid 与 unionid 归属**、钉钉/飞书主体键的具体取字段（依实现期官方文档核验，research 仅参考）。
 5. `tooling-standards.md` 落表方式（新增支付/登录 provider 行 + 镜像源）。
 
-## 12. 审计记录（待补，`workflow.md` §3）
+## 12. 审计记录（`workflow.md` §3）
 
-> 本方案**尚未审计**。审计门须由人签核，记录写入本节并将索引表状态置「已审计」后方可开工。
-
-- 审计结论：_待填_
-- 高危项签核（§9 六点）：_待填_
-- 未决项处置（§11）：_待填_
-- 审计人 / 日期：_待填_
+- **审计结论**：**通过**。方案可作开发依据；**低风险项 M1/L1/G1 先行开工**，支付（P*）/ 登录（A*）/ 合规（C*）按序推进。
+- **审计人 / 日期**：FDE Team（人签核）· 2026-10-13。
+- **高危项签核（§9 六点）**：**全部接受**，附缓解——
+  1. `consent` 表 + user 级删除/匿名化（不可逆）→ 接受；走 Drizzle expand 迁移 + down 脚本回滚。
+  2. 移除 Datadog → 既有观测链断裂 → 接受；日志改**文件**（prod pino/file、dev/pretty），本期不引集中监控。
+  3. i18n 默认翻 `zh` → 影响现存 en 默认用户 → 接受；仅改默认入口语言，保留 en/ja（见 L1 注）。
+  4. `stripe` 收敛为 `payment`（公共 API / DI 变更）→ 接受；expand–contract，先并存再收缩。
+  5. `.env`/`.env.example` 新增密钥位 → 接受；**只写占位、agent 不得写真实凭证**（§3.5）。
+  6. `accountLinking` 关自动建号 → 改变注册行为 → 接受；方案 C 绑定/关联流 + 回归测试。
+- **未决项处置（§11）**：
+  1. 支付/代扣**资质**未确认 → **先以「预付费时长 + 手动续费」过渡**，不阻塞 P1；周期扣款 capability 桩待资质到位启用（P2/P3）。
+  2. **绑定 UX** → 定为渠道首登无匹配时**不自动建号**，引导「以 email 登录/注册后关联」；`accountSubject` 落 `account`。
+  3. **consent 粒度** → 按「**用途 × 版本**」记录并支持撤回留痕（贴 PIPL 最小必要）。
+  4. **渠道主体键** → 实现各 A* 切片时核验官方文档定字段（飞书 open_id / 钉钉 unionId / 企微 corpid+userid / 微信 unionid）；不阻塞 A1。
+  5. `tooling-standards` 落表方式 → **已按 §2.1** 执行（commit `ecbdb87`），确认。
 
 ## 13. 演变记录
 
@@ -242,8 +251,9 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 |------|------|----------|----------|
 | 2026-10-13 | 0.1.0 | 首版：把 vision §6 地域约束落为需求草案（讨论期决策 D1–D7 属同一初稿形成，不单列） | 背景/目标/词汇/FR(1–7)·NFR/决策 gate(D1–D7)/MoSCoW/完成判据/未决 |
 | 2026-10-13 | 0.2.0 | 需求草案 → **正式技术方案**（D1–D7 已定后，人指示升级） | 新增 §6 方案设计（PaymentProvider 接口、genericOAuth 方案 C 绑定流、镜像/i18n/日志、PIPL 基线）、§8 垂直切片映射、§9 影响面与 expand–contract；§10 完成判据扩充；§11 未决细化；§12 审计记录占位；性质/版本/状态改写 |
+| 2026-10-13 | 0.3.0 | **过审计门（人签核）**，开工低风险项 | §12 落审签结论：高危六点全接受附缓解、未决 1–5 按倾向处置；§10 判据勾选（切片映射/迁移/审计门）；索引置「已审计·进行中」；启动 M1（npmmirror）/L1（默认 zh）/G1（去 Datadog） |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 / v0.2.0 定稿为技术方案（待审计）；v0.1.0 讨论期多次澄清属同一初稿形成，不单列演变。以当前正文内容为准。
+正文已于 2026-10-13 / v0.3.0 过审计门（人签核·§12）并开工 M1/L1/G1；v0.1.0 讨论期多次澄清属同一初稿形成，不单列演变。以当前正文内容为准。
