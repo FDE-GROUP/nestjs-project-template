@@ -1,6 +1,7 @@
 import { AUTH_BYPASS_PATHS, AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { Inject, Injectable, Logger, type NestMiddleware } from '@nestjs/common';
+import { TenantStatusService } from './lifecycle/tenant-status.service';
 import { type TenantContext, tenantStorage } from './tenant-context';
 
 /**
@@ -20,6 +21,8 @@ export class TenantMiddleware implements NestMiddleware {
   constructor(
     @Inject(AuthInstanceInjectKey)
     private readonly authInstance: InjectAuthInstance,
+    @Inject(TenantStatusService)
+    private readonly tenantStatus: TenantStatusService,
   ) {}
 
   use(req: any, _res: any, next: () => void): void {
@@ -46,6 +49,8 @@ export class TenantMiddleware implements NestMiddleware {
         (
           result: { session?: { activeOrganizationId?: string }; user?: { id?: string } } | null,
         ) => {
+          const tenantId = result?.session?.activeOrganizationId ?? undefined;
+          const userId = result?.user?.id;
           // S3 · workspace 二级边界 (D2/§9.2): the active workspace is a per-request
           // selector read from the `x-workspace-id` header (header may override — §9.2).
           // OPTIONAL: absent → request runs at tenant scope. Cross-tenant safety never
@@ -54,12 +59,24 @@ export class TenantMiddleware implements NestMiddleware {
           const wsHeader = req?.headers?.['x-workspace-id'];
           const workspaceId =
             typeof wsHeader === 'string' && wsHeader.length > 0 ? wsHeader : undefined;
-          const ctx: TenantContext = {
-            tenantId: result?.session?.activeOrganizationId ?? undefined,
-            workspaceId,
-            userId: result?.user?.id,
+
+          // S4 · FR-1 审批制失能卡点 (deny-list): a tenant explicitly pending approval /
+          // suspended / deleted binds NO tenantId → downstream TenantScopeGuard fails
+          // closed (403) on business routes. No status recorded (legacy/seeded) → allowed,
+          // so existing dev tenants are never locked. Async: only pay the extra read when
+          // a tenant is actually resolved.
+          const bind = (boundTenantId: string | undefined): void => {
+            const ctx: TenantContext = { tenantId: boundTenantId, workspaceId, userId };
+            tenantStorage.run(ctx, next);
           };
-          tenantStorage.run(ctx, next);
+          if (!tenantId) {
+            bind(undefined);
+            return;
+          }
+          this.tenantStatus
+            .isBlocked(tenantId)
+            .then((blocked) => bind(blocked ? undefined : tenantId))
+            .catch(() => bind(undefined)); // fail-closed: unresolvable status → no tenant
         },
       )
       .catch((err: Error) => {

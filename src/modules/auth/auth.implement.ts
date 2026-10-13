@@ -28,6 +28,8 @@ export interface CreateAuthResult {
       // 租户级 RBAC 判定（S1 · FR-4）：透传 Better Auth organization 插件的 hasPermission，
       // 以 ac + roles 为唯一权限源，供 TenantPermissionGuard 调用。
       hasPermission: (params: any) => Promise<any>;
+      // 建租户唯一通道（S4 · FR-1）：透传 organization 插件 createOrganization（服务端系统动作）。
+      createOrganization: (params: any) => Promise<any>;
     };
   };
 }
@@ -130,8 +132,15 @@ export function CreateAuth(
       // 权限源（禁散点·§9.3），由 TenantPermissionGuard 经 hasPermission 判定。S3 扩展 ac
       // 增 `workspace` 资源（read=全成员·create/update/delete=owner+admin），roles 精确镜像
       // BA 默认集再叠加 workspace（见 rbac/access-control.ts），故既有 org 端点行为不变。
-      // 审批制创建租户（FR-1）留 S4。
-      organization({ ac: tenantAccessControl, roles: tenantRoles }),
+      // S4（FR-1 审批制）：`allowUserToCreateOrganization: false` 封死 HTTP 自助即时开通
+      // （任何会话调 /organization/create 一律 403·ORGANIZATION_ERROR_CODES.YOU_ARE_NOT_ALLOWED…）；
+      // 建租户唯一通道 = 服务端系统动作（无 session + body.userId → isSystemAction·源码坐实不受
+      // 此开关限），由 tenants 申请端点独享（强制 metadata.status=pending_approval）。
+      organization({
+        ac: tenantAccessControl,
+        roles: tenantRoles,
+        allowUserToCreateOrganization: false,
+      }),
     ],
     account: {
       accountLinking: {
@@ -220,6 +229,11 @@ export function CreateAuth(
         },
         hasPermission(params: Parameters<typeof auth.api.hasPermission>[0]) {
           return auth.api.hasPermission(params);
+        },
+        // S4 · FR-1：申请建租户的服务端系统动作（无 session + body.userId → isSystemAction），
+        // 绕过 HTTP 层 `allowUserToCreateOrganization:false` 封禁，由 tenants 申请端点独享。
+        createOrganization(params: Parameters<typeof auth.api.createOrganization>[0]) {
+          return auth.api.createOrganization(params);
         },
       },
     },
