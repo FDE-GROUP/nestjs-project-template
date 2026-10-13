@@ -14,6 +14,7 @@ import type { FastifyInstance } from 'fastify';
 import * as yaml from 'js-yaml';
 import { AppModule } from './app.module';
 import { ConfigService } from './config/config.service';
+import { assertDataResidency, resolveEnforceMode } from './config/data-residency';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -32,6 +33,40 @@ async function bootstrap() {
   const host = appConfig.host;
   const apiPrefix = appConfig.apiPrefix;
   const swaggerConfig = configService.getSwaggerConfig();
+
+  // PIPL data-residency startup guard (C2 · D7).
+  // strict => mainland-only, refuse to boot on violation (default when NODE_ENV=production).
+  // warn   => log-and-continue (default for development/test; override via env).
+  {
+    const mode = resolveEnforceMode(process.env.NODE_ENV, process.env.DATA_RESIDENCY_ENFORCE);
+    const extraAllowlist = (process.env.DATA_RESIDENCY_DB_HOST_ALLOWLIST || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const dbConfig = configService.getDatabaseConfig();
+    const storageConfig = configService.getStorageConfig();
+    const report = assertDataResidency(
+      {
+        databaseUrl: dbConfig.url,
+        storage: {
+          provider: storageConfig?.provider,
+          region: storageConfig?.region,
+          endpoint: storageConfig?.endpoint,
+          accessKeyId: storageConfig?.accessKeyId,
+        },
+      },
+      mode,
+      extraAllowlist,
+    );
+    if (report.warnings.length > 0) {
+      logger.warn(`Data residency (warn mode): ${report.warnings.join(' | ')}`);
+    }
+    if (mode === 'strict' && report.errors.length > 0) {
+      logger.error(`Data residency violation, refusing to boot: ${report.errors.join(' | ')}`);
+      await app.close();
+      process.exit(1);
+    }
+  }
 
   app.setGlobalPrefix(apiPrefix as string, {
     exclude: swaggerConfig?.path

@@ -57,7 +57,7 @@
 | **默认语言** | i18n 默认 / fallback 置 `zh`（保留 en/ja） | **部分落地**（L1：mailer 默认 zh；全量翻译待 I18n 接线） | 文档中文为准（FR-5/D4） |
 | **日志后端** | pino 默认落文件；**移除** `pino-datadog-transport` | **已落地**（G1，commit `9e27d63`） | 本期**不引**集中监控（SLS/Loki 留后）（FR-6/D6） |
 | **对象存储默认** | 默认阿里云 OSS，COS/S3 经 env 切换 | provider 现行；**默认已切 OSS**（S1，境内 region 默认） | 已有 OSS/COS/S3 provider（D5） |
-| **合规（PIPL）** | consent 留痕 + 按 user 导出/删除 + 数据驻留境内 region | **部分落地**：C1 已落地（`consent` 表 + `GET /users/me/data-export` + `DELETE /users/me`，硬删 user + consent set-null 匿名保留）；数据驻留境内 region 启动校验 **已决策·待落地**（C2） | ICP 归部署、不进代码门禁；导出剔除口令/令牌（FR-7/D7） |
+| **合规（PIPL）** | consent 留痕 + 按 user 导出/删除 + 数据驻留境内 region | **已落地**：C1（`consent` 表 + `GET /users/me/data-export` + `DELETE /users/me`，硬删 user + consent `set null` 匿名保留）+ C2（`config/data-residency.ts` 启动校验，DB host 与 storage region 境内 allowlist、strict/warn 分环境） | ICP 归部署、不进代码门禁；导出剔除口令/令牌；Stripe/OAuth 不在驻留范围（FR-7/D7） |
 
 ## 3. 选型红线（禁止项）
 
