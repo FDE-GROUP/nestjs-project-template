@@ -7,7 +7,7 @@ import {
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { createAuthMiddleware } from 'better-auth/api';
 import { toNodeHandler } from 'better-auth/node';
-import { type GenericOAuthConfig, genericOAuth } from 'better-auth/plugins';
+import { type GenericOAuthConfig, genericOAuth, organization } from 'better-auth/plugins';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { ConfigService } from '../../config/config.service';
 import type { DrizzleService } from '../../database/drizzle.service';
@@ -121,6 +121,10 @@ export function CreateAuth(
       } satisfies BetterAuthPlugin,
       // 境内登录渠道（方案 C · FR-3/A1）：有配置才挂 genericOAuth 插件（NFR-2 未配即降级）
       ...(genericConfigs.length > 0 ? [genericOAuth({ config: genericConfigs })] : []),
+      // 多租户（混合复用 · S0 骨架）：org 插件承载 tenant/member/invitation + RBAC，
+      // 并将 activeOrganizationId 落到 session（D4 session-cookie）。S0 用默认 roles
+      // (owner/admin/member)；自定义 ac 权限映射留 S1、审批制创建租户（FR-1）留 S4。
+      organization(),
     ],
     account: {
       accountLinking: {

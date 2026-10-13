@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   account,
   consent,
+  invitation,
+  member,
+  organization,
   post,
   Role,
   roleEnum,
@@ -14,7 +17,17 @@ import {
 describe('database schema', () => {
   it('exports every table under the schema aggregate', () => {
     expect(Object.keys(schema).sort()).toEqual(
-      ['account', 'consent', 'post', 'session', 'user', 'verification'].sort(),
+      [
+        'account',
+        'consent',
+        'invitation',
+        'member',
+        'organization',
+        'post',
+        'session',
+        'user',
+        'verification',
+      ].sort(),
     );
   });
 
@@ -56,5 +69,16 @@ describe('database schema', () => {
     expect(consent.version).toBeDefined();
     expect(consent.grantedAt).toBeDefined();
     expect(consent.revokedAt).toBeDefined();
+  });
+
+  it('organization plugin tables expose their required columns (混合复用 · S0)', () => {
+    expect(organization.slug).toBeDefined();
+    expect(organization.metadata).toBeDefined();
+    expect(member.organizationId).toBeDefined();
+    expect(member.userId).toBeDefined();
+    expect(member.role).toBeDefined();
+    expect(invitation.status).toBeDefined();
+    expect(invitation.expiresAt).toBeDefined();
+    expect(session.activeOrganizationId).toBeDefined();
   });
 });

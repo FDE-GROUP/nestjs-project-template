@@ -9,6 +9,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { UsersModule } from './modules/users/users.module';
+import { TenancyModule } from './tenancy/tenancy.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { UsersModule } from './modules/users/users.module';
     AppI18nModule,
     CommonModule,
     AuthModule.forRoot(),
+    TenancyModule,
     UsersModule,
     StorageModule.register(),
     PaymentModule.register(),

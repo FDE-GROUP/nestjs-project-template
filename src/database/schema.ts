@@ -1,5 +1,14 @@
 import { relations } from 'drizzle-orm';
-import { boolean, index, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 
 // Role enum (replaces Prisma `enum Role`)
 export const roleEnum = pgEnum('role', ['USER', 'ADMIN']);
@@ -65,6 +74,9 @@ export const session = pgTable('session', {
     .references(() => user.id, { onDelete: 'cascade' }),
   // Better Auth session additional field (OAuth provider tracking)
   provider: text('provider'),
+  // Better Auth organization plugin: currently active tenant (D4 session-cookie).
+  // Set by `/organization/set-active`; read back by `getSession` as the tenant source.
+  activeOrganizationId: text('activeOrganizationId'),
   createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updatedAt', { mode: 'date' })
     .notNull()
@@ -116,6 +128,55 @@ export const post = pgTable('post', {
     .$onUpdate(() => new Date()),
 });
 
+// ===== Better Auth organization plugin (multi-tenancy · 混合复用 S0) =====
+// Table / column names MUST match Better Auth's expected field names; the drizzle
+// adapter maps them by the `schema` object KEYS below (organization / member / invitation).
+// Tenant == organization (no separate tenant table, see global-tenancy §9.2).
+export const organization = pgTable('organization', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  logo: text('logo'),
+  createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }),
+  metadata: jsonb('metadata'),
+});
+
+export const member = pgTable(
+  'member',
+  {
+    id: text('id').primaryKey(),
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    role: text('role').notNull().default('member'),
+    createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('member_org_user_idx').on(table.organizationId, table.userId)],
+);
+
+export const invitation = pgTable(
+  'invitation',
+  {
+    id: text('id').primaryKey(),
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    role: text('role').notNull(),
+    status: text('status').notNull().default('pending'),
+    expiresAt: timestamp('expiresAt', { mode: 'date' }).notNull(),
+    inviterId: text('inviterId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [index('invitation_org_email_idx').on(table.organizationId, table.email)],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   sessions: many(session),
@@ -150,6 +211,9 @@ export const schema = {
   verification,
   consent,
   post,
+  organization,
+  member,
+  invitation,
 };
 
 export type User = typeof user.$inferSelect;
@@ -158,6 +222,12 @@ export type Consent = typeof consent.$inferSelect;
 export type NewConsent = typeof consent.$inferInsert;
 export type Post = typeof post.$inferSelect;
 export type NewPost = typeof post.$inferInsert;
+export type Organization = typeof organization.$inferSelect;
+export type NewOrganization = typeof organization.$inferInsert;
+export type Member = typeof member.$inferSelect;
+export type NewMember = typeof member.$inferInsert;
+export type Invitation = typeof invitation.$inferSelect;
+export type NewInvitation = typeof invitation.$inferInsert;
 
 // Re-export a `Role` union to replace `import { Role } from '@prisma/client'`
 export const Role = {
