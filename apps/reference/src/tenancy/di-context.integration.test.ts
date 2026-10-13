@@ -9,6 +9,7 @@ import { Test } from '@nestjs/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { TenantStatusService } from './lifecycle/tenant-status.service';
 import { UserStatusService } from './lifecycle/user-status.service';
+import { PLATFORM_IDENTITY_LOOKUP } from './platform/platform-identity.port';
 import { PlatformOperatorGuard } from './platform/platform-operator.guard';
 import { TenantPermissionGuard } from './rbac/tenant-permission.guard';
 import { TenantMiddleware } from './tenant.middleware';
@@ -107,6 +108,7 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
           { provide: AuthInstanceInjectKey, useValue: authStub(null) },
           { provide: DrizzleService, useValue: drizzleStub() },
           { provide: ConfigService, useValue: configStub() },
+          { provide: PLATFORM_IDENTITY_LOOKUP, useValue: { emailOf: async () => undefined } },
           { provide: UserStatusService, useValue: { isBlocked: async () => false } },
           { provide: TenantStatusService, useValue: { isBlocked: async () => false } },
         ],

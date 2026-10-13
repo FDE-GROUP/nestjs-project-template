@@ -1,10 +1,10 @@
 import type { ConfigService } from '@app/config/config.service';
-import type { DrizzleService } from '@app/database/drizzle.service';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
 import type { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
 import { type ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PlatformIdentityLookup } from './platform/platform-identity.port';
 import { PlatformOperatorGuard } from './platform/platform-operator.guard';
 import { TenantPermissionGuard } from './rbac/tenant-permission.guard';
 import { TenantContextService } from './tenant-context.service';
@@ -51,13 +51,8 @@ function userStatus(blocked = false): UserStatusService {
   return { isBlocked: async () => blocked } as unknown as UserStatusService;
 }
 
-function emailDrizzle(email: string | null): DrizzleService {
-  const rows = email ? [{ email }] : [];
-  return {
-    db: {
-      select: () => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve(rows) }) }) }),
-    },
-  } as unknown as DrizzleService;
+function emailDrizzle(email: string | null): PlatformIdentityLookup {
+  return { emailOf: async () => email ?? undefined };
 }
 
 function config(email: string): ConfigService {

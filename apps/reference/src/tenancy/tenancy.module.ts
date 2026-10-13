@@ -1,4 +1,5 @@
 import { Global, type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
+import { DrizzlePlatformIdentityLookup } from './infrastructure/drizzle-platform-identity.lookup';
 import { DrizzleQuotaStore } from './infrastructure/drizzle-quota.store';
 import { DrizzleTenantStatusStore } from './infrastructure/drizzle-tenant-status.store';
 import { DrizzleUserStatusStore } from './infrastructure/drizzle-user-status.store';
@@ -7,6 +8,7 @@ import { TENANT_STATUS_STORE } from './lifecycle/tenant-status.store';
 import { UserStatusService } from './lifecycle/user-status.service';
 import { USER_STATUS_STORE } from './lifecycle/user-status.store';
 import { PlatformAuditService } from './platform/platform-audit.service';
+import { PLATFORM_IDENTITY_LOOKUP } from './platform/platform-identity.port';
 import { PlatformOperatorGuard } from './platform/platform-operator.guard';
 import { QuotaGuard } from './quota/quota.guard';
 import { QuotaService } from './quota/quota.service';
@@ -47,6 +49,7 @@ import { TenantScopeGuard } from './tenant-scope.guard';
     { provide: TENANT_STATUS_STORE, useClass: DrizzleTenantStatusStore },
     { provide: USER_STATUS_STORE, useClass: DrizzleUserStatusStore },
     { provide: QUOTA_STORE, useClass: DrizzleQuotaStore },
+    { provide: PLATFORM_IDENTITY_LOOKUP, useClass: DrizzlePlatformIdentityLookup },
   ],
   exports: [
     TenantContextService,
@@ -58,6 +61,12 @@ import { TenantScopeGuard } from './tenant-scope.guard';
     PlatformAuditService,
     QuotaService,
     QuotaGuard,
+    // 端口 token 随 @Global 一并导出：守卫/服务在消费模块（如 TenantsModule）就地实例化时
+    // 也能解析到应用侧 Drizzle 适配（对齐原 `DrizzleService` 经 @Global DatabaseModule 全局可见）。
+    TENANT_STATUS_STORE,
+    USER_STATUS_STORE,
+    QUOTA_STORE,
+    PLATFORM_IDENTITY_LOOKUP,
   ],
 })
 export class TenancyModule implements NestModule {

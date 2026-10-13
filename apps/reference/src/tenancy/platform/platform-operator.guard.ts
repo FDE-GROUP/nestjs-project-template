@@ -1,10 +1,12 @@
 import { ConfigService } from '@app/config/config.service';
-import { DrizzleService } from '@app/database/drizzle.service';
-import { user } from '@app/database/schema';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { resolveRequestSession } from '@app/modules/auth/session-resolver';
 import { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
+import {
+  PLATFORM_IDENTITY_LOOKUP,
+  type PlatformIdentityLookup,
+} from '@app/tenancy/platform/platform-identity.port';
 import {
   type CanActivate,
   type ExecutionContext,
@@ -13,7 +15,6 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
 
 /**
  * 平台级权限守卫（FR-11 三层之顶层 · FR-13 · S5 正式判据）。
@@ -30,7 +31,7 @@ import { eq } from 'drizzle-orm';
 export class PlatformOperatorGuard implements CanActivate {
   constructor(
     @Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance,
-    @Inject(DrizzleService) private readonly drizzle: DrizzleService,
+    @Inject(PLATFORM_IDENTITY_LOOKUP) private readonly identity: PlatformIdentityLookup,
     @Inject(ConfigService) private readonly config: ConfigService,
     @Inject(UserStatusService) private readonly userStatus: UserStatusService,
   ) {}
@@ -53,12 +54,7 @@ export class PlatformOperatorGuard implements CanActivate {
     const operatorEmail = this.config.getPlatformConfig().operatorEmail?.trim().toLowerCase();
     if (!operatorEmail) throw new ForbiddenException('Platform operator not configured');
 
-    const rows = await this.drizzle.db
-      .select({ email: user.email })
-      .from(user)
-      .where(eq(user.id, String(userId)))
-      .limit(1);
-    const email = rows[0]?.email?.toLowerCase();
+    const email = (await this.identity.emailOf(String(userId)))?.toLowerCase();
     if (!email || email !== operatorEmail) throw new ForbiddenException('Platform operator only');
     return true;
   }

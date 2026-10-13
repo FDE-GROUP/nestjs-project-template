@@ -1,12 +1,11 @@
 import type { ConfigService } from '@app/config/config.service';
-import type { DrizzleService } from '@app/database/drizzle.service';
-import { user } from '@app/database/schema';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import type { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
 import type { ExecutionContext } from '@nestjs/common';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { PlatformIdentityLookup } from './platform-identity.port';
 import { PlatformOperatorGuard } from './platform-operator.guard';
 
 function ctxWith(headers: Record<string, string>): ExecutionContext {
@@ -15,12 +14,12 @@ function ctxWith(headers: Record<string, string>): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
-function drizzleReturningRows(rows: { email: string }[]) {
-  const limit = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn().mockReturnValue({ limit });
-  const from = vi.fn().mockReturnValue({ where });
-  const select = vi.fn().mockReturnValue({ from });
-  return { drizzle: { db: { select } } as unknown as DrizzleService, where };
+/**
+ * 桩 `PlatformIdentityLookup`（§9.5.4①B）：email 命中→返回该 email；查无此人→undefined。
+ */
+function identityReturning(email: string | undefined) {
+  const emailOf = vi.fn(async (_userId: string) => email);
+  return { identity: { emailOf } as unknown as PlatformIdentityLookup, emailOf };
 }
 
 function configWith(operatorEmail: string) {
@@ -46,10 +45,10 @@ describe('PlatformOperatorGuard (S5 · FR-13 正式判据：email 命中配置)'
 
   it('allows the session user whose DB email matches the configured operator (case-insensitive)', async () => {
     getSession.mockResolvedValue({ user: { id: 'u1' } });
-    const { drizzle } = drizzleReturningRows([{ email: 'Admin@Example.com' }]);
+    const { identity } = identityReturning('Admin@Example.com');
     const guard = new PlatformOperatorGuard(
       authInstance,
-      drizzle,
+      identity,
       configWith('admin@example.com'),
       userStatusMock(),
     );
@@ -58,10 +57,10 @@ describe('PlatformOperatorGuard (S5 · FR-13 正式判据：email 命中配置)'
 
   it('rejects a generic ADMIN-named user whose email does not match (S4 判据已弃用)', async () => {
     getSession.mockResolvedValue({ user: { id: 'u2' } });
-    const { drizzle } = drizzleReturningRows([{ email: 'someone-else@example.com' }]);
+    const { identity } = identityReturning('someone-else@example.com');
     const guard = new PlatformOperatorGuard(
       authInstance,
-      drizzle,
+      identity,
       configWith('admin@example.com'),
       userStatusMock(),
     );
@@ -70,10 +69,10 @@ describe('PlatformOperatorGuard (S5 · FR-13 正式判据：email 命中配置)'
 
   it('fails closed when no user row is found', async () => {
     getSession.mockResolvedValue({ user: { id: 'ghost' } });
-    const { drizzle } = drizzleReturningRows([]);
+    const { identity } = identityReturning(undefined);
     const guard = new PlatformOperatorGuard(
       authInstance,
-      drizzle,
+      identity,
       configWith('admin@example.com'),
       userStatusMock(),
     );
@@ -82,10 +81,10 @@ describe('PlatformOperatorGuard (S5 · FR-13 正式判据：email 命中配置)'
 
   it('fails closed when the operator email is not configured', async () => {
     getSession.mockResolvedValue({ user: { id: 'u1' } });
-    const { drizzle } = drizzleReturningRows([{ email: 'admin@example.com' }]);
+    const { identity } = identityReturning('admin@example.com');
     const guard = new PlatformOperatorGuard(
       authInstance,
-      drizzle,
+      identity,
       configWith(''),
       userStatusMock(),
     );
@@ -94,10 +93,10 @@ describe('PlatformOperatorGuard (S5 · FR-13 正式判据：email 命中配置)'
 
   it('fails closed when the operator themselves is suspended (S6 · FR-10 platform layer)', async () => {
     getSession.mockResolvedValue({ user: { id: 'u1' } });
-    const { drizzle } = drizzleReturningRows([{ email: 'admin@example.com' }]);
+    const { identity } = identityReturning('admin@example.com');
     const guard = new PlatformOperatorGuard(
       authInstance,
-      drizzle,
+      identity,
       configWith('admin@example.com'),
       userStatusMock(true),
     );
@@ -106,25 +105,25 @@ describe('PlatformOperatorGuard (S5 · FR-13 正式判据：email 命中配置)'
 
   it('throws 401 when there is no session', async () => {
     getSession.mockResolvedValue(null);
-    const { drizzle } = drizzleReturningRows([{ email: 'admin@example.com' }]);
+    const { identity } = identityReturning('admin@example.com');
     const guard = new PlatformOperatorGuard(
       authInstance,
-      drizzle,
+      identity,
       configWith('admin@example.com'),
       userStatusMock(),
     );
     await expect(guard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
-  it('queries the email scoped to the session user id', async () => {
+  it('looks up the email scoped to the session user id', async () => {
     getSession.mockResolvedValue({ user: { id: 'u9' } });
-    const { drizzle, where } = drizzleReturningRows([{ email: 'admin@example.com' }]);
+    const { identity, emailOf } = identityReturning('admin@example.com');
     await new PlatformOperatorGuard(
       authInstance,
-      drizzle,
+      identity,
       configWith('admin@example.com'),
       userStatusMock(),
     ).canActivate(ctxWith({}));
-    expect(where.mock.calls[0][0]).toEqual(eq(user.id, 'u9'));
+    expect(emailOf).toHaveBeenCalledWith('u9');
   });
 });
