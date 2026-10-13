@@ -33,7 +33,7 @@
 
 **Specifications** (`docs/specs/` — binding rules)
 
-- [Project Vision](./docs/specs/vision.md) _(candidate draft · 待裁决)_
+- [Project Vision](./docs/specs/vision.md)
 - [Project Architecture](./docs/specs/architecture.md) | [Chinese](./docs/specs/architecture-zh.md)
 - [Tooling Standards](./docs/specs/tooling-standards.md)
 - [Development Workflow](./docs/specs/workflow.md) _(candidate draft · 待裁决)_
