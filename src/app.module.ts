@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CommonModule } from './common/common.module';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
+import { AppI18nModule } from './i18n/i18n.module';
 import { LoggerModule } from './logger/logger.module';
 import { MailerModule } from './mailer/mailer.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -14,6 +15,7 @@ import { UsersModule } from './modules/users/users.module';
     ConfigModule,
     LoggerModule,
     DatabaseModule,
+    AppI18nModule,
     CommonModule,
     AuthModule.forRoot(),
     UsersModule,

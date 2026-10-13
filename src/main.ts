@@ -6,12 +6,13 @@ import compression from '@fastify/compress';
 import fastifyCors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import fastifyMultipart from '@fastify/multipart';
-import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
+import { Logger, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { FastifyInstance } from 'fastify';
 import * as yaml from 'js-yaml';
+import { I18nValidationPipe } from 'nestjs-i18n';
 import { AppModule } from './app.module';
 import { ConfigService } from './config/config.service';
 import { assertDataResidency, resolveEnforceMode } from './config/data-residency';
@@ -80,13 +81,12 @@ async function bootstrap() {
   });
 
   // Setup global request validation
-  // Uses Nest's stock ValidationPipe. `nestjs-i18n` is wired for mailer localization
-  // (see MailerModule); the I18nValidationPipe / ExceptionFilter are intentionally still
-  // unused here because switching to them changes the shape of API validation error
-  // responses (a public contract change) and needs a per-request locale resolver —
-  // deferred per L1 staged rollout. Validation messages remain literal English for now.
+  // `I18nValidationPipe` (nestjs-i18n) validates and emits raw i18n keys; the localized
+  // text is rendered by the I18nValidationExceptionFilter registered in CommonModule
+  // (which preserves the standard error shape and only translates `message`). Locale is
+  // resolved from the `accept-language` header, falling back to `zh`.
   app.useGlobalPipes(
-    new ValidationPipe({
+    new I18nValidationPipe({
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
