@@ -6,6 +6,8 @@ node_modules/
 /.idea
 /.awcache
 *.code-workspace
+# Qoder IDE wiki/cache workspace (local only, never committed)
+.qoder/
 
 # bundle
 packages/**/*.d.ts

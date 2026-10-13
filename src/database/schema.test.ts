@@ -10,6 +10,7 @@ import {
   roleEnum,
   schema,
   session,
+  tenantSubscription,
   user,
   userStatus,
   verification,
@@ -27,6 +28,7 @@ describe('database schema', () => {
         'organization',
         'post',
         'session',
+        'tenantSubscription',
         'user',
         'userStatus',
         'verification',
@@ -110,5 +112,18 @@ describe('database schema', () => {
     expect(userStatus.reason).toBeDefined();
     expect(userStatus.createdAt).toBeDefined();
     expect(userStatus.updatedAt).toBeDefined();
+  });
+
+  it('tenant_subscription (S7 · FR-7/8/D5) exposes quota + FR-8 mapping columns', () => {
+    expect(tenantSubscription.id).toBeDefined();
+    expect(tenantSubscription.tenantId).toBeDefined();
+    expect(tenantSubscription.plan).toBeDefined();
+    expect(tenantSubscription.status).toBeDefined();
+    expect(tenantSubscription.seatsLimit).toBeDefined();
+    expect(tenantSubscription.periodStart).toBeDefined();
+    expect(tenantSubscription.periodEnd).toBeDefined();
+    expect(tenantSubscription.provider).toBeDefined();
+    expect(tenantSubscription.providerCustomerId).toBeDefined();
+    expect(tenantSubscription.providerSubscriptionId).toBeDefined();
   });
 });

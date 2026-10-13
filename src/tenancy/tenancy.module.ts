@@ -3,6 +3,8 @@ import { TenantStatusService } from './lifecycle/tenant-status.service';
 import { UserStatusService } from './lifecycle/user-status.service';
 import { PlatformAuditService } from './platform/platform-audit.service';
 import { PlatformOperatorGuard } from './platform/platform-operator.guard';
+import { QuotaGuard } from './quota/quota.guard';
+import { QuotaService } from './quota/quota.service';
 import { TenantPermissionGuard } from './rbac/tenant-permission.guard';
 import { TenantMiddleware } from './tenant.middleware';
 import { TenantContextService } from './tenant-context.service';
@@ -17,6 +19,8 @@ import { TenantScopeGuard } from './tenant-scope.guard';
  * - `PlatformOperatorGuard` (S4 · FR-11/13): platform-level (cross-tenant) actions.
  * - `PlatformAuditService` (S5 · FR-6): structured audit choke-point for governance actions.
  * - `UserStatusService` (S6 · FR-10): platform-level user suspension deny-list (dedicated table).
+ * - `QuotaService` + `QuotaGuard` (S7 · FR-7): tenant seat-quota choke-point (subscription
+ *   limit vs live member count); opt-in per-route via `@Quota`, not a global APP_GUARD.
  * Row-level filtering is enforced in each aggregate's repository adapter (single
  * choke-point, 禁散点); promoting these guards to a global APP_GUARD is a separate
  * signed decision (高危#4).
@@ -31,6 +35,8 @@ import { TenantScopeGuard } from './tenant-scope.guard';
     TenantScopeGuard,
     PlatformOperatorGuard,
     PlatformAuditService,
+    QuotaService,
+    QuotaGuard,
   ],
   exports: [
     TenantContextService,
@@ -40,6 +46,8 @@ import { TenantScopeGuard } from './tenant-scope.guard';
     TenantScopeGuard,
     PlatformOperatorGuard,
     PlatformAuditService,
+    QuotaService,
+    QuotaGuard,
   ],
 })
 export class TenancyModule implements NestModule {

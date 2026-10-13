@@ -2,6 +2,7 @@ import { relations } from 'drizzle-orm';
 import {
   boolean,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -241,6 +242,45 @@ export const userStatus = pgTable('user_status', {
     .$onUpdate(() => new Date()),
 });
 
+/**
+ * S7 · FR-7/FR-8/D5 tenant subscription ledger (dedicated table · 1:N history).
+ * Each row is a plan period for a tenant; the *current* subscription is the latest
+ * `status='active'` row by `periodStart` (older rows retained as history for
+ * upgrade/downgrade audit). FK cascades on tenant deletion (NFR-6). The FR-8 billing
+ * mapping columns hold the multi-channel provider references (see payment.interface
+ * `PaymentProviderId`); subscription creation on the provider side is deferred (D9/P3),
+ * so only the `providerCustomerId` mapping is exercised in this slice. `seatsLimit` is
+ * the quota source for `QuotaService`; when a tenant has no active row, the default free
+ * plan applies (see global-tenancy §147).
+ */
+export const tenantSubscription = pgTable(
+  'tenant_subscription',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenantId')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    plan: text('plan').notNull(), // tier id: 'free' | 'pro' | ...
+    status: text('status').notNull().default('active'), // 'active' | 'expired' | 'cancelled'
+    seatsLimit: integer('seatsLimit').notNull(),
+    storageQuota: integer('storageQuota'), // bytes · placeholder, nullable
+    apiQuota: integer('apiQuota'), // placeholder, nullable
+    periodStart: timestamp('periodStart', { mode: 'date' }).notNull().defaultNow(),
+    periodEnd: timestamp('periodEnd', { mode: 'date' }), // null = open-ended / current
+    provider: text('provider'), // PaymentProviderId ('stripe' | 'alipay' | 'wechat_pay')
+    providerCustomerId: text('providerCustomerId'), // FR-8 tenant ↔ customer mapping
+    providerSubscriptionId: text('providerSubscriptionId'), // P3 deferred · placeholder
+    createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' })
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index('tenant_subscription_tenant_status_idx').on(table.tenantId, table.status),
+    index('tenant_subscription_tenant_period_idx').on(table.tenantId, table.periodStart),
+  ],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   sessions: many(session),
@@ -275,6 +315,13 @@ export const userStatusRelations = relations(userStatus, ({ one }) => ({
   }),
 }));
 
+export const tenantSubscriptionRelations = relations(tenantSubscription, ({ one }) => ({
+  organization: one(organization, {
+    fields: [tenantSubscription.tenantId],
+    references: [organization.id],
+  }),
+}));
+
 export const schema = {
   user,
   account,
@@ -287,6 +334,7 @@ export const schema = {
   invitation,
   workspace,
   userStatus,
+  tenantSubscription,
 };
 
 export type User = typeof user.$inferSelect;
@@ -305,6 +353,8 @@ export type Workspace = typeof workspace.$inferSelect;
 export type NewWorkspace = typeof workspace.$inferInsert;
 export type UserStatusRecord = typeof userStatus.$inferSelect;
 export type NewUserStatusRecord = typeof userStatus.$inferInsert;
+export type TenantSubscription = typeof tenantSubscription.$inferSelect;
+export type NewTenantSubscription = typeof tenantSubscription.$inferInsert;
 
 // Re-export a `Role` union to replace `import { Role } from '@prisma/client'`
 export const Role = {

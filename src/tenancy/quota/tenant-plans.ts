@@ -1,0 +1,39 @@
+/**
+ * S7 · FR-7/FR-8/D5 订阅档位与配额常量（纯值·无 IO）。
+ *
+ * 配额值来自 Plan（§147）：每档位携带 `seatsLimit`（本片唯一落地维度），
+ * `storageQuota`/`apiQuota` 为后续维度占位。订阅行也各自携带 `seatsLimit`
+ * 快照（存于 `tenant_subscription`·改档不改历史）。无 active 订阅行时回落
+ * `FREE_PLAN`（带限额·非 fail-open·裁②）。
+ */
+
+/** 订阅状态（1:N 历史的行态；"当前订阅" = 最新 active 行）。 */
+export type SubscriptionStatus = 'active' | 'expired' | 'cancelled';
+
+export const SUBSCRIPTION_STATUS = {
+  ACTIVE: 'active',
+  EXPIRED: 'expired',
+  CANCELLED: 'cancelled',
+} as const;
+
+export interface TenantPlan {
+  readonly plan: string;
+  readonly seatsLimit: number;
+  readonly storageQuota?: number;
+  readonly apiQuota?: number;
+}
+
+/** 免费默认档：租户无 active 订阅时的回落（带 seats 限额·裁②）。 */
+export const FREE_PLAN: TenantPlan = { plan: 'free', seatsLimit: 5 };
+
+/** 档位目录（provisioning 缺省限额来源·可扩展）。 */
+export const TENANT_PLANS: Record<string, TenantPlan> = {
+  [FREE_PLAN.plan]: FREE_PLAN,
+  pro: { plan: 'pro', seatsLimit: 50 },
+  enterprise: { plan: 'enterprise', seatsLimit: Number.MAX_SAFE_INTEGER },
+};
+
+/** 取档位定义（未知档位回落免费档）。 */
+export function resolvePlanDef(plan: string | undefined): TenantPlan {
+  return (plan && TENANT_PLANS[plan]) || FREE_PLAN;
+}

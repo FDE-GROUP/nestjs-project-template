@@ -1,4 +1,4 @@
-import { type DynamicModule, Module } from '@nestjs/common';
+import { type DynamicModule, Global, Module } from '@nestjs/common';
 import { ConfigModule } from '../../config/config.module';
 import { ConfigService } from '../../config/config.service';
 import { PaymentController } from './controllers/payment.controller';
@@ -6,6 +6,7 @@ import type { PaymentProvider } from './providers/payment.interface';
 import { StripePaymentProvider } from './providers/stripe-payment.provider';
 import { PaymentService } from './services/payment.service';
 
+@Global()
 @Module({
   imports: [ConfigModule],
   controllers: [PaymentController],

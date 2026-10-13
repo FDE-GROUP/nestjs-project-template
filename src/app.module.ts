@@ -9,6 +9,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { UsersModule } from './modules/users/users.module';
 import { WorkspacesModule } from './modules/workspaces/workspaces.module';
@@ -27,6 +28,7 @@ import { TenancyModule } from './tenancy/tenancy.module';
     PostsModule,
     WorkspacesModule,
     TenantsModule,
+    SubscriptionsModule,
     StorageModule.register(),
     PaymentModule.register(),
     MailerModule,
