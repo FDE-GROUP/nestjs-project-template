@@ -24,6 +24,9 @@ export interface CreateAuthResult {
       getSession: (params: any) => Promise<any>;
       getProviders: () => string[];
       listUserAccounts: (params: any) => Promise<any>;
+      // 租户级 RBAC 判定（S1 · FR-4）：透传 Better Auth organization 插件的 hasPermission，
+      // 以 ac + roles 为唯一权限源，供 TenantPermissionGuard 调用。
+      hasPermission: (params: any) => Promise<any>;
     };
   };
 }
@@ -121,9 +124,10 @@ export function CreateAuth(
       } satisfies BetterAuthPlugin,
       // 境内登录渠道（方案 C · FR-3/A1）：有配置才挂 genericOAuth 插件（NFR-2 未配即降级）
       ...(genericConfigs.length > 0 ? [genericOAuth({ config: genericConfigs })] : []),
-      // 多租户（混合复用 · S0 骨架）：org 插件承载 tenant/member/invitation + RBAC，
-      // 并将 activeOrganizationId 落到 session（D4 session-cookie）。S0 用默认 roles
-      // (owner/admin/member)；自定义 ac 权限映射留 S1、审批制创建租户（FR-1）留 S4。
+      // 多租户（混合复用 · S0/S1）：org 插件承载 tenant/member/invitation + RBAC，
+      // 并将 activeOrganizationId 落到 session（D4 session-cookie）。S1 复用默认 roles
+      // (owner/admin/member) + ac 作为唯一权限源，由 TenantPermissionGuard 经 hasPermission
+      // 判定；自定义业务资源 ac 留 S2（届时才有带 tenant_id 的业务表）、审批制创建租户（FR-1）留 S4。
       organization(),
     ],
     account: {
@@ -210,6 +214,9 @@ export function CreateAuth(
             }
             throw error;
           }
+        },
+        hasPermission(params: Parameters<typeof auth.api.hasPermission>[0]) {
+          return auth.api.hasPermission(params);
         },
       },
     },
