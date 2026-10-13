@@ -172,7 +172,7 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 
 | 切片 | 需求 | 主要落点（文件/上下文） | schema 迁移 | 依赖 |
 |------|------|------------------------|------------|------|
-| **P1** 支付抽象 + Stripe 收敛 | FR-1 / NFR-1/2/4 | `src/modules/payment/{providers, services, payment.module}`、`config/envs/payment` | 无（沿用现有订阅映射） | — |
+| **P1** ✅ 支付抽象 + Stripe 收敛（已落地） | FR-1 / NFR-1/2/4 | `src/modules/payment/{providers, services, controllers, dto, payment.module}`、`config/envs/payment` | 无（沿用现有订阅映射） | — |
 | **P2** 支付宝通道 | FR-1 / FR-2 | `alipay-payment.provider.ts` + env | 无 | P1；资质门（周期扣款桩） |
 | **P3** 微信支付通道 | FR-1 / FR-2 | `wechatpay-payment.provider.ts` + env | 无 | P1；资质门 |
 | **A1** 飞书登录 | FR-3 | `auth.genericOAuth` feishu + 绑定流 | 无（复用 `account`） | — |
@@ -220,6 +220,7 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 - [x] **审计门通过 + 人签核**（见 §12），已可开工（低风险项 M1/L1/G1 先行）。
 - [x] **M1**（npmmirror/Docker 镜像 ARG）、**G1**（去 Datadog、日志落文件）、**L1**（mailer 默认 zh）已落地并通过本地 CI（commit `9e27d63`）；L1 全量翻译待 I18n 接线（非本片）。
 - [x] **S1** 存储默认切阿里云 OSS（境内 region/endpoint 默认、env 可切 S3/COS）已落地并通过本地 CI。
+- [x] **P1** 支付抽象已落地（expand–contract 一步到位）：新增 `src/modules/payment`（`PaymentProvider` 端口 + `StripePaymentProvider` 收敛自旧 `StripeService` + `PaymentModule.register()` 依配置装配、`PaymentService` 懒解析未配即降级 NFR-2）；旧 `src/modules/stripe` 已收缩删除、`/payment/*` 替 `/stripe/*`（公共 API/DI 变更=高危#4 已签核）；STRIPE_* 改 optional 以支持境内-only 降级；本地 CI 全绿。
 
 ## 11. 未决问题（审计前须澄清或标注占位）
 

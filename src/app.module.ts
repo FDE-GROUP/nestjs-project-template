@@ -5,8 +5,8 @@ import { DatabaseModule } from './database/database.module';
 import { LoggerModule } from './logger/logger.module';
 import { MailerModule } from './mailer/mailer.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { PaymentModule } from './modules/payment/payment.module';
 import { StorageModule } from './modules/storage/storage.module';
-import { StripeModule } from './modules/stripe/stripe.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -18,7 +18,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule.forRoot(),
     UsersModule,
     StorageModule.register(),
-    StripeModule,
+    PaymentModule.register(),
     MailerModule,
   ],
   controllers: [],

@@ -34,10 +34,11 @@ const createSchemaForEnv = (_isProd: boolean) => {
     STORAGE_ALLOWED_MIME_TYPES: Joi.string().default(
       'image/jpeg,image/png,image/gif,application/pdf',
     ),
-    STRIPE_SECRET_KEY: Joi.string().required(),
-    STRIPE_PUBLIC_KEY: Joi.string().required(),
-    STRIPE_WEBHOOK_SECRET: Joi.string().required(),
-    STRIPE_API_VERSION: Joi.string().required(),
+    STRIPE_SECRET_KEY: Joi.string().optional(),
+    STRIPE_PUBLIC_KEY: Joi.string().optional(),
+    STRIPE_WEBHOOK_SECRET: Joi.string().optional(),
+    STRIPE_API_VERSION: Joi.string().optional(),
+    PAYMENT_PROVIDER: Joi.string().valid('stripe', 'alipay', 'wechat_pay').default('stripe'),
   };
   const betterAuthSchema = {};
   // Datadog 已移除（global-cn-adaptation G1 / D6）；生产 / 非生产环境 schema 一致。

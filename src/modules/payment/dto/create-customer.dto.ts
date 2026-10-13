@@ -2,18 +2,12 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class CreateCustomerDto {
-  @ApiProperty({
-    description: 'Customer email address',
-    example: 'customer@example.com',
-  })
+  @ApiProperty({ description: 'Customer email address', example: 'customer@example.com' })
   @IsNotEmpty()
   @IsEmail()
   readonly email: string;
 
-  @ApiPropertyOptional({
-    description: 'Customer name',
-    example: 'John Doe',
-  })
+  @ApiPropertyOptional({ description: 'Customer name', example: 'John Doe' })
   @IsOptional()
   @IsString()
   readonly name?: string;

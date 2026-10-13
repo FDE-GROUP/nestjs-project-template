@@ -55,4 +55,7 @@ export default {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     apiVersion: process.env.STRIPE_API_VERSION || '2025-02-24.acacia',
   },
+  payment: {
+    provider: process.env.PAYMENT_PROVIDER || 'stripe',
+  },
 };

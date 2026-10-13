@@ -47,4 +47,8 @@ export class ConfigService {
   getStripeConfig() {
     return this.get<Config['stripe']>('stripe');
   }
+
+  getPaymentConfig() {
+    return this.get<Config['payment']>('payment');
+  }
 }

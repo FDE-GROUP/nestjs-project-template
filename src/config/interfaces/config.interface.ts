@@ -65,6 +65,11 @@ export interface StripeConfig {
   apiVersion: string;
 }
 
+export interface PaymentConfig {
+  /** 选定的默认支付通道；未配即降级（PaymentService 使用时才报错） */
+  provider: 'stripe' | 'alipay' | 'wechat_pay';
+}
+
 export interface OAuthConfig {
   providers: Array<{
     type: string;
@@ -88,5 +93,6 @@ export interface Config {
   database: DatabaseConfig;
   storage: StorageConfig;
   stripe: StripeConfig;
+  payment: PaymentConfig;
   oauth: OAuthConfig;
 }

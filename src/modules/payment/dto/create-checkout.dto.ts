@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, Min } from 'class-validator';
 
-export class CreatePaymentIntentDto {
+export class CreateCheckoutDto {
   @ApiProperty({
     description: 'Amount in smallest currency unit (e.g., cents for USD)',
     example: 2000,
@@ -11,16 +11,13 @@ export class CreatePaymentIntentDto {
   @Min(1)
   readonly amount: number;
 
-  @ApiProperty({
-    description: 'Three-letter ISO currency code',
-    example: 'usd',
-  })
+  @ApiProperty({ description: 'Three-letter ISO currency code', example: 'usd' })
   @IsNotEmpty()
   @IsString()
   readonly currency: string;
 
   @ApiPropertyOptional({
-    description: 'Description of the payment intent',
+    description: 'Description of the checkout',
     example: 'Payment for order #1234',
   })
   @IsOptional()
