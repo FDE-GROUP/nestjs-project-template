@@ -24,7 +24,7 @@
 | ORM | **Drizzle ORM** | ^0.44.7 | 类型安全 SQL 映射 | 强制 |
 | 数据库驱动 | **postgres**（postgres.js） | ^3.4.9 | Drizzle 底层驱动 | 强制 |
 | 迁移/CLI | **drizzle-kit** | ^0.31.11 | generate/migrate/push/studio | 强制 |
-| 认证 | **Better Auth** | ^1.7.7 | 会话/凭证（drizzleAdapter） | 强制 |
+| 认证 | **Better Auth** | ^1.7.7 | 会话/凭证（drizzleAdapter）；社交/企业渠道经 `genericOAuth`（见 §2.1） | 强制 |
 | 校验 | **class-validator + class-transformer** | ^0.15.1 / ^0.5.1 | DTO 校验 + ValidationPipe | 强制 |
 | 配置校验 | **Joi + @nestjs/config** | ^18.2.9 / ^12.0.1 | env schema 校验 | 强制 |
 | 编译/构建 | **@nestjs/cli + SWC** | cli ^12.0.8 / @swc/core ^1.16.18 | `nest build --builder swc` | 强制 |
@@ -37,13 +37,27 @@
 | 本地 CI 编排 | **scripts/ci.ts**（Bun Shell） | — | 一键全量门禁：`check`→`build:nest`→`test` + fallow 佐证；pre-push 自动触发，**替代远程 CI** | 强制 |
 | Git Hooks | **husky** | ^9.1.7 | pre-commit → `lint:fix`；pre-push → `ci` | 强制 |
 | 提交校验 | **commitlint** | ^21.2.3 | Conventional Commits | 强制 |
-| 日志 | **pino**（+ pino-pretty） | ^10.4.0 | 结构化日志 | 强制 |
+| 日志 | **pino**（+ pino-pretty） | ^10.4.0 | 结构化日志；`pino-datadog-transport` 待移除、默认落文件（见 §2.1） | 强制 |
 | API 文档 | **@nestjs/swagger** | ^12.0.2 | `/apidoc` + OpenAPI 导出 | 强制 |
 | 清理 | **rimraf** | ^6.1.3 | `prebuild` 清 dist | 强制 |
 | 容器/DB 环境 | **Docker Compose** | Docker 29.x | 本地 Postgres 供给 | 强制（dev） |
 | 密码哈希 | **bcryptjs** | ^3.0.3 | 纯 JS、免原生编译 | 强制 |
-| 支付 | **stripe** | ^23.0.0 | stripe 上下文 | 领域相关 |
+| 支付 | **stripe**（现行）+ 微信支付 / 支付宝（待落地） | ^23.0.0 | 经统一 `PaymentProvider` 多通道抽象（见 §2.1 / [global-cn-adaptation](../plans/global-cn-adaptation.md)） | 领域相关 |
 | AI 编码入口（L4） | **AGENTS.md** | — | 面向 agent 的统一项目指令 / 约束入口，与 `.claude/settings.local.json` 并存（定位见 workflow §4 / §9.5） | 推荐 |
+
+### 2.1 地域适配选型（中国大陆）· 状态标注
+
+> 依 [global-cn-adaptation.md](../plans/global-cn-adaptation.md)（技术方案 · **待审计**）D1–D7，记录**人已裁决的选型**。其中「待落地」项**尚未进 `package.json` / 配置**，落地以该 plan **过审计门为前置**（`workflow.md` §3：无已审方案不写码）；本节只登记选型方向，不谎报为现行能力。
+
+| 能力域 | 选型 | 状态 | 说明 / 关联 |
+|--------|------|------|------------|
+| **支付通道** | Stripe（海外）+ 微信支付 + 支付宝（大陆） | Stripe 现行；微信/支付宝 **已决策·待落地** | 统一 `PaymentProvider` 抽象（与存储同构，落 `src/modules/payment`）；周期扣款随资质（FR-1/FR-2 · D1） |
+| **登录渠道** | Google/GitHub（保留）+ 微信 / 企业微信 / 钉钉 / 飞书 | 海外现行；境内四渠道 **已决策·待落地** | Better Auth `genericOAuth`；方案 C 邮箱为体、社交为用；**不做**手机验证码登录（FR-3/D2/D3） |
+| **依赖镜像** | npm→npmmirror（`bunfig.toml`/`.npmrc`）+ Docker 国内基础镜像 | **已决策·待落地** | 纯配置、最低风险（FR-4/D4） |
+| **默认语言** | i18n 默认 / fallback 置 `zh`（保留 en/ja） | **已决策·待落地** | 文档中文为准（FR-5/D4） |
+| **日志后端** | pino 默认落文件；**移除** `pino-datadog-transport` | **已决策·待落地** | 本期**不引**集中监控（SLS/Loki 留后）（FR-6/D6） |
+| **对象存储默认** | 默认阿里云 OSS，COS/S3 经 env 切换 | provider 现行；**默认切换待落地** | 已有 OSS/COS/S3 provider（D5） |
+| **合规（PIPL）** | consent 留痕 + 按 user 导出/删除 + 数据驻留境内 region | **已决策·待落地** | 属需求非工具；ICP 归部署、不进代码门禁（FR-7/D7） |
 
 ## 3. 选型红线（禁止项）
 

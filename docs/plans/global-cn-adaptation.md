@@ -213,7 +213,7 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 - [x] D1–D7 全部裁决并回写本文；
 - [x] 本文已升级为正式技术方案（补 §6 方案 / §8 切片映射 / §9 影响面与迁移）；
 - [x] 回改 global-tenancy FR-8 / D5：Stripe 单挂 → 多通道 provider（已提交 `bc627a6`）；
-- [ ] 选型（支付 / 登录 / 镜像 / 日志 / 存储默认）落 [tooling-standards.md](../specs/tooling-standards.md)（技术栈 SSOT）；
+- [x] 选型（支付 / 登录 / 镜像 / 日志 / 存储默认）落 [tooling-standards.md](../specs/tooling-standards.md) §2.1（技术栈 SSOT，标「已决策·待落地」）；
 - [ ] 每条 Must/Should FR/NFR 有「垂直切片」映射且无遗漏（§8 已列，审计复核）；
 - [ ] `PaymentProvider` / `GenericOAuthConfig` 接口签名经审计定稿；
 - [ ] expand–contract 迁移与回滚步骤经审计确认可执行；
