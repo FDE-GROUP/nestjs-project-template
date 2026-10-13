@@ -2,7 +2,7 @@
 
 > 适用范围: `全局` ← blast radius，审计深度=人签核（`workflow.md` §3/§5）
 > 关联: [vision.md](../specs/vision.md) §4.1 Tenancy / §7 阶段1 · [architecture.md](../specs/architecture.md)（垂直切片）· [workflow.md](../specs/workflow.md) §1/§3
-> 性质: **需求草案（pre-plan）**，重写型 · 版本 0.2.0 · 日期 2026-10-13 · 状态: **决策 D1–D6 全部落定**（见 §5），待升级为技术方案 + 过审计门（`workflow.md` §3）
+> 性质: **技术方案（起草 · 待审计）**，重写型 · 版本 0.4.0 · 日期 2026-10-13 · 状态: **决策 D1–D6 全落定**（见 §5）；**§8-2 已清**（混合复用，见 [`research/better-auth-org.md`](../research/better-auth-org.md)）；**§9–§11 为方案主体**（§9 设计 / §10 垂直切片 / §11 影响面），待过审计门（`workflow.md` §3）后开工
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
 > 受众: **人（方案主导）+ Agent（已审后为开发依据）**
 
@@ -103,9 +103,9 @@
 > 需求「完成」= 决策齐 + 可转 plan；阶段 1 落地「完成」另计。
 
 - [x] D1–D6 全部裁决并回写本文（重写型）；
-- [ ] 每条 Must FR/NFR 有对应「未来 plan 的垂直切片」映射（无遗漏）；
-- [ ] 术语表并入 specs，冲突词已消解；
-- [ ] 本文升级为 `global-tenancy.md` 正式 plan（补 §方案/切片/影响面），`docs/plans` 索引置「已审计」前不写码。
+- [x] 每条 Must FR/NFR 有对应「垂直切片」映射（无遗漏）→ 见 §10；
+- [ ] 术语表并入 `docs/specs/`（GLOSSARY），冲突词已消解 → 开工前补（不阻塞本稿审阅，但为审计门签核前置）；
+- [x] 本文已补 §方案/切片/影响面，升级为正式 plan（§9–§11）；**索引置「已审计」前不写码**。
 
 ## 8. 未决问题（讨论中）
 
@@ -117,15 +117,89 @@
 6. **（依 D2 已裁决：C+A）workspace = 租户内二级数据分组**：业务表挂 `workspace_id`、查询默认按 `(tenant_id, workspace_id)` 复合过滤（强边界，workspace 间默认互不可见）；**不设 workspace 独立角色层**，访问权由租户级权限判定（守 CL-5 三层）。待细化：用户对哪些 workspace 有可见权（数据作用域映射）的表设计，落 plan。
 7. **交付两包落地**（依 D6）：monorepo 拆 `core`（多租户能力库）+ 参考应用；影响包结构 / 构建 / 发布（可能与 `architecture.md` 的垂直切片目录共存的布局需协调）。落 plan 时定 workspace 布局与依赖边界。
 
-## 9. 演变记录
+## 9. 方案设计（技术方案主体 · 待审计）
+
+> 地基选型 = **混合复用**（依 [§8-2 调研](../research/better-auth-org.md)）：复用 Better Auth `organization` 插件承载 tenant 实体 / membership / 受邀 / 租户内 RBAC / activeOrganizationId；隔离守卫、workspace 边界、审批生命周期、订阅配额、平台/用户级权限、fail-closed、Owner 治理自建。
+
+### 9.1 复用 / 自建边界
+
+| 关注点 | 归属 | 承载 |
+|--------|------|------|
+| tenant 实体 | **复用** | org 插件 `organization` 表（= Tenant；`slug`/`metadata` 存租户元） |
+| membership (user×tenant) | **复用** | org 插件 `member`（userId, organizationId, role） |
+| 受邀 (invitation) | **复用** | org 插件 `invitation`（email 锚、pending/accept/reject） |
+| 租户内 RBAC (租户级) | **复用** | org `ac` + roles(owner/admin/member/自定义) + `hasPermission` |
+| active tenant | **复用** | `session.activeOrganizationId`（D4 session-cookie）+ `/organization/set-active` |
+| **申请加入**（user→tenant 方向） | **自建** | org 无 join-request，建 `join_request` 表（见 9.4） |
+| 数据隔离强制 (FR-5) | **自建** | 业务表 `tenant_id`/`workspace_id` + 查询守卫（见 9.3） |
+| workspace 边界 (D2) | **自建** | `workspace` 表（**不复用 org `team`**，避免第四层权限） |
+| 审批制生命周期 (FR-1) | **自建** | `organization.metadata.status` 状态机 + 平台审批端点 |
+| 订阅 / 配额 (D5/FR-7/8) | **自建** | `tenant_subscription` + 用量计量点（挂 orgId） |
+| 平台级 / 用户级权限 (FR-11/13) | **自建** | 沿用 `user.role`→平台级（seed 唯一 operator）+ 用户级能力 |
+| fail-closed 暂停 (FR-10) | **自建** | 失效 session 行 + 守卫校验 status |
+| Owner 治理 (FR-12) | **自建** | 基于 org `owner` 角色 + 移交/保底规则 |
+
+### 9.2 数据模型
+
+- **org 侧（复用、auth schema）**：`organization` / `member` / `invitation` / `session.activeOrganizationId`。**Tenant = organization**（不另建 tenant 表，避免双写；租户扩展字段走 `organization.metadata` 或经 `schema` 选项增列）。
+- **workspace（自建、业务侧）**：`workspace(id, organizationId→tenant, name, slug, createdAt…)`，`(organizationId, slug)` 复合唯一；租户内二级分组。
+- **业务表通用列（自建）**：所有租户内业务表加 `tenant_id`(=`organization.id`) + `workspace_id` + 复合索引 `(tenant_id, workspace_id, …)`（NFR-2）。**`users` 表不加 `tenant_id`**（D3/§8-1，保持平台全局）。
+- **订阅 / 配额（自建）**：`tenant_subscription(id, tenant_id, plan/tier, status, seats/storage/apiQuota 限额, periodEnd…)`；`usage` 计量点（按 tenant 聚合）。支付经多通道 provider 抽象（挂 [global-cn-adaptation](./global-cn-adaptation.md) `PaymentProvider`，Stripe 先行、支付宝/微信 D9 暂缓）。
+- **平台经营者（自建）**：`user.role=ADMIN` 演化为**平台级 operator**，由 `prisma/seed`（→Drizzle seed）初始化**全局唯一**、不可自助注册（FR-13）。
+
+### 9.3 租户上下文贯穿 + 隔离守卫
+
+- **上下文**：`TenantContextMiddleware`（或拦截器）在 `SessionGuard` 之后运行，从 `getSession` 结果读 `activeOrganizationId`（header 可临时覆盖，D4）→ 写入 **AsyncLocalStorage** `TenantContext { tenantId, workspaceId?, userId, roles }`（FR-2）。
+- **隔离守卫（FR-5/NFR-1）**：`TenantScopeGuard` + Drizzle 查询层强制注入 `tenant_id`（必要时 `workspace_id`）谓词；**fail-closed**：无 `TenantContext` 即拒；提供越权回归测试（漏挂过滤即红）。org `hasPermission` 供**租户级** RBAC 判定，统一在守卫层封装（禁散点特判，FR-4）。
+
+### 9.4 生命周期与状态机
+
+- **租户（FR-1 审批制）**：`pending_approval` →（平台 operator 人工审批）→ `active` ⇄ `suspended` → `deleted`（软删 + 定期硬删）。**申请**落 `join_request`/`organization.metadata`；加入已有租户由租户管理者审批、不需平台审批。
+- **成员（FR-3）**：受邀=`invitation`（接受前不生效；受邀 email 未注册→接受时先注册）；申请=`join_request`(user→tenant, 待租户管理者批)。退出仅删 membership。
+- **fail-closed 暂停（FR-10）**：暂停租户/用户 → 置 status + **删除/失效其 session 行**（D4 session 模式即时失权）；守卫统一校验，勿散点。
+- **Owner（FR-12）**：首名 owner=创建申请人；转移/多名、**至少保留一名**；退出前须移交，否则平台 operator 接管。
+
+### 9.5 交付形态（D6 两包 · 解 §8-7）
+
+- **Bun workspaces monorepo**：`packages/core`（= `@app/tenancy` 多租户能力库：TenantContext / 守卫 / workspace & subscription 领域 / org 集成）+ `apps/reference`（参考应用消费 core）。与本仓 Clean Architecture 垂直切片目录协调（core 暴露端口、infrastructure 提供 Drizzle/org 适配）。**待审计**：具体包名与依赖边界为草案，可在审计时调整。
+
+## 10. 垂直切片映射（Must FR/NFR → 切片 → 依赖 → 验收）
+
+| 切片 | 内容 | 覆盖 FR/NFR | 依赖 | 验收（可核验） |
+|------|------|-------------|------|----------------|
+| **S0 租户上下文骨架** | org 插件接入 + TenantContext(ALS) + SessionGuard 读 activeOrganizationId | FR-2, D4 | §8-2 spike 通过 | 请求解析出正确 tenantId；切换 set-active 生效 |
+| **S1 membership + 租户级 RBAC** | 复用 member/invitation/ac/roles；受邀接受落地 | FR-3, FR-4 | S0 | 多租户归属、(user,tenant) 角色、`hasPermission` 单测 |
+| **S2 数据隔离强制** | 业务表加 `tenant_id` + `TenantScopeGuard` + 复合索引 | FR-5, NFR-1/2 | S0 | **越界回归测试红**；P95 不退化 |
+| **S3 workspace 二级边界** | `workspace` 表 + `(tenant_id,workspace_id)` 复合过滤 | D2, FR-5, §8-6 | S2 | workspace 间默认互不可见；无第四层权限 |
+| **S4 审批制租户生命周期** | 状态机 + 申请/审批端点 + Owner 规则 | FR-1, FR-12 | S1 | 申请→审批→生效→暂停/删除；owner 保底 |
+| **S5 平台经营者治理** | seed 唯一 operator + 平台级端点(列表/暂停/恢复/删除/诊断) | FR-6, FR-13 | S0/S4 | 平台级 fail-closed；越权访问红 |
+| **S6 fail-closed 暂停** | 暂停租户/用户→失效 session + 守卫校验 | FR-10, NFR-1 | S2/S5 | 暂停后相应访问全红（回归） |
+| **S7 订阅 / 配额挂钩** | `tenant_subscription` + 计量点（占位） | FR-7, FR-8, D5 | S1 | 超限拒绝；tenant↔subscription 映射通 |
+| **S8 三层权限收口** | 平台/租户/用户级统一裁决（禁散点） | FR-11 | S1/S2/S5 | 三层各自 fail-closed、互不授予 |
+| **S9 DI/上下文集成测试** | ALS + 守卫 e2e（对齐 `design:paramtypes` 回归） | NFR-7 | S0–S2 | 既有 Nest DI 集成测试规范覆盖 |
+| **S10 两包拆分** | core/参考应用 monorepo | D6, §8-7 | S0–S3 | 构建/发布绿；依赖边界清晰 |
+
+> **Should/Could 递延**：FR-9 特性开关（依 D5/Plan，Could）、NFR-4 观测 `tenant_id` 字段（Should，pino）、NFR-5 连接池按档位（可扩展性，后）；多区域驻留/账单 UI/跨租分析 **Won't**（§2/§6）。
+
+## 11. 影响面与迁移
+
+- **迁移策略（NFR-3）**：行级共享 = **单一 schema、无 per-tenant fan-out**，走常规 Drizzle migrate。**待 spike（§8-2 风险②）**：org 插件新增 `organization`/`member`/`invitation` + `session.activeOrganizationId` 列在**本仓手写单文件 `src/database/schema.ts`** 下的 `drizzle-kit generate`/migrate 具体路径须先坐实（可能需手写并入这些表）。
+- **存量数据回填**：现仅 `post` 样例业务表——加 `tenant_id`/`workspace_id` 须**回填策略**（seed 期分配默认租户或标记 `unassigned`）；正式业务表上线即带列，无历史包袱。
+- **auth 侧改造**：`auth.implement.ts` 挂 `organization({ ac, roles })` 插件；`SessionGuard` 扩展返回 `sessionUser + tenantContext`；与既有 genericOAuth(A1)/PIPL consent 共存无冲突。
+- **D6 重构波及**：monorepo 拆分改 `package.json` workspaces / `nest-cli` / 构建发布链；与 `docs/specs/architecture.md` 垂直切片布局协调（本方案 §9.5）。
+- **交叉引用**：FR-8 支付复用 [global-cn-adaptation](./global-cn-adaptation.md) `PaymentProvider`（Stripe 先行，支付宝/微信 **D9 劣后暂缓**）；受邀 email 依赖遇境内无 email 渠道（[cn-providers 风险①](../research/better-auth-cn-providers.md)）→ 需 email 外锚点，留实现期决。
+- **审计门**：本 §9–§11 为**起草待审**；`docs/plans/README` 索引保持「待审计」，人签「已审计」前不写实现码（`workflow.md` §3）。§7 判据「术语并入 specs」为签核前置、开工前补。
+
+## 12. 演变记录
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
 | 2026-10-13 | 0.1.0 | 首版：从 vision 阶段 1 提炼多租户需求草案（讨论期澄清 D1/D3 与 CL-1~CL-5 属同一初稿形成，不单列） | 背景/目标/词汇/FR(1–11)·NFR/决策 gate(D1–D6)/MoSCoW/完成判据/未决 |
 | 2026-10-13 | 0.2.0 | 地域适配决策（支付多通道）传导至本草案 | FR-8 / D5：计费挂钩由 Stripe 单挂 → 多通道 provider（Stripe/微信/支付宝，见 global-cn-adaptation） |
 | 2026-10-13 | 0.3.0 | §8-2 spike（代码级核验）发现 D4「JWT claim 为主」与实态不符，经**人裁**修正 | **D4**：JWT claim 为主 → **cookie + 服务端 DB session 为主**（active tenant = session.activeOrganizationId）；FR-2 同步改措辞；§8-2 标混合复用已产 research |
+| 2026-10-13 | 0.4.0 | 路径 C：起草技术方案主体、升级为正式 plan（待审计） | 新增 §9 方案设计（混合复用边界/数据模型/租户上下文/生命周期/两包）· §10 垂直切片映射(S0–S10)· §11 影响面与迁移；勾 §7 切片映射判据；§8-6/§8-7 落入设计 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 / v0.3.0 变更（D4 依 §8-2 spike 经人裁修正为 session-cookie，FR-2 同步），以当前正文内容为准。
+正文已于 2026-10-13 / v0.4.0 变更（路径 C：新增 §9–§11 技术方案主体，升级为正式 plan·待审计），以当前正文内容为准。
