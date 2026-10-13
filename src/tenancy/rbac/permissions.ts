@@ -11,14 +11,16 @@
  * (backed by `tenant_id` tables) are added when those tables land in S2.
  */
 
-/** Built-in tenant-scoped resources provided by the Better Auth organization plugin. */
-export type TenantResource = 'organization' | 'member' | 'invitation';
+/** Built-in tenant-scoped resources: Better Auth org defaults + the S3 workspace resource. */
+export type TenantResource = 'organization' | 'member' | 'invitation' | 'workspace';
 
-/** Actions available per built-in resource (mirrors better-auth defaultStatements). */
+/** Actions available per resource (mirrors the ac statements in rbac/access-control.ts). */
 export const TENANT_ACTIONS: Record<TenantResource, readonly string[]> = {
   organization: ['update', 'delete'],
   member: ['create', 'update', 'delete'],
   invitation: ['create', 'cancel'],
+  // S3 · D2: read for all members, create/update/delete for owner+admin (single source = ac).
+  workspace: ['create', 'read', 'update', 'delete'],
 };
 
 /** A permission string is `resource:action`, e.g. `member:create`. */

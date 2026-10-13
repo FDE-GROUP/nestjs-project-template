@@ -2,5 +2,8 @@
   "email.required": "Please enter your email address",
   "email.invalid": "Please enter a valid email address",
   "password.minLength": "Password must be at least 8 characters",
-  "title.required": "Please enter a title"
+  "title.required": "Please enter a title",
+  "name.required": "Please enter a name",
+  "slug.required": "Please enter a slug",
+  "slug.invalid": "Slug may only contain lowercase letters, digits and hyphens"
 }

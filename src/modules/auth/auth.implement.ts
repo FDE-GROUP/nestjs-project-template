@@ -12,6 +12,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { ConfigService } from '../../config/config.service';
 import type { DrizzleService } from '../../database/drizzle.service';
 import * as schema from '../../database/schema';
+import { tenantAccessControl, tenantRoles } from '../../tenancy/rbac/access-control';
 
 export type AuthRequest = FastifyRequest & { originalUrl?: string; url?: string };
 export type AuthResponse = FastifyReply;
@@ -124,11 +125,13 @@ export function CreateAuth(
       } satisfies BetterAuthPlugin,
       // 境内登录渠道（方案 C · FR-3/A1）：有配置才挂 genericOAuth 插件（NFR-2 未配即降级）
       ...(genericConfigs.length > 0 ? [genericOAuth({ config: genericConfigs })] : []),
-      // 多租户（混合复用 · S0/S1）：org 插件承载 tenant/member/invitation + RBAC，
-      // 并将 activeOrganizationId 落到 session（D4 session-cookie）。S1 复用默认 roles
-      // (owner/admin/member) + ac 作为唯一权限源，由 TenantPermissionGuard 经 hasPermission
-      // 判定；自定义业务资源 ac 留 S2（届时才有带 tenant_id 的业务表）、审批制创建租户（FR-1）留 S4。
-      organization(),
+      // 多租户（混合复用 · S0/S1/S3）：org 插件承载 tenant/member/invitation + RBAC，
+      // 并将 activeOrganizationId 落到 session（D4 session-cookie）。以 ac + roles 为唯一
+      // 权限源（禁散点·§9.3），由 TenantPermissionGuard 经 hasPermission 判定。S3 扩展 ac
+      // 增 `workspace` 资源（read=全成员·create/update/delete=owner+admin），roles 精确镜像
+      // BA 默认集再叠加 workspace（见 rbac/access-control.ts），故既有 org 端点行为不变。
+      // 审批制创建租户（FR-1）留 S4。
+      organization({ ac: tenantAccessControl, roles: tenantRoles }),
     ],
     account: {
       accountLinking: {

@@ -2,5 +2,8 @@
   "email.required": "请输入邮箱",
   "email.invalid": "请输入正确的邮箱",
   "password.minLength": "密码长度至少 8 位",
-  "title.required": "请输入标题"
+  "title.required": "请输入标题",
+  "name.required": "请输入名称",
+  "slug.required": "请输入标识符",
+  "slug.invalid": "标识符仅可包含小写字母、数字和连字符"
 }
