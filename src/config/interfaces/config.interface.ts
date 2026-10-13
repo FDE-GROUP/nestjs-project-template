@@ -65,13 +65,6 @@ export interface StripeConfig {
   apiVersion: string;
 }
 
-export interface DatdogConfig {
-  apiKey: string;
-  hostName?: string;
-  serviceName?: string;
-  intakeRegion: string;
-}
-
 export interface OAuthConfig {
   providers: Array<{
     type: string;
@@ -94,7 +87,6 @@ export interface Config {
   security: SecurityConfig;
   database: DatabaseConfig;
   storage: StorageConfig;
-  datadog: DatdogConfig;
   stripe: StripeConfig;
   oauth: OAuthConfig;
 }

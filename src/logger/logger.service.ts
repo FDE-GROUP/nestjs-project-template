@@ -1,44 +1,49 @@
-import { ConfigService } from '@app/config/config.service';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import pino from 'pino';
 
 @Injectable()
 export class LoggerService extends Logger {
-  private readonly pinoInstance: any;
+  private readonly pinoInstance: ReturnType<typeof pino>;
 
-  constructor(@Inject(ConfigService) private readonly config: ConfigService) {
+  constructor() {
     super();
 
-    const datadog = this.config.getDatadogConfig();
+    const level = process.env.LOG_LEVEL || 'info';
+    const isProd = process.env.NODE_ENV === 'production';
 
-    this.pinoInstance = pino({
-      level: 'info',
-      transport: {
-        targets: [
-          // Console transport for local logs
-          {
-            target: 'pino-pretty',
-            level: 'info',
-            options: {
-              colorize: true,
+    // 日志后端去 Datadog（依 global-cn-adaptation G1 / D6）：
+    // - 生产：默认落文件（pino/file，可经 LOG_FILE 指定路径、滚动留待运维/后续 pino-roll）
+    // - 开发 / 测试：pino-pretty 彩色控制台
+    this.pinoInstance = pino(
+      isProd
+        ? {
+            level,
+            transport: {
+              targets: [
+                {
+                  target: 'pino/file',
+                  level,
+                  options: {
+                    destination: process.env.LOG_FILE || 'logs/app.log',
+                    mkdir: true,
+                  },
+                },
+              ],
+            },
+          }
+        : {
+            level,
+            transport: {
+              targets: [
+                {
+                  target: 'pino-pretty',
+                  level,
+                  options: { colorize: true },
+                },
+              ],
             },
           },
-          // Datadog transport for remote logs
-          {
-            target: 'pino-datadog-transport',
-            level: 'info',
-            options: {
-              apiKey: datadog.apiKey,
-              ddsource: 'nodejs',
-              service: datadog.serviceName,
-              hostname: datadog.hostName,
-              site: datadog.intakeRegion,
-              ddtags: `env:${process.env.NODE_ENV}`,
-            },
-          },
-        ],
-      },
-    });
+    );
   }
 
   log(message: string): void {

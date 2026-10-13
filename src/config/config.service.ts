@@ -44,10 +44,6 @@ export class ConfigService {
     return this.get<Config['security']>('security');
   }
 
-  getDatadogConfig() {
-    return this.get<Config['datadog']>('datadog');
-  }
-
   getStripeConfig() {
     return this.get<Config['stripe']>('stripe');
   }

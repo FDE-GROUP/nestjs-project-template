@@ -52,12 +52,6 @@ export default {
       process.env.STORAGE_ALLOWED_MIME_TYPES || 'image/jpeg,image/png,image/gif,application/pdf'
     ).split(','),
   },
-  datadog: {
-    apiKey: process.env.DATADOG_API_KEY,
-    serviceName: process.env.DATADOG_SERVICE_NAME || 'my-service',
-    hostName: process.env.DATADOG_HOST_NAME || 'host-name',
-    intakeRegion: process.env.DATADOG_INTAKE_REGION || 'us5',
-  },
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY,
     publicKey: process.env.STRIPE_PUBLIC_KEY,

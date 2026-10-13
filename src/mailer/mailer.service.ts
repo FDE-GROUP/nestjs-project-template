@@ -26,10 +26,13 @@ export class MailerService {
     });
   }
 
+  // 默认入口语言置中文（依 global-cn-adaptation L1 / vision §6 地域约束）。
+  // 注：`I18nModule` 尚未接线，`getEmailTranslations` 仍为占位英文——此处只定「默认
+  // 语言」基准，全量翻译（校验消息 / 邮件正文）待 I18n 管道接入后启用。
   private async renderTemplate(
     templateName: string,
     context: Record<string, any>,
-    lang: string = 'en',
+    lang: string = 'zh',
   ): Promise<string> {
     try {
       // Read MJML template
@@ -84,7 +87,7 @@ export class MailerService {
   async sendVerificationEmail(
     email: string,
     verificationCode: string,
-    lang: string = 'en',
+    lang: string = 'zh',
   ): Promise<void> {
     try {
       const context = {
@@ -111,7 +114,7 @@ export class MailerService {
     }
   }
 
-  async sendWelcomeEmail(email: string, name: string, lang: string = 'en'): Promise<void> {
+  async sendWelcomeEmail(email: string, name: string, lang: string = 'zh'): Promise<void> {
     try {
       const context = {
         name,
@@ -140,7 +143,7 @@ export class MailerService {
     email: string,
     resetToken: string,
     expireTime: number,
-    lang: string = 'en',
+    lang: string = 'zh',
   ): Promise<void> {
     try {
       const context = {

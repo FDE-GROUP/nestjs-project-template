@@ -33,7 +33,6 @@ describe('ConfigService', () => {
       cors: { origin: '*' },
       swagger: { path: 'apidoc' },
       security: { helmet: true },
-      datadog: { intakeRegion: 'us5' },
       stripe: { apiVersion: '2025-02-24.acacia' },
     };
     innerGet.mockImplementation((key: string) => registry[key]);
@@ -46,7 +45,6 @@ describe('ConfigService', () => {
     expect(service.getCorsConfig()).toEqual(registry.cors);
     expect(service.getSwaggerConfig()).toEqual(registry.swagger);
     expect(service.getSecurityConfig()).toEqual(registry.security);
-    expect(service.getDatadogConfig()).toEqual(registry.datadog);
     expect(service.getStripeConfig()).toEqual(registry.stripe);
   });
 });

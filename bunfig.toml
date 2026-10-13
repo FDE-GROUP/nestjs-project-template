@@ -2,6 +2,8 @@
 # Install configuration
 cache = true
 lockfile = true
+# 依赖镜像境内化（npm → npmmirror）；海外开发者可用 `bun install --registry https://registry.npmjs.org` 覆盖
+registry = "https://registry.npmmirror.com"
 
 [build]
 # Build configuration

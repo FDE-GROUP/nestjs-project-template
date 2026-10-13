@@ -7,7 +7,7 @@ import developmentConfig from './envs/development';
 import productionConfig from './envs/production';
 
 // Create different schemas based on environment
-const createSchemaForEnv = (isProd: boolean) => {
+const createSchemaForEnv = (_isProd: boolean) => {
   // Base schema for all environments
   const baseSchema = {
     NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
@@ -40,26 +40,11 @@ const createSchemaForEnv = (isProd: boolean) => {
     STRIPE_API_VERSION: Joi.string().required(),
   };
   const betterAuthSchema = {};
-  // Datadog schema varies by environment
-  if (isProd) {
-    return Joi.object({
-      ...baseSchema,
-      ...betterAuthSchema,
-      DATADOG_API_KEY: Joi.string().required(),
-      DATADOG_SERVICE_NAME: Joi.string().required(),
-      DATADOG_HOST_NAME: Joi.string().required(),
-      DATADOG_INTAKE_REGION: Joi.string().valid('us5', 'eu', 'us3').required(),
-    });
-  } else {
-    return Joi.object({
-      ...baseSchema,
-      ...betterAuthSchema,
-      DATADOG_API_KEY: Joi.string().optional().default('dummy-api-key'),
-      DATADOG_SERVICE_NAME: Joi.string().optional().default('my-service'),
-      DATADOG_HOST_NAME: Joi.string().optional().default('host-name'),
-      DATADOG_INTAKE_REGION: Joi.string().valid('us5', 'eu', 'us3').optional().default('us5'),
-    });
-  }
+  // Datadog 已移除（global-cn-adaptation G1 / D6）；生产 / 非生产环境 schema 一致。
+  return Joi.object({
+    ...baseSchema,
+    ...betterAuthSchema,
+  });
 };
 
 const configModuleOptions = {

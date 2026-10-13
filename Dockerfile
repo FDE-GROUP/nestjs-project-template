@@ -1,4 +1,8 @@
-FROM oven/bun:1-alpine AS base
+# 基础镜像境内化：默认走国内镜像仓库（DaoCloud）；海外构建用
+#   docker build --build-arg BUN_IMAGE=oven/bun:1-alpine ...
+# 覆盖回官方 Docker Hub。
+ARG BUN_IMAGE=docker.m.daocloud.io/oven/bun:1-alpine
+FROM ${BUN_IMAGE} AS base
 
 # 设置工作目录
 WORKDIR /app
@@ -14,7 +18,7 @@ COPY . .
 RUN bun run build:nest
 
 # 生产层
-FROM oven/bun:1-alpine AS runner
+FROM ${BUN_IMAGE} AS runner
 ENV NODE_ENV=production
 
 # 设置工作目录
