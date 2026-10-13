@@ -90,7 +90,17 @@
 - **仍待 S0 boot 验（不属本 spike）**：① runtime adapter 是否按这些列真实读写（需挂 `organization()` 插件启动）；② `metadata` 列型：本 spike 用 `jsonb` 可行，但 Better Auth 对 metadata 的序列化期望（object vs JSON string）待 boot 确认（必要时改 `text`）。③ `session.activeOrganizationId` 是否需加 `references(organization.id)`（本 spike 未加 FK、能过）。
 - **结论**：风险②（迁移工具链）在**结构层证实可行**，不推翻混合复用；真实 additive 迁移将作为现有 `drizzle/`（已含 0000/0001）后的 0002 追加，形态等同本 diff。
 
+## 8. S0 boot 实测（真实 DB 往返 · 2026-10-13）
+
+S0 开工（global-tenancy v0.5.0·eafab76）把 `organization()` 插件挂上、`0002` 落库后，用一次性脚本对 dev 库（`nestjs_practice`）跑真实 Better Auth DB 往返（scratch·不入库·跑后删）：
+
+- **风险②三项坐实**：① runtime adapter 按列真实读写 ✅（`createOrganization` 写 `organization`+`member`、`getSession` 回读）；② `metadata` **jsonb** 正确——`{plan,seats,nested:{a:1}}` 存为真对象、读回对象，BA 以对象序列化（**非** JSON string），无需改 `text`；③ `session.activeOrganizationId` **无需** `references(organization.id)` FK，能过（本 S0 未加 FK）。
+- **D4 session-cookie 读路坐实**：`createOrganization` 自动把新租户写入 `session.activeOrganizationId`（并自动建 `member` role=`owner`）→ `getSession` 原样带出 → **`TenantMiddleware` 读 `session.activeOrganizationId` 注入 ALS 的骨架端到端跑通**，零 claim 改造。
+- **⚠️ 撞出预存缺陷（与多租户正交·上报后已人裁）**：`better-auth@1.7.7` 新增**运行时 schema 校验**（`advanced.database.validateSchema`，**默认全环境开**），比对 drizzle schema 与 BA 期望核心字段；本仓手写 `session` 缺 `ipAddress`/`userAgent` → **任何 auth API（含 `getSession`）抛 `SchemaMismatchError`**。此为整个 auth 层的潜在运行时地雷（此前 CI 用 mock、dev 库经 push 建，从未跑真实 BA DB 操作，故未暴露）。
+  - **经人裁决采 A**：给 `session` 加 `ipAddress`+`userAgent`（可空 text）→ `0003` 纯 additive（`fix(auth)` c73e254），**保留 validateSchema 开**（拒 B「关校验」，避免丢 schema 漂移安全网）。复验：validateSchema 开下 signUpEmail→getSession→createOrganization→activeOrganizationId 回读→owner membership **全绿**。
+  - **推论（须回灌 auth 主线，非本调研范围）**：凡以手写 Drizzle schema 承载 Better Auth，字段须与 BA 期望核心字段**逐一对齐**（`auth generate` 产出的 schema 为准），否则运行时校验拦截；本项目后续若升 BA 大版本，此校验是回归红线。
+
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 起草（v0.1.0），同日补 §6 代码级 spike（v0.2.0）与 §7 离线 generate 并入核验（v0.3.0）；结论须人二次核验后写入 plan，本文不作开发依据。
+正文已于 2026-10-13 起草（v0.1.0），同日补 §6 代码级 spike（v0.2.0）、§7 离线 generate 并入核验（v0.3.0）与 §8 S0 boot 实测（v0.4.0·坐实 adapter/jsonb/D4 读路·撞出并采 A 修复 BA 1.7.7 validateSchema 与 session 缺列冲突）；结论须人二次核验后写入 plan，本文不作开发依据。

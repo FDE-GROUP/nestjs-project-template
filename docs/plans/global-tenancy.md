@@ -2,7 +2,7 @@
 
 > 适用范围: `全局` ← blast radius，审计深度=人签核（`workflow.md` §3/§5）
 > 关联: [vision.md](../specs/vision.md) §4.1 Tenancy / §7 阶段1 · [architecture.md](../specs/architecture.md)（垂直切片）· [workflow.md](../specs/workflow.md) §1/§3
-> 性质: **技术方案（plan）**，重写型 · 版本 0.5.0 · 日期 2026-10-13 · 状态: **已审·开发依据**（`workflow.md` §3 已过审计门、人签核，见 §12）；D1–D6 全落定（§5）· §8-2 已清=混合复用（见 [`research/better-auth-org.md`](../research/better-auth-org.md)）· §9–§11 方案主体
+> 性质: **技术方案（plan）**，重写型 · 版本 0.6.0 · 日期 2026-10-13 · 状态: **已审·开发依据·进行中（S0 已落地）**（`workflow.md` §3 已过审计门、人签核，见 §12）；D1–D6 全落定（§5）· §8-2 已清=混合复用（见 [`research/better-auth-org.md`](../research/better-auth-org.md)）· **S0 已开工落地**（eafab76 + c73e254）
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
 > 受众: **人（方案主导）+ Agent（已审后为开发依据）**
 
@@ -167,7 +167,7 @@
 
 | 切片 | 内容 | 覆盖 FR/NFR | 依赖 | 验收（可核验） |
 |------|------|-------------|------|----------------|
-| **S0 租户上下文骨架** | org 插件接入 + TenantContext(ALS) + SessionGuard 读 activeOrganizationId | FR-2, D4 | §8-2 spike 通过 | 请求解析出正确 tenantId；切换 set-active 生效 |
+| **S0 租户上下文骨架** ✅ | org 插件接入 + TenantContext(ALS) + TenantMiddleware 读 activeOrganizationId | FR-2, D4 | §8-2 spike 通过 | ✅已落地（eafab76）：真实库往返验 getSession 带出 activeOrganizationId·owner 自动入会·零 claim |
 | **S1 membership + 租户级 RBAC** | 复用 member/invitation/ac/roles；受邀接受落地 | FR-3, FR-4 | S0 | 多租户归属、(user,tenant) 角色、`hasPermission` 单测 |
 | **S2 数据隔离强制** | 业务表加 `tenant_id` + `TenantScopeGuard` + 复合索引 | FR-5, NFR-1/2 | S0 | **越界回归测试红**；P95 不退化 |
 | **S3 workspace 二级边界** | `workspace` 表 + `(tenant_id,workspace_id)` 复合过滤 | D2, FR-5, §8-6 | S2 | workspace 间默认互不可见；无第四层权限 |
@@ -183,7 +183,8 @@
 
 ## 11. 影响面与迁移
 
-- **迁移策略（NFR-3）**：行级共享 = **单一 schema、无 per-tenant fan-out**，走常规 Drizzle migrate。**风险②已离线 spike 坐实**（见 [research §7](../research/better-auth-org.md)）：org 三表 + `session.activeOrganizationId` 并入手写单文件 `src/database/schema.ts` 后，`drizzle-kit generate` 产**纯 additive、FK 可解析** SQL（真迁移将作现有 `drizzle/` 后的 0002 追加）；**仅剩** runtime adapter 映射与 `metadata` 列型（`jsonb` vs `text`）待 **S0 boot 验**。
+- **迁移策略（NFR-3）**：行级共享 = **单一 schema、无 per-tenant fan-out**，走常规 Drizzle migrate。**风险②已 S0 boot 坐实**（见 [research §7–§8](../research/better-auth-org.md)）：org 三表 + `session.activeOrganizationId` 并入手写单文件 `src/database/schema.ts`，`drizzle-kit generate` 产**纯 additive、FK 可解析** SQL（→ `0002`），runtime adapter 按列真实读写、`metadata` 为 **jsonb 真对象**（非 JSON string）、`activeOrganizationId` 无需额外 FK 均经真实库往返验证。
+- **⚠️ S0 boot 撞出并采 A 修复（预存·非租户）**：`better-auth@1.7.7` 运行时 schema 校验（`advanced.database.validateSchema`·默认全环境开）要求手写 `session` 含 `ipAddress`/`userAgent`，缺则任何 auth API 抛 `SchemaMismatchError`；经人裁采 A（加两可空列→ `0003` 纯 additive、保留校验开），见 [`fix(auth)` 提交] 与 [research §8](../research/better-auth-org.md)。**推论：手写 Drizzle 承载 Better Auth 须字段与 BA 期望核心字段逐一对齐（升 BA 版为回归红线）。**
 - **存量数据回填**：现仅 `post` 样例业务表——加 `tenant_id`/`workspace_id` 须**回填策略**（seed 期分配默认租户或标记 `unassigned`）；正式业务表上线即带列，无历史包袱。
 - **auth 侧改造**：`auth.implement.ts` 挂 `organization({ ac, roles })` 插件；`SessionGuard` 扩展返回 `sessionUser + tenantContext`；与既有 genericOAuth(A1)/PIPL consent 共存无冲突。
 - **D6 重构波及**：monorepo 拆分改 `package.json` workspaces / `nest-cli` / 构建发布链；与 `docs/specs/architecture.md` 垂直切片布局协调（本方案 §9.5）。
@@ -208,8 +209,9 @@
 | 2026-10-13 | 0.3.0 | §8-2 spike（代码级核验）发现 D4「JWT claim 为主」与实态不符，经**人裁**修正 | **D4**：JWT claim 为主 → **cookie + 服务端 DB session 为主**（active tenant = session.activeOrganizationId）；FR-2 同步改措辞；§8-2 标混合复用已产 research |
 | 2026-10-13 | 0.4.0 | 路径 C：起草技术方案主体、升级为正式 plan（待审计） | 新增 §9 方案设计（混合复用边界/数据模型/租户上下文/生命周期/两包）· §10 垂直切片映射(S0–S10)· §11 影响面与迁移；勾 §7 切片映射判据；§8-6/§8-7 落入设计 |
 | 2026-10-13 | 0.5.0 | 新建 [`specs/glossary.md`](../specs/glossary.md) 术语 SSOT（勾除 §7 最后一判据）+ §11 风险②离线 spike 坐实 + **过审计门（人签核）** | 勾 §7 术语并入判据；§11 标风险②已坐实（纯 additive）；新增 §12 审计记录、演变顺延 §13；性质/版本/状改写为「已审·开发依据」；索引置「已审计·进行中（S0）」 |
+| 2026-10-13 | 0.6.0 | **S0 落地（开工首片）** | schema 加 org 三表+`activeOrganizationId`（`0002`）·`auth.implement` 挂 `organization()`·新建 `src/tenancy`（ALS 上下文+中间件+@Global 模块）接 `app.module`（feat eafab76）；boot 冒烟撞出 BA 1.7.7 `validateSchema` 与 `session` 缺 `ipAddress`/`userAgent` 冲突，经人裁采 A 加两可空列（`0003`·fix c73e254）；真实库往返坐实 adapter/jsonb/D4 读路；回灌 §10 S0 ✅、§11、research §8 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 / v0.5.0 变更（新建 glossary + §11 风险② spike 坐实 + 过审计门人签核，现为开发依据），以当前正文内容为准。
+正文已于 2026-10-13 / v0.6.0 变更（**S0 开工落地**：org 三表+插件+ALS 骨架 eafab76；boot 冒烟撞出 BA 1.7.7 validateSchema 与 session 缺列冲突、经人裁采 A 加 ipAddress/userAgent → 0003 c73e254；真实库往返坐实 adapter/jsonb/D4），以当前正文内容为准。

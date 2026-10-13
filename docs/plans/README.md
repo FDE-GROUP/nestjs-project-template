@@ -8,7 +8,7 @@
 
 | Plan | 主题 | 审计 | 执行状态 | 关联 |
 |------|------|------|----------|------|
-| [global-tenancy](./global-tenancy.md) | 多租户能力（技术方案 v0.5.0 · 已审计） | 已审计 | 进行中（S0 开工：租户上下文骨架；schema migrate 逐次守高危#1） | `specs/vision.md` §4.1/§7 · `research/better-auth-org.md` · `specs/glossary.md` · global-cn-adaptation PaymentProvider/D9 |
+| [global-tenancy](./global-tenancy.md) | 多租户能力（技术方案 v0.6.0 · 已审计） | 已审计 | 进行中（**S0 已落地** eafab76+c73e254：org 三表+插件+ALS 骨架·真实库往返坐实 D4；含采 A 补 session.ipAddress/userAgent 过 BA1.7.7 validateSchema；下一步 S1 membership/RBAC） | `specs/vision.md` §4.1/§7 · `research/better-auth-org.md` · `specs/glossary.md` · global-cn-adaptation PaymentProvider/D9 |
 | [global-cn-adaptation](./global-cn-adaptation.md) | 中国大陆地域适配（技术方案 · 已审计） | 已审计 | 进行中（M1/L1・全量(A+B)/G1/S1/P1/A1/C1/C2 ✅；A2/A3 仅留接口·暂缓 D8；P2/P3 劣后暂缓 D9） | `specs/vision.md` §4.3/§6 · global-tenancy FR-8/D5 · `research/better-auth-cn-providers.md` |
 | [event-sourcing-roadmap](./event-sourcing-roadmap.md) | 事件溯源路线（技术方案 · 递延） | 待审计 | 未开工 | `specs/architecture.md` · `specs/vision.md` §7 |
 
