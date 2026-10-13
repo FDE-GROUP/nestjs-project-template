@@ -8,7 +8,7 @@
 
 | Plan | 主题 | 审计 | 执行状态 | 关联 |
 |------|------|------|----------|------|
-| [global-tenancy](./global-tenancy.md) | 多租户能力（技术方案 v0.7.0 · 已审计） | 已审计 | 进行中（**S0/S1 已落地**：S0 eafab76+c73e254 org 三表+插件+ALS 骨架·真实库往返坐实 D4；S1 f310cfc 租户级 RBAC——`@RequirePermissions`+`TenantPermissionGuard` 委派 BA `hasPermission`、ac/roles 单一权限源；下一步 S2 数据隔离强制） | `specs/vision.md` §4.1/§7 · `research/better-auth-org.md` · `specs/glossary.md` · global-cn-adaptation PaymentProvider/D9 |
+| [global-tenancy](./global-tenancy.md) | 多租户能力（技术方案 v0.8.0 · 已审计） | 已审计 | 进行中（**S0/S1/S2 已落地**：S0 eafab76+c73e254 org 三表+插件+ALS·D4；S1 f310cfc 租户级 RBAC（委派 BA hasPermission）；S2 post+organizationId（0004）+TenantScopeGuard fail-closed+仓储层唯一隔离卡点+越界回归单测；下一步 S3 workspace 二级边界） | `specs/vision.md` §4.1/§7 · `research/better-auth-org.md` · `specs/glossary.md` · global-cn-adaptation PaymentProvider/D9 |
 | [global-cn-adaptation](./global-cn-adaptation.md) | 中国大陆地域适配（技术方案 · 已审计） | 已审计 | 进行中（M1/L1・全量(A+B)/G1/S1/P1/A1/C1/C2 ✅；A2/A3 仅留接口·暂缓 D8；P2/P3 劣后暂缓 D9） | `specs/vision.md` §4.3/§6 · global-tenancy FR-8/D5 · `research/better-auth-cn-providers.md` |
 | [event-sourcing-roadmap](./event-sourcing-roadmap.md) | 事件溯源路线（技术方案 · 递延） | 待审计 | 未开工 | `specs/architecture.md` · `specs/vision.md` §7 |
 
