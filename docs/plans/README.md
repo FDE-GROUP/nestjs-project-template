@@ -9,6 +9,7 @@
 | Plan | 主题 | 审计 | 执行状态 | 关联 |
 |------|------|------|----------|------|
 | [global-tenancy](./global-tenancy.md) | 多租户能力需求（草案 · pre-plan） | 待审计 | 未开工 | `specs/vision.md` §4.1/§7 |
+| [global-cn-adaptation](./global-cn-adaptation.md) | 中国大陆地域适配需求（草案 · pre-plan） | 待审计 | 未开工 | `specs/vision.md` §4.3/§6 · global-tenancy FR-8/D5 |
 
 **列取值**
 - **审计**：`待审计` / `已审计`（无已审方案不写码——`workflow.md` §3）
