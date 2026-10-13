@@ -144,6 +144,12 @@ bun run ci:quick    # 轻量门禁：check + test
 - **提交规范**：Conventional Commits，见 [约定文档](./COMMIT_CONVENTION.md)。
 - **代码智能分析**：`fallow`（经 `bunx fallow`）作为 L2 佐证工具（结果须人工二判），详见 [工具标准](./docs/specs/tooling-standards.md)。
 
+## 联系方式
+
+<p align="center">
+  <img src="./abel-weichat.jpg" alt="WeChat 联系" width="240" />
+</p>
+
 ## 许可
 
 [MIT](LICENSE)
