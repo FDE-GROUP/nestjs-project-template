@@ -77,6 +77,10 @@ export const session = pgTable('session', {
   // Better Auth organization plugin: currently active tenant (D4 session-cookie).
   // Set by `/organization/set-active`; read back by `getSession` as the tenant source.
   activeOrganizationId: text('activeOrganizationId'),
+  // Better Auth core session fields (BA 1.7.7 runtime schema validation expects these;
+  // stored on session creation for audit / revoke). Optional → nullable.
+  ipAddress: text('ipAddress'),
+  userAgent: text('userAgent'),
   createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updatedAt', { mode: 'date' })
     .notNull()
