@@ -110,7 +110,7 @@
 ## 8. 未决问题（讨论中）
 
 1. **（依 D3+CL-2 已定方向）users 表保持平台全局、不加 `tenant_id`**；租户维度落在**业务表 + `membership`(user×tenant) 关联表**。待细化：membership / RBAC 表设计与迁移。
-2. Better Auth 的 organization / teams 插件能否直接承载 membership/RBAC，减少自建？（宜先 `docs/research/` 调研，非依据）
+2. Better Auth 的 organization / teams 插件能否直接承载 membership/RBAC，减少自建？→ **已产调研 [`research/better-auth-org.md`](../research/better-auth-org.md)（仅参考、非依据）**：倾向 **混合复用**——复用 org 承载 tenant 实体 + membership(D3) + 受邀 + 租户内 RBAC(FR-4)，自建 隔离守卫(FR-5)/workspace 边界(D2)/审批生命周期(FR-1)/订阅配额(D5)/三层权限另两层(FR-11/13)/fail-closed 暂停(FR-10)/Owner 治理(FR-12)；`team` 不复用于 workspace。**结论须人二判 + 最小 spike（JWT↔activeOrganizationId 接缝）坐实后方可写入技术方案。**
 3. **（依 CL-3 已明确）租户内 admin 权限严格限本租户、不可跨租；平台经营者只管租户级生命周期与运营，默认不进入租户内业务数据**（如需进入须显式授权 + 审计）。
 4. **（依 D3）用户 email 为平台全局唯一，`users.email` 保持全局唯一约束**；`(tenant_id, …)` 复合唯一用于**租户内业务实体**（如租户内 slug / 邀请 token），非 user email。待列：哪些业务表需复合唯一 + 影响校验 / i18n。
 5. **平台用户注册与信任分级**（**另行专题讨论**，属 vision Identity 支柱、跨切多租户）：初步意见——用户**分等级**、**准入宽松（仅邮箱认证）**、**逐步提升等级**。与本文关系：① 决定 FR-3「受邀未注册者接受时注册」的门槛与反滥用；② 用户等级可约束**用户级能力**（如能否申请创建租户）；③ 注意两个门不同：平台注册=宽松准入 vs 创建租户=平台人工审批（FR-1）。待开独立 plan（`global-user-registration`）。
