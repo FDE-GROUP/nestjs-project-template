@@ -55,7 +55,7 @@
 ### 4.1 功能需求（FR）
 
 - **FR-1 租户生命周期（审批制）**：客户先注册为平台 user → 申请成为租户 → **平台经营者人工认证 / 审批** → 通过后租户生效；后续可配置 / 暂停 / 恢复 / 删除（软删 + 定期硬删）。**不得自助即时开通**。
-- **FR-2 租户上下文贯穿**：每次请求解析出当前租户（由认证凭证 / 子域名 / header，见 §5 决策5），注入作用域，供数据层与下游消费；解析顺序遵循 FR-11——先认证平台用户（用户级）→ 再确定目标租户与 membership（租户级）。
+- **FR-2 租户上下文贯穿**：每次请求解析出当前租户（源于认证会话：`getSession` 带出的 `activeOrganizationId`，header 可临时覆盖 / 子域名留前端，见 §5 决策4），注入作用域（AsyncLocalStorage），供数据层与下游消费；解析顺序遵循 FR-11——先认证平台用户（用户级）→ 再确定目标租户与 membership（租户级）。
 - **FR-3 成员与加入**：成员来自平台已注册用户；准入方式 = **申请 + 受邀**并存：① user 可申请加入一个或多个租户，**由该租户管理者审批**是否接受；② 租户管理者可邀请（email / 链接）平台用户加入，被邀请者接受前不生效；**受邀 email 若未注册，接受时须先完成注册再落地 membership**。加入已有租户**不需平台经营者审批**（平台审批仅用于「创建租户」，见 FR-1）；**退出某租户仅解除该 membership，user 仍是平台用户**；租户管理者管理本租户成员。
 - **FR-4 角色与授权（RBAC，租户内）**：角色是 **(user, tenant) 维度**——同一 user 在不同租户可持不同角色；由**该租户管理者分配，仅限本租户范围，不得跨租户分配**；授权校验在切片内统一执行（含**租户 / 用户暂停态**裁决，见 FR-10），禁止散点特判；退出后对该租户的访问即时失效。
 - **FR-5 数据隔离强制**：所有业务查询默认被 `tenant_id` 约束（D1）；因 D2 两级 + 强数据边界，再按 `workspace_id` 复合过滤（租户内 workspace 间默认互不可见）；提供**防越权守卫**（漏挂 tenant/workspace 过滤即红）。workspace **不设独立角色层**，访问权由租户级权限判定（见 FR-4/FR-11）。
@@ -87,7 +87,7 @@
 | **D1** ✅ | **数据隔离策略** | **已裁决：仅行级 `tenant_id`（共享表）**；**不做** schema-per-tenant / db-per-tenant | 隔离靠贯穿的租户上下文 + 数据层强制约束 + 复合索引；迁移为统一单 schema |
 | **D2** ✅ | **租户层级** | **已裁决：两级 租户(tenant) → 工作区(workspace)；workspace=纯数据分组(C) + 强数据边界(A)** | 领域模型含 workspace 聚合；业务数据挂 `workspace_id` 默认过滤；**不新增第四层权限**（见 §8.6）|
 | **D3** ✅ | **成员模型** | **已定向（CL-2/CL-3）：user 独立存在，经 membership 多对多关联；可加入多租户、角色按 (user,tenant)、退出仅解除 membership** | 复用现有 users + Better Auth；区分「创建租户=审批」与「加入租户=自由」 |
-| **D4** ✅ | **租户识别方式** | **已裁决：JWT claim 为主 + 可覆盖 header**（多租户用户切换） | 中间件从 claim 解析 active tenant，header 可临时覆盖；子域名 / URL 段留作前端可选映射 |
+| **D4** ✅ | **租户识别方式** | **已裁决（v0.3.0 修正）：cookie + 服务端 DB session 为主 + 可覆盖 header**（多租户用户切换） | 与代码实态一致（`SessionGuard → auth.api.getSession({headers})`，本仓无状态 JWT）；active tenant 取自 **session.activeOrganizationId**（Better Auth org 插件原生），注入上下文零 claim 改造；切换走 `/organization/set-active`；**FR-10 fail-closed 暂停 = 失效 session 行**；子域名 / URL 段留前端可选；若未来需无状态 JWT 再演进（本期不做）。修正缘由见 [`research/better-auth-org.md` §6](../research/better-auth-org.md) |
 | **D5** ✅ | **计费模型优先级** | **已裁决：订阅 + 配额**先行 | 支付经多通道 provider（Stripe/微信/支付宝，见 global-cn-adaptation）挂 tenant 订阅；配额驱动 FR-7；计量制留后 |
 | **D6** ✅ | **交付形态** | **已裁决：core 库 + 参考应用两包** | monorepo 拆分：`core`=多租户能力库，参考应用消费之；影响包结构 / 构建 / 发布（见 §8.7） |
 
@@ -123,8 +123,9 @@
 |------|------|----------|----------|
 | 2026-10-13 | 0.1.0 | 首版：从 vision 阶段 1 提炼多租户需求草案（讨论期澄清 D1/D3 与 CL-1~CL-5 属同一初稿形成，不单列） | 背景/目标/词汇/FR(1–11)·NFR/决策 gate(D1–D6)/MoSCoW/完成判据/未决 |
 | 2026-10-13 | 0.2.0 | 地域适配决策（支付多通道）传导至本草案 | FR-8 / D5：计费挂钩由 Stripe 单挂 → 多通道 provider（Stripe/微信/支付宝，见 global-cn-adaptation） |
+| 2026-10-13 | 0.3.0 | §8-2 spike（代码级核验）发现 D4「JWT claim 为主」与实态不符，经**人裁**修正 | **D4**：JWT claim 为主 → **cookie + 服务端 DB session 为主**（active tenant = session.activeOrganizationId）；FR-2 同步改措辞；§8-2 标混合复用已产 research |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 / v0.2.0 变更（FR-8 / D5 依地域适配改为多通道支付 provider），以当前正文内容为准。
+正文已于 2026-10-13 / v0.3.0 变更（D4 依 §8-2 spike 经人裁修正为 session-cookie，FR-2 同步），以当前正文内容为准。

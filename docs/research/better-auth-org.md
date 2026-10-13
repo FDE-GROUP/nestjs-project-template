@@ -79,7 +79,7 @@
 - **切换 active org**：端点 `/organization/set-active`（写 session.activeOrganizationId）存在；全套端点涵盖 `create/update/delete/list`、`set-active`/`set-active-team`、`invite-member`/`accept-invitation`/`reject-invitation`/`cancel-invitation`、`update-member-role`/`remove-member`/`leave`/`get-active-member(-role)`/`list-members`、动态角色 `create/list/update/delete-role`。
 - **未验（留 plan 待 spike）**：风险②（组插件新增 `organization`/`member`/`invitation` + `session` 列在**手写单文件 Drizzle schema** 下的 `drizzle-kit generate`/migrate 具体路径）需真实 DB 才能坐实；不推翻结构结论。
 
-> **副作用（须人裁）**：本次核验发现 [global-tenancy D4](../plans/global-tenancy.md) 「JWT claim 为主 + 可覆盖 header」与**代码实态（cookie+DB session）不符**。这不是 org 插件的限制，而是需求前提需修正：session-cookie 对本项目反而更优（FR-10 fail-closed 暂停可直接失效 session 行）。**D4 已✅签核，属人决策权限（P7），本文仅上报事实、不擅改。**
+> **副作用（已人裁 · 2026-10-13）**：本次核验发现 [global-tenancy D4](../plans/global-tenancy.md) 「JWT claim 为主」与**代码实态（cookie+DB session）不符**。经人裁决，**D4 已修正为「cookie + 服务端 DB session 为主」**（global-tenancy v0.3.0）：顺着实态走，租户上下文 = guard 读 `session.activeOrganizationId`、零 claim 改造，FR-10 暂停=失效 session 行。（本文仅上报事实，裁决权属人）。
 
 ---
 
