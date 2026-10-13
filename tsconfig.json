@@ -1,5 +1,5 @@
 {
-  "include": ["src/**/*"],
+  "include": ["apps/**/*"],
   "compilerOptions": {
     "module": "ES2022",
     "moduleResolution": "node",
@@ -27,13 +27,13 @@
     "verbatimModuleSyntax": false,
     "types": ["bun-types"],
     "paths": {
-      "@app/*": ["src/*"],
-      "@modules/*": ["src/modules/*"],
-      "@shared-kernel/*": ["src/shared-kernel/*"],
-      "@config/*": ["src/config/*"],
-      "@common/*": ["src/common/*"],
-      "@shared/*": ["src/shared/*"],
-      "@core/*": ["src/core/*"]
+      "@app/*": ["apps/reference/src/*"],
+      "@modules/*": ["apps/reference/src/modules/*"],
+      "@shared-kernel/*": ["apps/reference/src/shared-kernel/*"],
+      "@config/*": ["apps/reference/src/config/*"],
+      "@common/*": ["apps/reference/src/common/*"],
+      "@shared/*": ["apps/reference/src/shared/*"],
+      "@core/*": ["packages/core/src/*"]
     }
   },
   "exclude": ["node_modules", "dist", "test", "**/*.spec.ts", "prisma/**/*"]
