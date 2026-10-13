@@ -2,7 +2,7 @@
 
 > 适用范围: `全局` ← blast radius，审计深度=人签核（`workflow.md` §3/§5）
 > 关联: [vision.md](../specs/vision.md) §4.1 Tenancy / §7 阶段1 · [architecture.md](../specs/architecture.md)（垂直切片）· [workflow.md](../specs/workflow.md) §1/§3
-> 性质: **技术方案（plan）**，重写型 · 版本 0.8.0 · 日期 2026-10-13 · 状态: **已审·开发依据·进行中（S0/S1/S2 已落地）**（`workflow.md` §3 已过审计门、人签核，见 §12）；D1–D6 全落定（§5）· §8-2 已清=混合复用（见 [`research/better-auth-org.md`](../research/better-auth-org.md)）· **S0/S1/S2 已开工落地**（eafab76+c73e254+f310cfc+S2）
+> 性质: **技术方案（plan）**，重写型 · 版本 0.9.0 · 日期 2026-10-13 · 状态: **已审·开发依据·进行中（S0/S1/S2/S3 已落地）**（`workflow.md` §3 已过审计门、人签核，见 §12）；D1–D6 全落定（§5）· §8-2 已清=混合复用（见 [`research/better-auth-org.md`](../research/better-auth-org.md)）· **S0/S1/S2/S3 已开工落地**（eafab76+c73e254+f310cfc+S2+0747efc）
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
 > 受众: **人（方案主导）+ Agent（已审后为开发依据）**
 
@@ -170,7 +170,7 @@
 | **S0 租户上下文骨架** ✅ | org 插件接入 + TenantContext(ALS) + TenantMiddleware 读 activeOrganizationId | FR-2, D4 | §8-2 spike 通过 | ✅已落地（eafab76）：真实库往返验 getSession 带出 activeOrganizationId·owner 自动入会·零 claim |
 | **S1 membership + 租户级 RBAC** ✅ | 复用 member/invitation/ac/roles；受邀接受落地 | FR-3, FR-4 | S0 | ✅已落地（f310cfc）：`@RequirePermissions`+`TenantPermissionGuard` 委派 BA `hasPermission`（ac/roles 为唯一权限源、禁散点）·fail-closed 无租户即 403·真实库冒烟坐实返回 `{success:boolean}`；org member/invitation 端点 S0 挂载后即 live |
 | **S2 数据隔离强制** ✅ | 业务表加 `tenant_id` + `TenantScopeGuard` + 复合索引 | FR-5, NFR-1/2 | S0 | ✅已落地：`post` 加 `organizationId`（0004 纯additive·逐条 apply）·`TenantScopeGuard` fail-closed 403·**仓储层为唯一隔离卡点**（port 不暴露 tenant、adapter 从 ALS requireTenantId 强制过滤/写）·post CQRS 参考切片·越界回归单测（漏挂 where 即红）。*待决*：全局 APP_GUARD（高危#4）、NOT NULL 收紧、全栈 e2e |
-| **S3 workspace 二级边界** | `workspace` 表 + `(tenant_id,workspace_id)` 复合过滤 | D2, FR-5, §8-6 | S2 | workspace 间默认互不可见；无第四层权限 |
+| **S3 workspace 二级边界** ✅ | `workspace` 表 + `(tenant_id,workspace_id)` 复合过滤 | D2, FR-5, §8-6 | S2 | ✅已落地（0747efc）：`workspace` 表（orgId FK cascade·`(orgId,slug)` 复合唯一）+ `post.workspaceId`（可空·FK set null）+ 复合索引 `(organizationId,workspaceId)`（`0005` 纯additive·人已审·事务内逐条 apply·采①可空）；`TenantMiddleware` 读 `x-workspace-id` 绑定 ALS `workspaceId`（可选选择器·§9.2 header 覆盖）；**post 仓储唯一卡点升级为复合作用域**（有 ws 即 `AND workspaceId`·`organizationId` 恒取自可信 ctx→外部 ws 天然 0 行·跨租泄漏结构上不可能）；越界回归单测 +5。*待决*：workspace CRUD 参考切片（谁可建 ws→由租户级权限·待裁）、全局 APP_GUARD（高危#4）、`organizationId`/`workspaceId` NOT NULL 收紧、全栈 e2e |
 | **S4 审批制租户生命周期** | 状态机 + 申请/审批端点 + Owner 规则 | FR-1, FR-12 | S1 | 申请→审批→生效→暂停/删除；owner 保底 |
 | **S5 平台经营者治理** | seed 唯一 operator + 平台级端点(列表/暂停/恢复/删除/诊断) | FR-6, FR-13 | S0/S4 | 平台级 fail-closed；越权访问红 |
 | **S6 fail-closed 暂停** | 暂停租户/用户→失效 session + 守卫校验 | FR-10, NFR-1 | S2/S5 | 暂停后相应访问全红（回归） |
@@ -212,8 +212,9 @@
 | 2026-10-13 | 0.6.0 | **S0 落地（开工首片）** | schema 加 org 三表+`activeOrganizationId`（`0002`）·`auth.implement` 挂 `organization()`·新建 `src/tenancy`（ALS 上下文+中间件+@Global 模块）接 `app.module`（feat eafab76）；boot 冒烟撞出 BA 1.7.7 `validateSchema` 与 `session` 缺 `ipAddress`/`userAgent` 冲突，经人裁采 A 加两可空列（`0003`·fix c73e254）；真实库往返坐实 adapter/jsonb/D4 读路；回灌 §10 S0 ✅、§11、research §8 |
 | 2026-10-13 | 0.7.0 | **S1 落地（租户级 RBAC）** | 新建 `src/tenancy/rbac`：`@RequirePermissions` 装饰器 + `TenantPermissionGuard`（fail-closed）+ `permissions.ts`（`toPermissionMap`）；`auth.implement` 透传 `hasPermission`、`TenancyModule` 注册导出（feat f310cfc）。以 BA org 插件 `ac`/roles 为唯一权限源（禁散点·§9.3）；局部 `@UseGuards` 非全局 APP_GUARD（高危#4 留 S2）；无 schema 变更。真实库冒烟纠正 `hasPermission` 返回为 `{success:boolean}`。回灌 §10 S1 ✅ |
 | 2026-10-13 | 0.8.0 | **S2 落地（数据隔离强制）** | `post` 加 `organizationId`+复合索引（`0004` 纯additive·人已审·事务内逐条 apply·采选项①可空）；新建 `TenantScopeGuard`（fail-closed 403·局部 @UseGuards）+ `post` CQRS 参考切片（domain port 不暴露 tenant·Drizzle adapter 从 ALS requireTenantId 为唯一隔离卡点）+ i18n `validate.title.required`；越界回归单测（list/findById 谓词结构相等·无租户即拒·create 盖租户）。全局 APP_GUARD/NOT NULL 收紧/全栈 e2e 留待。回灌 §10 S2 ✅ |
+| 2026-10-13 | 0.9.0 | **S3 落地（workspace 二级边界·复合作用域）** | schema 新增 `workspace` 表（orgId FK cascade·`(orgId,slug)` 复合唯一）+ `post.workspaceId`（可空·FK set null）+ 复合索引 `(organizationId,workspaceId)`（`0005` 纯additive·人已审·事务内逐条 apply·采①可空）；`TenantMiddleware` 读 `x-workspace-id`→ALS `workspaceId`（可选选择器）；`TenantContextService` 加 `workspaceId` getter；**post 仓储唯一卡点升级为复合作用域**（有 ws 即 `AND workspaceId`·跨租泄漏结构不可能）+ port `PostRecord` 加 `workspaceId`；互不可见越界回归单测 +5（list/findById 复合谓词·外部 ws 天然 0 行·create 盖 ws）。workspace CRUD 参考切片（谁可建→租户级权限·待裁）/全局 APP_GUARD/NOT NULL 收紧/全栈 e2e 留待。回灌 §10 S3 ✅ |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 / v0.8.0 变更（**S2 开工落地**：`post` 加 organizationId+复合索引（0004 纯additive·逐条 apply·采①可空）；`TenantScopeGuard` fail-closed + post CQRS 参考切片（仓储层唯一隔离卡点、port 不暴露 tenant）+ 越界回归单测；全局 APP_GUARD/NOT NULL 收紧/全栈 e2e 留待），以当前正文内容为准。
+正文已于 2026-10-13 / v0.9.0 变更（**S3 开工落地**：schema 加 `workspace` 表 + `post.workspaceId`（可空）+ 复合索引（0005 纯additive·逐条 apply·采①可空）；`TenantMiddleware` 读 `x-workspace-id`→ALS；post 仓储唯一卡点升级为复合作用域（有 ws 即 AND workspaceId·跨租泄漏结构不可能）+ 互不可见越界回归单测；workspace CRUD 参考切片/全局 APP_GUARD/NOT NULL 收紧/全栈 e2e 留待），以当前正文内容为准。
