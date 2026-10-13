@@ -2,7 +2,7 @@
 
 > 适用范围: `全局` ← blast radius，审计深度=人签核（`workflow.md` §3/§5）
 > 关联: [vision.md](../specs/vision.md) §4.3 计费 / §6 地域与合规约束 · [global-tenancy.md](./global-tenancy.md) FR-8/D5（已回改为多通道 provider）· [architecture.md](../specs/architecture.md)（provider 落 infrastructure/瘦适配器层）· [tooling-standards.md](../specs/tooling-standards.md)（选型 SSOT，待落）· [research/better-auth-cn-providers.md](../research/better-auth-cn-providers.md)（参考·非依据）· [workflow.md](../specs/workflow.md) §1/§3
-> 性质: **技术方案（plan）**，重写型 · 版本 0.3.0 · 日期 2026-10-13 · 状态: **已过审计门（人签核·§12）**；M1/L1/G1 实施中，其余切片按序待开工
+> 性质: **技术方案（plan）**，重写型 · 版本 0.3.0 · 日期 2026-10-13 · 状态: **已审·开发依据**（`workflow.md` §3 已过审计门，见 §12）
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
 > 受众: **人（方案主导）+ Agent（已审后为开发依据）**
 
@@ -218,6 +218,7 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 - [ ] `PaymentProvider` / `GenericOAuthConfig` 接口签名经实现切片时代码评审定稿（非阻断 M1/L1/G1）；
 - [x] expand–contract 迁移与回滚步骤经审计确认可执行；
 - [x] **审计门通过 + 人签核**（见 §12），已可开工（低风险项 M1/L1/G1 先行）。
+- [x] **M1**（npmmirror/Docker 镜像 ARG）、**G1**（去 Datadog、日志落文件）、**L1**（mailer 默认 zh）已落地并通过本地 CI（commit `9e27d63`）；L1 全量翻译待 I18n 接线（非本片）。
 
 ## 11. 未决问题（审计前须澄清或标注占位）
 

@@ -37,7 +37,7 @@
 | 本地 CI 编排 | **scripts/ci.ts**（Bun Shell） | — | 一键全量门禁：`check`→`build:nest`→`test` + fallow 佐证；pre-push 自动触发，**替代远程 CI** | 强制 |
 | Git Hooks | **husky** | ^9.1.7 | pre-commit → `lint:fix`；pre-push → `ci` | 强制 |
 | 提交校验 | **commitlint** | ^21.2.3 | Conventional Commits | 强制 |
-| 日志 | **pino**（+ pino-pretty） | ^10.4.0 | 结构化日志；`pino-datadog-transport` 待移除、默认落文件（见 §2.1） | 强制 |
+| 日志 | **pino**（+ pino-pretty） | ^10.4.0 | 结构化日志；dev pino-pretty、prod pino/file 落文件（Datadog 已移除） | 强制 |
 | API 文档 | **@nestjs/swagger** | ^12.0.2 | `/apidoc` + OpenAPI 导出 | 强制 |
 | 清理 | **rimraf** | ^6.1.3 | `prebuild` 清 dist | 强制 |
 | 容器/DB 环境 | **Docker Compose** | Docker 29.x | 本地 Postgres 供给 | 强制（dev） |
@@ -53,9 +53,9 @@
 |--------|------|------|------------|
 | **支付通道** | Stripe（海外）+ 微信支付 + 支付宝（大陆） | Stripe 现行；微信/支付宝 **已决策·待落地** | 统一 `PaymentProvider` 抽象（与存储同构，落 `src/modules/payment`）；周期扣款随资质（FR-1/FR-2 · D1） |
 | **登录渠道** | Google/GitHub（保留）+ 微信 / 企业微信 / 钉钉 / 飞书 | 海外现行；境内四渠道 **已决策·待落地** | Better Auth `genericOAuth`；方案 C 邮箱为体、社交为用；**不做**手机验证码登录（FR-3/D2/D3） |
-| **依赖镜像** | npm→npmmirror（`bunfig.toml`/`.npmrc`）+ Docker 国内基础镜像 | **已决策·待落地** | 纯配置、最低风险（FR-4/D4） |
-| **默认语言** | i18n 默认 / fallback 置 `zh`（保留 en/ja） | **已决策·待落地** | 文档中文为准（FR-5/D4） |
-| **日志后端** | pino 默认落文件；**移除** `pino-datadog-transport` | **已决策·待落地** | 本期**不引**集中监控（SLS/Loki 留后）（FR-6/D6） |
+| **依赖镜像** | npm→npmmirror（`bunfig.toml`/`.npmrc`）+ Docker 国内基础镜像 | **已落地**（M1，commit `9e27d63`） | 纯配置；Dockerfile 基础镜像经 ARG 可覆盖（FR-4/D4） |
+| **默认语言** | i18n 默认 / fallback 置 `zh`（保留 en/ja） | **部分落地**（L1：mailer 默认 zh；全量翻译待 I18n 接线） | 文档中文为准（FR-5/D4） |
+| **日志后端** | pino 默认落文件；**移除** `pino-datadog-transport` | **已落地**（G1，commit `9e27d63`） | 本期**不引**集中监控（SLS/Loki 留后）（FR-6/D6） |
 | **对象存储默认** | 默认阿里云 OSS，COS/S3 经 env 切换 | provider 现行；**默认切换待落地** | 已有 OSS/COS/S3 provider（D5） |
 | **合规（PIPL）** | consent 留痕 + 按 user 导出/删除 + 数据驻留境内 region | **已决策·待落地** | 属需求非工具；ICP 归部署、不进代码门禁（FR-7/D7） |
 
