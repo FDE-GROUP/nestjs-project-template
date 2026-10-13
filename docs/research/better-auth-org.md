@@ -49,7 +49,7 @@
 ## 3. 主要风险 / 待决（须进 plan，非本文裁决）
 
 1. **JWT vs session activeOrganizationId 接缝**（结构级）：~~待核~~ → **已代码级核验（见 §6 spike 补记）：非阻塞、反而天然对齐**。本仓实为 cookie + 服务端 DB session（`SessionGuard` 走 `auth.api.getSession({headers})`），org 插件把 `activeOrganizationId` 存于 **session 字段**、由同一 `getSession` 带出——注入租户上下文只需读 `session.activeOrganizationId`，无需 JWT claim 管道。**副作用：与 [global-tenancy D4「JWT claim 为主」前提不符，须上报人裁（见 §6）**。
-2. **手写 Drizzle schema 的集成成本**：本仓 auth 表为**手写维护**（`src/database/schema.ts` 单文件，`user` 已手加 `isOwner`/`handle` 等 Better Auth additionalFields）。org 插件要新增 `organization`/`member`/`invitation` + 改 `session`——须核验其在**手写 schema + 单一 `database/schema.ts` 布局**下的生成 / 迁移路径（文档字段清单为渲染组件、未取精确列，以实际生成表为准）。
+2. **手写 Drizzle schema 的集成成本**：~~待核~~ → **已工具链级核验（见 §7）**：本仓 auth 表为**手写维护**（`src/database/schema.ts` 单文件）；将 org 三表 + `session.activeOrganizationId` 并入后，离线 `drizzle-kit generate` 产出**纯 additive、FK 可解析**的 SQL。**剩** runtime adapter 映射与 `metadata` 列型待 S0 boot 验。
 3. **RBAC 粒度**：`member.role` 为**单字符串角色** + `ac` 的 resource:action。FR-4/FR-11「角色与权限点分离」「三层各自 fail-closed」——须核 `ac` 表达力是否足够，`organizationRole` 动态角色是否引入额外复杂度。
 4. **受邀 email 依赖**：`invitation` 以 email 为锚，与 [cn-providers 风险1](./better-auth-cn-providers.md)（微信/钉钉/飞书常无 email）叠加——境内场景下受邀流可能需要 email 之外的锚点。
 5. **`teams` ≠ workspace 语义**：org 的 `team` 是「组织内团队」，与 D2「workspace = 纯数据分组 + 强边界、不设独立角色层」不完全对齐；复用 `team` 反而可能带入 team 级权限（违背 CL-5 三层）。倾向 **workspace 业务侧自建、不复用 team**。
@@ -77,11 +77,20 @@
 - **本仓验活形态**：`src/modules/auth/guards/session.guard.ts:46` → `auth.api.getSession({ headers: req.headers })`；`auth.implement.ts` **未挂 `jwt()` 插件**，`authConfig.jwt.secret` 仅作 Better Auth 内部 session cookie 签名密钥。**结论：本仓 = cookie + 服务端 DB session，非无状态 JWT。**
 - **org 插件 activeOrg 位置**：`plugins/organization/schema.d.mts` 的 `SessionDefaultFields.activeOrganizationId`（string, required:false, input:false）——**挂在 session 记录上**，由 `getSession` 一并返回。→ 与本仓 session 模型**天然对齐**，注入租户上下文 = guard 读 `result.session.activeOrganizationId` → AsyncLocalStorage，**无需 claim 改造**。
 - **切换 active org**：端点 `/organization/set-active`（写 session.activeOrganizationId）存在；全套端点涵盖 `create/update/delete/list`、`set-active`/`set-active-team`、`invite-member`/`accept-invitation`/`reject-invitation`/`cancel-invitation`、`update-member-role`/`remove-member`/`leave`/`get-active-member(-role)`/`list-members`、动态角色 `create/list/update/delete-role`。
-- **未验（留 plan 待 spike）**：风险②（组插件新增 `organization`/`member`/`invitation` + `session` 列在**手写单文件 Drizzle schema** 下的 `drizzle-kit generate`/migrate 具体路径）需真实 DB 才能坐实；不推翻结构结论。
+- **未验（留 plan 待 spike）**：风险② → **已工具链级核验（见 §7）**：手写并入 + 离线 `generate` 产纯 additive SQL 通过；仅剩 runtime adapter 映射 / `metadata` 列型待 S0 boot 验。
 
 > **副作用（已人裁 · 2026-10-13）**：本次核验发现 [global-tenancy D4](../plans/global-tenancy.md) 「JWT claim 为主」与**代码实态（cookie+DB session）不符**。经人裁决，**D4 已修正为「cookie + 服务端 DB session 为主」**（global-tenancy v0.3.0）：顺着实态走，租户上下文 = guard 读 `session.activeOrganizationId`、零 claim 改造，FR-10 暂停=失效 session 行。（本文仅上报事实，裁决权属人）。
+
+## 7. Spike 补记 #2 · 手写 Drizzle schema 并入（离线 generate · 2026-10-13）
+
+针对风险②，在 scratch（**不碰主线 `schema.ts`/迁移、未 migrate、未 push**）验证：将 org 三表 + `session.activeOrganizationId` 并入单文件 schema 后，`drizzle-kit generate` 能否产干净、可解析的迁移。步骤：以现 `schema.ts` 为基线灌入隔离 out 目录 → 再用含 org 表的 scratch schema 产**增量 diff**。
+
+- **结果：纯 additive ✅**。迁移仅含 `CREATE TABLE organization/member/invitation` + `ALTER TABLE session ADD COLUMN activeOrganizationId` + 4 条 FK（`member.organizationId→organization.id`、`member.userId→user.id`、`invitation.organizationId→organization.id`、`invitation.inviterId→user.id`）+ 2 个复合索引；**无任何 DROP / 改动既有列**，FK 正确解析到现有 `user.id`（text pk）。
+- **列名与插件期望对齐**：按 `organization/schema.d.mts` 的 DefaultFields 手写，drizzleAdapter 按 `schema` 对象**键名** `organization`/`member`/`invitation` 映射，列名（organizationId/userId/role/status/expiresAt/inviterId/metadata/activeOrganizationId）与 Better Auth 字段一致。
+- **仍待 S0 boot 验（不属本 spike）**：① runtime adapter 是否按这些列真实读写（需挂 `organization()` 插件启动）；② `metadata` 列型：本 spike 用 `jsonb` 可行，但 Better Auth 对 metadata 的序列化期望（object vs JSON string）待 boot 确认（必要时改 `text`）。③ `session.activeOrganizationId` 是否需加 `references(organization.id)`（本 spike 未加 FK、能过）。
+- **结论**：风险②（迁移工具链）在**结构层证实可行**，不推翻混合复用；真实 additive 迁移将作为现有 `drizzle/`（已含 0000/0001）后的 0002 追加，形态等同本 diff。
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 起草（v0.1.0），同日补 §6 代码级 spike 核验（v0.2.0）；结论须人二次核验后写入 plan，本文不作开发依据。
+正文已于 2026-10-13 起草（v0.1.0），同日补 §6 代码级 spike（v0.2.0）与 §7 离线 generate 并入核验（v0.3.0）；结论须人二次核验后写入 plan，本文不作开发依据。

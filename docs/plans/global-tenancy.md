@@ -183,7 +183,7 @@
 
 ## 11. 影响面与迁移
 
-- **迁移策略（NFR-3）**：行级共享 = **单一 schema、无 per-tenant fan-out**，走常规 Drizzle migrate。**待 spike（§8-2 风险②）**：org 插件新增 `organization`/`member`/`invitation` + `session.activeOrganizationId` 列在**本仓手写单文件 `src/database/schema.ts`** 下的 `drizzle-kit generate`/migrate 具体路径须先坐实（可能需手写并入这些表）。
+- **迁移策略（NFR-3）**：行级共享 = **单一 schema、无 per-tenant fan-out**，走常规 Drizzle migrate。**风险②已离线 spike 坐实**（见 [research §7](../research/better-auth-org.md)）：org 三表 + `session.activeOrganizationId` 并入手写单文件 `src/database/schema.ts` 后，`drizzle-kit generate` 产**纯 additive、FK 可解析** SQL（真迁移将作现有 `drizzle/` 后的 0002 追加）；**仅剩** runtime adapter 映射与 `metadata` 列型（`jsonb` vs `text`）待 **S0 boot 验**。
 - **存量数据回填**：现仅 `post` 样例业务表——加 `tenant_id`/`workspace_id` 须**回填策略**（seed 期分配默认租户或标记 `unassigned`）；正式业务表上线即带列，无历史包袱。
 - **auth 侧改造**：`auth.implement.ts` 挂 `organization({ ac, roles })` 插件；`SessionGuard` 扩展返回 `sessionUser + tenantContext`；与既有 genericOAuth(A1)/PIPL consent 共存无冲突。
 - **D6 重构波及**：monorepo 拆分改 `package.json` workspaces / `nest-cli` / 构建发布链；与 `docs/specs/architecture.md` 垂直切片布局协调（本方案 §9.5）。
