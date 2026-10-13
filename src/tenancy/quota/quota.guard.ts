@@ -2,13 +2,14 @@ import {
   type CanActivate,
   type ExecutionContext,
   ForbiddenException,
+  Inject,
   Injectable,
 } from '@nestjs/common';
-import type { Reflector } from '@nestjs/core';
+import { Reflector } from '@nestjs/core';
 
-import type { TenantContextService } from '../tenant-context.service';
+import { TenantContextService } from '../tenant-context.service';
 import { QUOTA_KEY, type QuotaRequirement } from './quota.decorator';
-import type { QuotaService } from './quota.service';
+import { QuotaService } from './quota.service';
 
 /**
  * 逐路由配额守卫（S7 · FR-7）。仅对声明了 `@Quota({ seats })` 的写路径生效：
@@ -22,9 +23,9 @@ import type { QuotaService } from './quota.service';
 @Injectable()
 export class QuotaGuard implements CanActivate {
   constructor(
-    private readonly reflector: Reflector,
-    private readonly tenantContext: TenantContextService,
-    private readonly quota: QuotaService,
+    @Inject(Reflector) private readonly reflector: Reflector,
+    @Inject(TenantContextService) private readonly tenantContext: TenantContextService,
+    @Inject(QuotaService) private readonly quota: QuotaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

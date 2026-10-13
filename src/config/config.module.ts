@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { ConfigService } from './config.service';
@@ -62,6 +62,7 @@ const configModuleOptions = {
   },
 };
 
+@Global()
 @Module({
   imports: [NestConfigModule.forRoot(configModuleOptions as any)],
   providers: [ConfigService],

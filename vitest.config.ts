@@ -40,7 +40,10 @@ export default defineConfig({
     env: {
       NODE_ENV: 'test',
       LOG_LEVEL: 'silent',
-      DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/test-db',
+      // DB-free 默认：真实件不连库（boot 冒烟 override DrizzleService）。仅当外部传入
+      // DATABASE_URL（如 env-gated 全栈 e2e 指向已 migrate 的 dev 库）时才用它。
+      DATABASE_URL:
+        process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/test-db',
       JWT_SECRET: 'test-jwt-secret',
       JWT_REFRESH_SECRET: 'test-jwt-refresh-secret',
       ALLOWED_ORIGINS: 'http://localhost:3000',
