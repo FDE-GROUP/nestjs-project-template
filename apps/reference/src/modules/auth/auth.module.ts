@@ -7,6 +7,7 @@ import {
   type NestModule,
   type Provider,
 } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { AuthInstanceInjectKey } from './auth.constant';
 import { AuthController } from './auth.controller';
 import type { AuthInstance } from './auth.interface';
@@ -35,7 +36,15 @@ export class AuthModule implements NestModule {
     return {
       module: AuthModule,
       imports: [ConfigModule, DatabaseModule],
-      providers: [AuthService, SessionGuard, authProvider],
+      providers: [
+        AuthService,
+        SessionGuard,
+        authProvider,
+        // S11 · 高危#4 收口：全局会话墙（deny-by-default）。SessionGuard 已在本模块 provide，
+        // 其依赖（AuthInstanceInjectKey 本地 · UserStatusService 经 @Global TenancyModule）均可解析；
+        // useExisting 复用同一实例。@Public() 路由经 Reflector 旁路。
+        { provide: APP_GUARD, useExisting: SessionGuard },
+      ],
       controllers: [AuthController],
       exports: [AuthService, SessionGuard, authProvider],
       global: true,

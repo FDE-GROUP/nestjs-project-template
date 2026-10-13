@@ -70,6 +70,11 @@ function userStatus(blocked = false): UserStatusService {
   return { isBlocked: async () => blocked } as unknown as UserStatusService;
 }
 
+/** S11：全局墙下 SessionGuard 新增 Reflector 依赖·默认无 @Public（旁路不触发）。 */
+function reflectorStub() {
+  return { getAllAndOverride: () => undefined } as never;
+}
+
 function emailDrizzle(email: string | null): PlatformIdentityLookup {
   return { emailOf: async () => email ?? undefined };
 }
@@ -84,7 +89,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
   describe('① 各层各自 fail-closed', () => {
     it('用户级：无会话 → SessionGuard 401', async () => {
       const { ctx } = ctxWith();
-      const guard = new SessionGuard(authWith(null), userStatus());
+      const guard = new SessionGuard(authWith(null), userStatus(), reflectorStub());
       await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
@@ -137,6 +142,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
       const guard = new SessionGuard(
         authWith({ user: { id: 'u9', email: 'u9@x.com' } }),
         userStatus(),
+        reflectorStub(),
       );
       await expect(guard.canActivate(ctx)).resolves.toBe(true);
       expect(req.sessionUser).toEqual({ id: 'u9', email: 'u9@x.com' });
@@ -167,7 +173,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
 
     it('用户层：SessionGuard 对暂停用户 403', async () => {
       const { ctx } = ctxWith();
-      const guard = new SessionGuard(authWith(blockedSession), userStatus(true));
+      const guard = new SessionGuard(authWith(blockedSession), userStatus(true), reflectorStub());
       await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(ForbiddenException);
     });
 

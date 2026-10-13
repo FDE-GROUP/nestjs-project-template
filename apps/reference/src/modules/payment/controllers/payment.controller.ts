@@ -1,3 +1,4 @@
+import { Public } from '@core/tenancy/public.decorator';
 import type { RawBodyRequest } from '@nestjs/common';
 import { Body, Controller, Get, Headers, Inject, Param, Post, Req } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -52,6 +53,8 @@ export class PaymentController {
   }
 
   @Post('webhooks')
+  // 入站回调靠 Stripe 签名校验而非会话·S11 显式旁路全局会话墙（deny-by-default 下的例外）。
+  @Public()
   @ApiOperation({ summary: 'Handle payment webhook events' })
   @ApiHeader({ name: 'stripe-signature', description: 'Payment provider webhook signature' })
   @ApiResponse({ status: 200, description: 'Webhook processed successfully' })

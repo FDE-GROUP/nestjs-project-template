@@ -1,4 +1,5 @@
 import { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
+import { IS_PUBLIC_KEY } from '@core/tenancy/public.decorator';
 import {
   type CanActivate,
   type ExecutionContext,
@@ -7,6 +8,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AuthInstanceInjectKey } from '../auth.constant';
 import type { InjectAuthInstance } from '../auth.interface';
 import { resolveRequestSession } from '../session-resolver';
@@ -33,17 +35,27 @@ export interface SessionRequest {
  * Resolves the Better Auth session from the incoming request headers.
  * Attaches `req.sessionUser` on success; otherwise throws 401.
  *
- * Used by PIPL-scoped endpoints (C1 · FR-7). Deliberately NOT applied to
- * legacy `POST /users` / `GET /users` to avoid an unrelated contract break.
+ * S11 · 高危#4 收口：本守卫经 `AuthModule` 注册为全局 `APP_GUARD`（deny-by-default 会话墙），
+ * 所有路由默认要求已登录会话。仅显式标注 `@Public()` 的路由（认证面自身、签名校验的入站回调）
+ * 经 `Reflector` 读回旁路元数据后放行。其余守卫（TenantScope/TenantPermission/PlatformOperator/Quota）
+ * 仍逐路由叠加，运行于本全局守卫**之后**。`UserStatusService` 暂停联动保持纵深防御（403）。
  */
 @Injectable()
 export class SessionGuard implements CanActivate {
   constructor(
     @Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance,
     @Inject(UserStatusService) private readonly userStatus: UserStatusService,
+    @Inject(Reflector) private readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // S11 · deny-by-default：显式 @Public 的路由（handler 优先于 class）跳过会话墙。
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) return true;
+
     const req = context.switchToHttp().getRequest<SessionRequest>();
     const auth = this.authInstance.get();
     if (!auth) throw new UnauthorizedException('Auth instance not initialized');
