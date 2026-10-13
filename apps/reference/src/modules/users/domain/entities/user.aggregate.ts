@@ -1,4 +1,4 @@
-import { AggregateRoot } from '@app/shared-kernel/domain/aggregate-root';
+import { AggregateRoot } from '@core/shared-kernel/domain/aggregate-root';
 import { UserRegisteredEvent } from '../events/user-registered.event';
 import { Email } from '../value-objects/email';
 

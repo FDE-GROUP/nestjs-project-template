@@ -1,4 +1,4 @@
-import { DomainEvent, type DomainEventProps } from '@app/shared-kernel/domain/domain-event';
+import { DomainEvent, type DomainEventProps } from '@core/shared-kernel/domain/domain-event';
 
 export interface UserRegisteredPayload {
   readonly id: string;

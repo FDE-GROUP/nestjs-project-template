@@ -1,4 +1,4 @@
-import { BaseQuery } from '@app/shared-kernel/cqrs/types';
+import { BaseQuery } from '@core/shared-kernel/cqrs/types';
 import type { TenantDiagnostics } from '../read-models/platform-tenant.read-model';
 
 /** 按租户诊断（FR-6·平台级读侧）：租户行 + 关联计数；不存在 → null（404）。 */

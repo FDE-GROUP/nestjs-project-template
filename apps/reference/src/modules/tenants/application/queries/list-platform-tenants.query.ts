@@ -1,4 +1,4 @@
-import { BaseQuery } from '@app/shared-kernel/cqrs/types';
+import { BaseQuery } from '@core/shared-kernel/cqrs/types';
 import type { PlatformTenantPage } from '../read-models/platform-tenant.read-model';
 
 /**

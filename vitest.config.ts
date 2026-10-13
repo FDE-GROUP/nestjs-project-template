@@ -35,7 +35,7 @@ export default defineConfig({
     // swc transform can exceed the 5s default on the first test.
     testTimeout: 20000,
     hookTimeout: 20000,
-    include: ['apps/**/*.test.ts'],
+    include: ['apps/**/*.test.ts', 'packages/**/*.test.ts'],
     exclude: ['node_modules', 'dist'],
     env: {
       NODE_ENV: 'test',
@@ -60,7 +60,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',
-      include: ['apps/**/*.ts'],
+      include: ['apps/**/*.ts', 'packages/**/*.ts'],
       exclude: [
         'apps/**/*.test.ts',
         'apps/**/dto/**',

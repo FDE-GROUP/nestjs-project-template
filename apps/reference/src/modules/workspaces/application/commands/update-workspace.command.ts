@@ -1,4 +1,4 @@
-import { BaseCommand } from '@app/shared-kernel/cqrs/types';
+import { BaseCommand } from '@core/shared-kernel/cqrs/types';
 import type { WorkspaceReadModel } from '../read-models/workspace.read-model';
 
 /** Update a workspace within the active tenant (repository scopes by trusted tenant id). */

@@ -1,4 +1,4 @@
-import { BaseCommand } from '@app/shared-kernel/cqrs/types';
+import { BaseCommand } from '@core/shared-kernel/cqrs/types';
 import type { UserGovernanceResult } from '../read-models/platform-user.read-model';
 
 /**

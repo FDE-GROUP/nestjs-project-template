@@ -1,0 +1,12 @@
+{
+  "name": "@core/saas-kit",
+  "version": "0.0.0",
+  "description": "多租户 SaaS 能力核心库（框架无关·禁反向 import 参考应用·§9.5.4①B/③）",
+  "type": "module",
+  "private": true,
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  }
+}

@@ -1,4 +1,4 @@
-import { BaseCommand } from '@app/shared-kernel/cqrs/types';
+import { BaseCommand } from '@core/shared-kernel/cqrs/types';
 
 /**
  * 平台级动作（FR-11①·FR-6）：经营者驳回**pending 申请** → 硬删组织行（FK 级联清成员/邀请）。

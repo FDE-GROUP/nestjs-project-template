@@ -4,6 +4,9 @@
   "description": "NestJS project structure template with best practices using Fastify, Drizzle, PostgreSQL, and Bun",
   "type": "module",
   "main": "dist/main.js",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "prebuild": "rimraf dist",
     "build:nest": "nest build --builder swc",

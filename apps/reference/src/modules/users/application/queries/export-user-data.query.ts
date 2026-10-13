@@ -1,4 +1,4 @@
-import { BaseQuery } from '@app/shared-kernel/cqrs/types';
+import { BaseQuery } from '@core/shared-kernel/cqrs/types';
 import type { UserDataExportReadModel } from '../read-models/user-data-export.read-model';
 
 /**

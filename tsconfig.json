@@ -1,5 +1,5 @@
 {
-  "include": ["apps/**/*"],
+  "include": ["apps/**/*", "packages/**/*"],
   "compilerOptions": {
     "module": "ES2022",
     "moduleResolution": "node",
@@ -25,11 +25,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
-    "types": ["bun-types"],
+    "types": ["bun"],
     "paths": {
       "@app/*": ["apps/reference/src/*"],
       "@modules/*": ["apps/reference/src/modules/*"],
-      "@shared-kernel/*": ["apps/reference/src/shared-kernel/*"],
+      "@shared-kernel/*": ["packages/core/src/shared-kernel/*"],
       "@config/*": ["apps/reference/src/config/*"],
       "@common/*": ["apps/reference/src/common/*"],
       "@shared/*": ["apps/reference/src/shared/*"],
