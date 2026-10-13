@@ -1,0 +1,22 @@
+# 技术方案索引（plans）
+
+> 本区是**开发依据**（`docs/specs/workflow.md` §2）。plan = 方案单位；带**审计**与**执行状态**。
+> 状态**单源**在本索引表——**各 plan 文档头不重复标状态**（单标记防漂移）。
+> 方案完成后**留原地、不归档**（`recycle/` 只收弃用稿）。
+
+## 索引
+
+| Plan | 主题 | 审计 | 执行状态 | 关联 |
+|------|------|------|----------|------|
+| [global-tenancy](./global-tenancy.md) | 多租户能力需求（草案 · pre-plan） | 待审计 | 未开工 | `specs/vision.md` §4.1/§7 |
+
+**列取值**
+- **审计**：`待审计` / `已审计`（无已审方案不写码——`workflow.md` §3）
+- **执行状态**：`未开工` / `进行中` / `已完成` / `搁置`
+- **关联**：`specs/*` 条款 · GitHub Issue · `research/*` 参考
+
+## 命名
+
+`<global|module>-<slug>.md`（`适用范围` = blast radius，决定审计深度与授权粒度）；例：`module-users-es-append.md`、`global-ci-hardening.md`。
+
+新建 plan：复制 [`_template.md`](_template.md) 起。
