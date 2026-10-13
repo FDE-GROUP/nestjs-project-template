@@ -15,7 +15,9 @@ import { AppModule } from '../app.module';
  * Fastify 收请求 → `TenantMiddleware` 经 `getSession` 解析 `activeOrganizationId` 绑进 ALS →
  * `TenantScopeGuard` fail-closed → `PostsController` → CQRS → **真实 Drizzle 查询注入
  * `organizationId` 谓词** → `TransformInterceptor` 包装响应。断言**跨租户互不可见**：org_a 只
- * 见自己的帖子、org_b 只见自己的，无 cookie 直接 403。
+ * 见自己的帖子、org_b 只见自己的，无 cookie 直接 403。**并补越界负向路径**（FR-5/NFR-1 红线）：
+ * 伪造 body `organizationId` 写→仍被强制盖可信租户、对端租户绝不可见；伪造 `x-workspace-id`
+ * 选择器读→复合作用域恒 0 行、无法括宽/泄漏。
  *
  * **刻意只在认证令牌边界打桩**（override `AuthInstanceInjectKey` 让 `getSession` 依 cookie
  * 返回固定 session），其余（守卫/中间件/CQRS/仓储/Fastify/Drizzle）全是真实件——真实 Better Auth
@@ -107,8 +109,21 @@ gated('租户隔离全栈 e2e（真实 HTTP · 真守卫/中间件/仓储 · env
     }
   });
 
-  const list = (cookie?: string) =>
-    app.inject({ method: 'GET', url: '/posts', headers: cookie ? { cookie } : {} });
+  const list = (cookie?: string, extraHeaders?: Record<string, string>) =>
+    app.inject({
+      method: 'GET',
+      url: '/posts',
+      headers: { ...(cookie ? { cookie } : {}), ...(extraHeaders ?? {}) },
+    });
+
+  /** POST 创建（body 允许携带伪造的 organizationId/workspaceId·验证被忽略/强制回可信 ctx）。 */
+  const create = (cookie: string, body: Record<string, unknown>) =>
+    app.inject({
+      method: 'POST',
+      url: '/posts',
+      headers: { cookie, 'content-type': 'application/json' },
+      payload: JSON.stringify(body),
+    });
 
   it('无 session cookie → TenantMiddleware 不绑租户 → TenantScopeGuard fail-closed 403', async () => {
     const res = await list();
@@ -129,5 +144,31 @@ gated('租户隔离全栈 e2e（真实 HTTP · 真守卫/中间件/仓储 · env
     const body = res.body;
     expect(body).toContain('E2E-POST-BRAVO');
     expect(body).not.toContain('E2E-POST-ALPHA');
+  });
+
+  it('负向·越界写：org_a 伪造 body organizationId=ORG_B 创建 → 仍盖 ORG_A，org_b 绝不可见', async () => {
+    const res = await create(COOKIE_A, {
+      title: 'E2E-WRITE-A',
+      published: true,
+      // 以下均为越界伪造尝试：控制器只读 title/content/published，organizationId 由可信 ctx 强制。
+      organizationId: ORG_B,
+      workspaceId: 'ws_forged',
+    });
+    expect(res.statusCode).toBe(201);
+
+    // org_a 可见自己刚创建的帖子。
+    const a = await list(COOKIE_A);
+    expect(a.body).toContain('E2E-WRITE-A');
+    // 关键：org_b **绝不应**看到这条试图伪造归属到它的帖子（跨租写重定向失效）。
+    const b = await list(COOKIE_B);
+    expect(b.body).not.toContain('E2E-WRITE-A');
+  });
+
+  it('负向·越界读：org_a 伪造 x-workspace-id 选择器不能括宽/泄漏（复合作用域 → 0 行）', async () => {
+    // ALPHA 属于 ORG_A 且 workspaceId=null；携任意 foreign ws 选择器后 (ORG_A ∧ ws=foreign) 恒 0 行，
+    // 证明 organizationId 谓词恒取可信 ctx、外部选择器至多匹配 0 行、无法跨租读取。
+    const res = await list(COOKIE_A, { 'x-workspace-id': 'ws_of_other_tenant' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).not.toContain('E2E-POST-ALPHA');
   });
 });
