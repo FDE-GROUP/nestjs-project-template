@@ -37,6 +37,8 @@
 
 ## 3. 领域词汇（地域适配相关）
 
+> 词表已并入 [`specs/glossary.md`](../specs/glossary.md)（项目级术语 SSOT）；**本表以 glossary 为准**，新词/改词先改 glossary。
+
 | 词 | 含义 |
 |----|------|
 | **PaymentProvider（支付通道）** | 统一支付接口；实现 = `StripeProvider` / `WechatPayProvider` / `AlipayProvider`。与 storage provider 同构，落 infrastructure 层 |

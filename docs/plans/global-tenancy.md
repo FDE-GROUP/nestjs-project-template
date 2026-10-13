@@ -48,7 +48,7 @@
 | **Plan / Tier（套餐）** | 决定配额与特性开关的档位 |
 | **Quota / Usage（配额/用量）** | 每租户资源计量（用户数、存储、API 调用…） |
 
-> 词表须进 `docs/specs/` 术语（呼应 domain-modeling / GLOSSARY 纪律）；冲突词当场锐化。
+> 词表**已并入** [`specs/glossary.md`](../specs/glossary.md)（项目级术语 **SSOT**）；**本表以 glossary 为准**，新词/改词先改 glossary、再回写本表（防双 SSOT 漂移）。冲突词已当场锐化。
 
 ## 4. 需求
 
@@ -104,7 +104,7 @@
 
 - [x] D1–D6 全部裁决并回写本文（重写型）；
 - [x] 每条 Must FR/NFR 有对应「垂直切片」映射（无遗漏）→ 见 §10；
-- [ ] 术语表并入 `docs/specs/`（GLOSSARY），冲突词已消解 → 开工前补（不阻塞本稿审阅，但为审计门签核前置）；
+- [x] 术语表并入 `docs/specs/`（GLOSSARY）→ 已建 [`specs/glossary.md`](../specs/glossary.md)（项目级术语 SSOT）；冲突词已消解（Tenant=organization 等）。
 - [x] 本文已补 §方案/切片/影响面，升级为正式 plan（§9–§11）；**索引置「已审计」前不写码**。
 
 ## 8. 未决问题（讨论中）
