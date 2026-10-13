@@ -223,6 +223,24 @@ export const workspace = pgTable(
   (table) => [uniqueIndex('workspace_org_slug_idx').on(table.organizationId, table.slug)],
 );
 
+/**
+ * S6 · FR-10 platform-level user suspension ledger (dedicated table — no `user` column churn).
+ * Presence with a non-active `status` is the deny-list signal; a missing row means active
+ * (fail-open default, symmetric with the tenant status deny-list). Kept separate so the
+ * Better Auth-owned `user` table stays untouched; FK cascades on user deletion (NFR-6).
+ */
+export const userStatus = pgTable('user_status', {
+  userId: text('userId')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  status: text('status').notNull(), // 'active' | 'suspended' | 'deleted'
+  reason: text('reason'),
+  createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt', { mode: 'date' })
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
 export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   sessions: many(session),
@@ -250,6 +268,13 @@ export const sessionRelations = relations(session, ({ one }) => ({
   }),
 }));
 
+export const userStatusRelations = relations(userStatus, ({ one }) => ({
+  user: one(user, {
+    fields: [userStatus.userId],
+    references: [user.id],
+  }),
+}));
+
 export const schema = {
   user,
   account,
@@ -261,6 +286,7 @@ export const schema = {
   member,
   invitation,
   workspace,
+  userStatus,
 };
 
 export type User = typeof user.$inferSelect;
@@ -277,6 +303,8 @@ export type Invitation = typeof invitation.$inferSelect;
 export type NewInvitation = typeof invitation.$inferInsert;
 export type Workspace = typeof workspace.$inferSelect;
 export type NewWorkspace = typeof workspace.$inferInsert;
+export type UserStatusRecord = typeof userStatus.$inferSelect;
+export type NewUserStatusRecord = typeof userStatus.$inferInsert;
 
 // Re-export a `Role` union to replace `import { Role } from '@prisma/client'`
 export const Role = {

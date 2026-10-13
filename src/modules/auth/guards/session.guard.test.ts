@@ -1,9 +1,13 @@
+import type { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
 import type { ExecutionContext } from '@nestjs/common';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import type { InjectAuthInstance } from '../auth.interface';
 import { SessionGuard } from './session.guard';
+
+function userStatusMock(blocked = false) {
+  return { isBlocked: async () => blocked } as unknown as UserStatusService;
+}
 
 function ctxWith(headers: Record<string, string>): ExecutionContext {
   const req: { headers: Record<string, string>; sessionUser?: { id: string; email: string } } = {
@@ -24,7 +28,7 @@ describe('SessionGuard (PIPL · C1)', () => {
   let guard: SessionGuard;
   beforeEach(() => {
     getSession.mockReset();
-    guard = new SessionGuard(authInstance);
+    guard = new SessionGuard(authInstance, userStatusMock());
   });
 
   it('passes and attaches sessionUser when session resolves', async () => {
@@ -41,8 +45,17 @@ describe('SessionGuard (PIPL · C1)', () => {
     await expect(guard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
+  it('throws 403 for a platform-suspended user (S6 · FR-10 user layer)', async () => {
+    getSession.mockResolvedValue({ user: { id: 'u9', email: 'a@b.c' }, session: {} });
+    const suspended = new SessionGuard(authInstance, userStatusMock(true));
+    await expect(suspended.canActivate(ctxWith({}))).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('throws 500-style Unauthorized when auth instance not yet initialized', async () => {
-    const coldGuard = new SessionGuard({ get: () => undefined as never, set: () => {} });
+    const coldGuard = new SessionGuard(
+      { get: () => undefined as never, set: () => {} },
+      userStatusMock(),
+    );
     await expect(coldGuard.canActivate(ctxWith({}))).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });

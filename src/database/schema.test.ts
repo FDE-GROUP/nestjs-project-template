@@ -11,6 +11,7 @@ import {
   schema,
   session,
   user,
+  userStatus,
   verification,
   workspace,
 } from './schema';
@@ -27,6 +28,7 @@ describe('database schema', () => {
         'post',
         'session',
         'user',
+        'userStatus',
         'verification',
         'workspace',
       ].sort(),
@@ -100,5 +102,13 @@ describe('database schema', () => {
     expect(invitation.status).toBeDefined();
     expect(invitation.expiresAt).toBeDefined();
     expect(session.activeOrganizationId).toBeDefined();
+  });
+
+  it('user_status (S6 · FR-10 suspension ledger) exposes userId/status/reason', () => {
+    expect(userStatus.userId).toBeDefined();
+    expect(userStatus.status).toBeDefined();
+    expect(userStatus.reason).toBeDefined();
+    expect(userStatus.createdAt).toBeDefined();
+    expect(userStatus.updatedAt).toBeDefined();
   });
 });

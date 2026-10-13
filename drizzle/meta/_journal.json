@@ -43,6 +43,13 @@
       "when": 1791897235711,
       "tag": "0005_omniscient_firestar",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791905351604,
+      "tag": "0006_equal_hobgoblin",
+      "breakpoints": true
     }
   ]
 }

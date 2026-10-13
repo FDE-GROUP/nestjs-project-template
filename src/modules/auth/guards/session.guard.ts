@@ -1,11 +1,12 @@
+import { UserStatusService } from '@app/tenancy/lifecycle/user-status.service';
 import {
   type CanActivate,
   type ExecutionContext,
+  ForbiddenException,
   Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-
 import { AuthInstanceInjectKey } from '../auth.constant';
 import type { InjectAuthInstance } from '../auth.interface';
 
@@ -36,7 +37,10 @@ export interface SessionRequest {
  */
 @Injectable()
 export class SessionGuard implements CanActivate {
-  constructor(@Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance) {}
+  constructor(
+    @Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance,
+    @Inject(UserStatusService) private readonly userStatus: UserStatusService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<SessionRequest>();
@@ -46,7 +50,12 @@ export class SessionGuard implements CanActivate {
     const result = await auth.api.getSession({ headers: req.headers as unknown as Headers });
     if (!result?.user?.id) throw new UnauthorizedException('Missing or invalid session');
 
-    req.sessionUser = { id: String(result.user.id), email: String(result.user.email ?? '') };
+    // S6 · FR-10: platform-suspended users are fail-closed at the user layer too
+    // (defense-in-depth alongside session hard-invalidation — catches a re-login bypass).
+    const userId = String(result.user.id);
+    if (await this.userStatus.isBlocked(userId)) throw new ForbiddenException('Account suspended');
+
+    req.sessionUser = { id: userId, email: String(result.user.email ?? '') };
     return true;
   }
 }

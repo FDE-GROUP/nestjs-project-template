@@ -29,6 +29,22 @@ describe('PlatformAuditService (S5 · FR-6 结构化审计单点)', () => {
     expect(typeof payload.at).toBe('string');
   });
 
+  it('emits a platform.user audit payload for a user governance action (S6)', () => {
+    svc.logUserGovernance('suspend', 'u1', 'op1', {
+      from: TENANT_STATUS.ACTIVE,
+      to: TENANT_STATUS.SUSPENDED,
+    });
+    const payload = logSpy.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      audit: 'platform.user',
+      action: 'suspend',
+      userId: 'u1',
+      operatorId: 'op1',
+      from: TENANT_STATUS.ACTIVE,
+      to: TENANT_STATUS.SUSPENDED,
+    });
+  });
+
   it('carries the failure context on an illegal transition', () => {
     svc.logTenantGovernance('suspend', 'orgA', 'op1', {
       from: TENANT_STATUS.PENDING,

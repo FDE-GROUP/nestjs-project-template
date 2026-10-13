@@ -1,6 +1,7 @@
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { describe, expect, it, vi } from 'vitest';
 import type { TenantStatusService } from './lifecycle/tenant-status.service';
+import type { UserStatusService } from './lifecycle/user-status.service';
 import { TenantMiddleware } from './tenant.middleware';
 import { type TenantContext, tenantStorage } from './tenant-context';
 
@@ -8,6 +9,7 @@ function makeMiddleware(opts: {
   activeOrganizationId?: string;
   userId?: string;
   blocked?: boolean | 'throw';
+  userBlocked?: boolean;
 }) {
   const getSession = vi.fn().mockResolvedValue({
     session: { activeOrganizationId: opts.activeOrganizationId },
@@ -24,7 +26,14 @@ function makeMiddleware(opts: {
       : vi.fn().mockResolvedValue(opts.blocked ?? false);
   const status = { isBlocked } as unknown as TenantStatusService;
 
-  return { mw: new TenantMiddleware(authInstance, status), isBlocked };
+  const userIsBlocked = vi.fn().mockResolvedValue(opts.userBlocked ?? false);
+  const userStatus = { isBlocked: userIsBlocked } as unknown as UserStatusService;
+
+  return {
+    mw: new TenantMiddleware(authInstance, status, userStatus),
+    isBlocked,
+    userIsBlocked,
+  };
 }
 
 function reqWith(headers: Record<string, unknown> = {}) {
@@ -77,5 +86,41 @@ describe('TenantMiddleware · S4 approval fail-closed (deny-list)', () => {
     const store = await run(mw, reqWith({ 'x-workspace-id': 'ws7' }));
     expect(store?.tenantId).toBe('orgA');
     expect(store?.workspaceId).toBe('ws7');
+  });
+});
+
+describe('TenantMiddleware · S6 user suspension fail-closed (deny-list · 全局失能)', () => {
+  it('binds NEITHER tenant NOR identity for a suspended user (all layers red)', async () => {
+    const { mw, userIsBlocked } = makeMiddleware({
+      activeOrganizationId: 'orgA',
+      userId: 'u1',
+      userBlocked: true,
+    });
+    const store = await run(mw, reqWith());
+    expect(userIsBlocked).toHaveBeenCalledWith('u1');
+    expect(store?.tenantId).toBeUndefined();
+    expect(store?.userId).toBeUndefined();
+  });
+
+  it('skips the tenant status read when the user is already suspended', async () => {
+    const { mw, isBlocked } = makeMiddleware({
+      activeOrganizationId: 'orgA',
+      userId: 'u1',
+      userBlocked: true,
+    });
+    await run(mw, reqWith());
+    expect(isBlocked).not.toHaveBeenCalled();
+  });
+
+  it('preserves identity + tenant for an active user (no regression)', async () => {
+    const { mw } = makeMiddleware({
+      activeOrganizationId: 'orgA',
+      userId: 'u1',
+      blocked: false,
+      userBlocked: false,
+    });
+    const store = await run(mw, reqWith());
+    expect(store?.tenantId).toBe('orgA');
+    expect(store?.userId).toBe('u1');
   });
 });
