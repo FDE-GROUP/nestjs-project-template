@@ -219,6 +219,7 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 - [x] expand–contract 迁移与回滚步骤经审计确认可执行；
 - [x] **审计门通过 + 人签核**（见 §12），已可开工（低风险项 M1/L1/G1 先行）。
 - [x] **M1**（npmmirror/Docker 镜像 ARG）、**G1**（去 Datadog、日志落文件）、**L1**（mailer 默认 zh）已落地并通过本地 CI（commit `9e27d63`）；L1 全量翻译待 I18n 接线（非本片）。
+- [x] **S1** 存储默认切阿里云 OSS（境内 region/endpoint 默认、env 可切 S3/COS）已落地并通过本地 CI。
 
 ## 11. 未决问题（审计前须澄清或标注占位）
 

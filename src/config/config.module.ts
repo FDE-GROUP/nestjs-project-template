@@ -23,7 +23,7 @@ const createSchemaForEnv = (_isProd: boolean) => {
     JWT_EXPIRES_IN: Joi.string().default('30d'),
     JWT_REFRESH_SECRET: Joi.string().required(),
     JWT_REFRESH_EXPIRES_IN: Joi.string().default('90d'),
-    STORAGE_PROVIDER: Joi.string().valid('s3', 'alioss', 'tencentoss').default('s3'),
+    STORAGE_PROVIDER: Joi.string().valid('s3', 'alioss', 'tencentoss').default('alioss'),
     STORAGE_BUCKET: Joi.string().default('my-bucket'),
     STORAGE_REGION: Joi.string().required(),
     STORAGE_ENDPOINT: Joi.string().required(),

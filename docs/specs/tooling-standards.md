@@ -56,7 +56,7 @@
 | **依赖镜像** | npm→npmmirror（`bunfig.toml`/`.npmrc`）+ Docker 国内基础镜像 | **已落地**（M1，commit `9e27d63`） | 纯配置；Dockerfile 基础镜像经 ARG 可覆盖（FR-4/D4） |
 | **默认语言** | i18n 默认 / fallback 置 `zh`（保留 en/ja） | **部分落地**（L1：mailer 默认 zh；全量翻译待 I18n 接线） | 文档中文为准（FR-5/D4） |
 | **日志后端** | pino 默认落文件；**移除** `pino-datadog-transport` | **已落地**（G1，commit `9e27d63`） | 本期**不引**集中监控（SLS/Loki 留后）（FR-6/D6） |
-| **对象存储默认** | 默认阿里云 OSS，COS/S3 经 env 切换 | provider 现行；**默认切换待落地** | 已有 OSS/COS/S3 provider（D5） |
+| **对象存储默认** | 默认阿里云 OSS，COS/S3 经 env 切换 | provider 现行；**默认已切 OSS**（S1，境内 region 默认） | 已有 OSS/COS/S3 provider（D5） |
 | **合规（PIPL）** | consent 留痕 + 按 user 导出/删除 + 数据驻留境内 region | **已决策·待落地** | 属需求非工具；ICP 归部署、不进代码门禁（FR-7/D7） |
 
 ## 3. 选型红线（禁止项）

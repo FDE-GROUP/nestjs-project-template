@@ -37,10 +37,10 @@ export default {
     rateLimit: true,
   },
   storage: {
-    provider: process.env.STORAGE_PROVIDER || 's3',
+    provider: process.env.STORAGE_PROVIDER || 'alioss',
     bucket: process.env.STORAGE_BUCKET || 'my-bucket',
-    region: process.env.STORAGE_REGION || 'us-east-1',
-    endpoint: process.env.STORAGE_ENDPOINT || 's3.amazonaws.com',
+    region: process.env.STORAGE_REGION || 'oss-cn-hangzhou',
+    endpoint: process.env.STORAGE_ENDPOINT || 'oss-cn-hangzhou.aliyuncs.com',
     accessKeyId: process.env.STORAGE_ACCESS_KEY_ID,
     accessKeySecret: process.env.STORAGE_ACCESS_KEY_SECRET,
     baseUrl: process.env.STORAGE_BASE_URL || '',
