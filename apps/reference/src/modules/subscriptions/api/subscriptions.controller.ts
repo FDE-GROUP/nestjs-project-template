@@ -1,3 +1,6 @@
+import { CreateSubscriptionCommand } from '@core/modules/subscriptions/application/commands/create-subscription.command';
+import { GetSubscriptionQuery } from '@core/modules/subscriptions/application/queries/get-current-subscription.query';
+import type { TenantSubscriptionView } from '@core/modules/subscriptions/application/read-models/subscription.read-model';
 import { RequirePermissions } from '@core/tenancy/rbac/require-permissions.decorator';
 import { TenantPermissionGuard } from '@core/tenancy/rbac/tenant-permission.guard';
 import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
@@ -13,9 +16,6 @@ import {
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { CreateSubscriptionCommand } from '../application/commands/create-subscription.command';
-import { GetSubscriptionQuery } from '../application/queries/get-current-subscription.query';
-import type { TenantSubscriptionView } from '../application/read-models/subscription.read-model';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 
 /**

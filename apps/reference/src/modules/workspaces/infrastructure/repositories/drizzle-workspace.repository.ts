@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { DrizzleService } from '@app/database/drizzle.service';
 import { workspace } from '@app/database/schema';
-import { TenantContextService } from '@core/tenancy/tenant-context.service';
-import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq } from 'drizzle-orm';
 import type {
   WorkspaceDraft,
   WorkspaceRecord,
   WorkspaceRepository,
-} from '../../domain/repositories/workspace.repository';
+} from '@core/modules/workspaces/domain/repositories/workspace.repository';
+import { TenantContextService } from '@core/tenancy/tenant-context.service';
+import { Inject, Injectable } from '@nestjs/common';
+import { and, asc, eq } from 'drizzle-orm';
 
 /**
  * Drizzle-backed workspace repository — the ONE place workspace isolation is enforced

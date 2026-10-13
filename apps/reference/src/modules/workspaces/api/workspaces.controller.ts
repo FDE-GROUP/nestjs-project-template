@@ -1,3 +1,8 @@
+import { CreateWorkspaceCommand } from '@core/modules/workspaces/application/commands/create-workspace.command';
+import { DeleteWorkspaceCommand } from '@core/modules/workspaces/application/commands/delete-workspace.command';
+import { UpdateWorkspaceCommand } from '@core/modules/workspaces/application/commands/update-workspace.command';
+import { ListWorkspacesQuery } from '@core/modules/workspaces/application/queries/list-workspaces.query';
+import type { WorkspaceReadModel } from '@core/modules/workspaces/application/read-models/workspace.read-model';
 import { RequirePermissions } from '@core/tenancy/rbac/require-permissions.decorator';
 import { TenantPermissionGuard } from '@core/tenancy/rbac/tenant-permission.guard';
 import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
@@ -17,11 +22,6 @@ import {
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { CreateWorkspaceCommand } from '../application/commands/create-workspace.command';
-import { DeleteWorkspaceCommand } from '../application/commands/delete-workspace.command';
-import { UpdateWorkspaceCommand } from '../application/commands/update-workspace.command';
-import { ListWorkspacesQuery } from '../application/queries/list-workspaces.query';
-import type { WorkspaceReadModel } from '../application/read-models/workspace.read-model';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 

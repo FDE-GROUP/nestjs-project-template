@@ -1,9 +1,9 @@
 import { PaymentService } from '@app/modules/payment/services/payment.service';
-import { Inject, Injectable } from '@nestjs/common';
 import type {
   CustomerProvisioner,
   ProvisionedCustomer,
-} from '../domain/ports/customer-provisioner.port';
+} from '@core/modules/subscriptions/domain/ports/customer-provisioner.port';
+import { Inject, Injectable } from '@nestjs/common';
 
 /**
  * `CustomerProvisioner` 的参考应用侧适配（§9.5.4①B/④ · P1c 支付端口）。

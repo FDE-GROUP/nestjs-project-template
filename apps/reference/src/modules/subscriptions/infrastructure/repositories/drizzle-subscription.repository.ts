@@ -1,15 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { DrizzleService } from '@app/database/drizzle.service';
 import { tenantSubscription } from '@app/database/schema';
-import { SUBSCRIPTION_STATUS } from '@core/tenancy/quota/tenant-plans';
-import { TenantContextService } from '@core/tenancy/tenant-context.service';
-import { Inject, Injectable } from '@nestjs/common';
-import { desc, eq } from 'drizzle-orm';
 import type {
   SubscriptionDraft,
   SubscriptionRecord,
   SubscriptionRepository,
-} from '../../domain/repositories/subscription.repository';
+} from '@core/modules/subscriptions/domain/repositories/subscription.repository';
+import { SUBSCRIPTION_STATUS } from '@core/tenancy/quota/tenant-plans';
+import { TenantContextService } from '@core/tenancy/tenant-context.service';
+import { Inject, Injectable } from '@nestjs/common';
+import { desc, eq } from 'drizzle-orm';
 
 /**
  * Drizzle-backed subscription repository — the tenant-scoped write/read choke-point for
