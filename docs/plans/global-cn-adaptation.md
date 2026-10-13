@@ -50,7 +50,7 @@
 
 - **FR-1 支付 provider 抽象**：定义统一 `PaymentProvider` 接口（创建客户 / 订阅 / 收款 / 回调 / 退款），三实现 **Stripe（海外）+ 微信支付 + 支付宝（大陆）**；租户订阅与配额挂钩（接 global-tenancy FR-7/FR-8）经该接口，不绑定单一通道。
 - **FR-2 周期扣款（订阅续费）**：大陆订阅续费经**支付宝周期扣款 / 微信委托代扣**实现；能力与资质随通道差异，**方案层细化**（本 plan 仅立需求与接口位，落地依资质到位）。
-- **FR-3 境内登录 provider**：以 **Better Auth 自定义 provider** 接入 微信（开放平台网站应用 / 公众号）、企业微信、钉钉、飞书；各渠道唯一标识（unionid / corpid+userid 等）归并到**平台全局 user**（接 global-tenancy D3 / FR-3），不与租户维度耦合。保留 Google / GitHub。
+- **FR-3 境内登录 provider（邮箱为体、社交为用 · 方案 C）**：以 Better Auth `genericOAuth` 接入 微信、企业微信、钉钉、飞书（保留 Google/GitHub）。**平台账号主体仍是 email+密码的全局唯一 user**；社交渠道**不独立建号**，而是作为**既有 user 的登录 / 绑定方式**——因多数境内渠道不返 email，新渠道首登须经「先以 email 账号登录再绑定该社交」或「社交首登后关联既有 email 账号」完成归属；各渠道以 `accountSubject`(unionid/corpid+userid…) 落一条 `account` 关联到同一 user。跨渠道身份由「都绑到同一 email user」自然统一，无需按厂商键自动合并。不与租户维度耦合（接 global-tenancy D3/FR-3，**email 唯一语义保持不变**）。
 - **FR-4 依赖镜像境内化**：`bunfig.toml` / `.npmrc` 配 **npmmirror** registry；`Dockerfile` 基础镜像与构建期拉取改用**国内镜像 / 镜像仓库**；相关文档同步。
 - **FR-5 默认语言中文**：i18n fallback / 默认 locale 置 `zh`；校验消息、邮件模板以中文为默认准。
 - **FR-6 日志后端**：移除 `pino-datadog-transport`；pino 输出**默认落文件**（本地 / 滚动），**本期不引入集中监控**（SLS / Loki 不做，留后）。
@@ -96,9 +96,9 @@
 ## 8. 未决问题（讨论中）
 
 1. 微信支付 / 支付宝**周期扣款 / 委托代扣资质**是否已具备？决定 FR-2 能否落地及订阅续费形态（否则先「预付费时长 + 手动续费」过渡）。
-2. 微信 / 企业微信 / 钉钉 / 飞书 各自账号体系如何归并到平台全局 user（unionid、corpid+userid、staffId）与 membership；同一自然人多渠道身份合并策略。
+2. **（采 C 已缓解）账号归并**：社交渠道一律绑定到既有 email user，跨渠道天然统一到同一 user，无需厂商键自动合并。待细化：首登「关联既有账号」的 UX 与 `accountSubject` 落 `account` 的迁移。
 3. **Better Auth 自定义 provider** → **调研已成文**（[research/better-auth-cn-providers.md](../research/better-auth-cn-providers.md)，非依据）：候选结论——复用 `genericOAuth` 钩子即可承载四渠道、**无需自建引擎**；难度 企业微信(高) > 微信/钉钉(中) > 飞书(低–中)，宜分期。
-4. **（research 引出）Email 缺失冲突**：微信/钉钉/飞书多**不返回 email**，与 global-tenancy D3/FR-3「email 全局唯一 + 受邀 email」冲突 → 方案级待决（email 可选化 / 首登补绑 + 跨渠道身份合并），届时联动回改 global-tenancy。
+4. **（已决·方案 C）Email 缺失**：定为**邮箱为体、社交为用**——email 保持全局唯一，**不回改 global-tenancy D3/FR-3**；境内登录不独立建号、降为绑定/登录方式（见 FR-3）。
 
 ## 9. 演变记录
 
