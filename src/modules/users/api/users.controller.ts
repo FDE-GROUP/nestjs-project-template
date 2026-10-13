@@ -1,10 +1,27 @@
-import { Body, Controller, Get, Inject, Logger, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Logger,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { SessionGuard, type SessionUser } from '../../auth/guards/session.guard';
 import { CreateUserCommand } from '../application/commands/create-user.command';
+import { DeleteUserCommand } from '../application/commands/delete-user.command';
+import { ExportUserDataQuery } from '../application/queries/export-user-data.query';
 import { GetUserQuery } from '../application/queries/get-user.query';
 import { GetUsersQuery } from '../application/queries/get-users.query';
 import type { UserReadModel } from '../application/read-models/user.read-model';
+import type { UserDataExportReadModel } from '../application/read-models/user-data-export.read-model';
 import type { PublicUser } from '../domain/entities/user.aggregate';
 import { CreateUserDto } from './dto/create-user.dto';
 
@@ -33,6 +50,29 @@ export class UsersController {
         createUserDto.lastName,
       ),
     );
+  }
+
+  @Get('me/data-export')
+  @UseGuards(SessionGuard)
+  @ApiOperation({ summary: 'PIPL right-to-access: export current user personal data (C1 · FR-7)' })
+  @ApiResponse({ status: 200, description: 'Aggregated personal data (no credentials).' })
+  @ApiResponse({ status: 401, description: 'Missing or invalid session.' })
+  async exportMe(@CurrentUser() user: SessionUser): Promise<UserDataExportReadModel> {
+    this.logger.log(`Exporting personal data for user ${user.id}`);
+    return this.queryBus.execute<ExportUserDataQuery, UserDataExportReadModel>(
+      new ExportUserDataQuery(user.id),
+    );
+  }
+
+  @Delete('me')
+  @UseGuards(SessionGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'PIPL right-to-erase: hard-delete current user (C1 · FR-7)' })
+  @ApiResponse({ status: 204, description: 'User deleted; consent rows retained anonymously.' })
+  @ApiResponse({ status: 401, description: 'Missing or invalid session.' })
+  async deleteMe(@CurrentUser() user: SessionUser): Promise<void> {
+    this.logger.log(`Deleting user ${user.id} (PIPL right-to-erase)`);
+    await this.commandBus.execute<DeleteUserCommand, void>(new DeleteUserCommand(user.id));
   }
 
   @Get()

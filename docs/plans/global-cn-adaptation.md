@@ -2,7 +2,7 @@
 
 > 适用范围: `全局` ← blast radius，审计深度=人签核（`workflow.md` §3/§5）
 > 关联: [vision.md](../specs/vision.md) §4.3 计费 / §6 地域与合规约束 · [global-tenancy.md](./global-tenancy.md) FR-8/D5（已回改为多通道 provider）· [architecture.md](../specs/architecture.md)（provider 落 infrastructure/瘦适配器层）· [tooling-standards.md](../specs/tooling-standards.md)（选型 SSOT，待落）· [research/better-auth-cn-providers.md](../research/better-auth-cn-providers.md)（参考·非依据）· [workflow.md](../specs/workflow.md) §1/§3
-> 性质: **技术方案（plan）**，重写型 · 版本 0.4.0 · 日期 2026-10-13 · 状态: **已审·开发依据**（`workflow.md` §3 已过审计门，见 §12）
+> 性质: **技术方案（plan）**，重写型 · 版本 0.5.0 · 日期 2026-10-13 · 状态: **已审·开发依据**（`workflow.md` §3 已过审计门，见 §12）
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
 > 受众: **人（方案主导）+ Agent（已审后为开发依据）**
 
@@ -183,7 +183,7 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 | **M1** 依赖镜像 | FR-4 | `bunfig.toml`/`.npmrc`、`Dockerfile`、文档 | 无 | 最低风险，可先行 |
 | **L1** 默认 zh | FR-5 | i18n fallback、校验/邮件默认 | 无 | 可先行 |
 | **G1** 去 Datadog | FR-6 / D6 | `logger.service.ts`、`config/envs`、`package.json`、`.env.example` | 无 | 移除即契约变更（观测） |
-| **C1** PIPL 同意+导出/删除 | FR-7 | `consent` 表、`users` me 端点 | **有（expand）** | users 上下文 |
+| **C1** ✅ PIPL 同意+导出/删除（已落地） | FR-7 | `database/schema.consent` + `users/api/{GET me/data-export, DELETE me}` + `auth/guards/session.guard` + `@CurrentUser` + CQRS `DeleteUserCommand`/`ExportUserDataQuery` | **有（expand 新表 · `drizzle/0001_*.sql`）** | users 上下文 · 硬删 user 与 consent `onDelete: set null` 匿名保留 |
 | **C2** 数据驻留校验 | FR-7 / D7 | config 启动期 region allowlist | 无 | C1 |
 | **S1** 存储默认 OSS | D5 | `storage` provider 默认 env | 无 | — |
 
@@ -224,6 +224,7 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 - [x] **S1** 存储默认切阿里云 OSS（境内 region/endpoint 默认、env 可切 S3/COS）已落地并通过本地 CI。
 - [x] **P1** 支付抽象已落地（expand–contract 一步到位）：新增 `src/modules/payment`（`PaymentProvider` 端口 + `StripePaymentProvider` 收敛自旧 `StripeService` + `PaymentModule.register()` 依配置装配、`PaymentService` 懒解析未配即降级 NFR-2）；旧 `src/modules/stripe` 已收缩删除、`/payment/*` 替 `/stripe/*`（公共 API/DI 变更=高危#4 已签核）；STRIPE_* 改 optional 以支持境内-only 降级；本地 CI 全绿。
 - [x] **A1** 飞书登录已落地（方案 C）：`genericOAuth` 插件挂入 `CreateAuth`（有配置才挂、NFR-2）；飞书构建器自定义 `getToken`（JSON body）/`getUserInfo`（Bearer+解包 data）/`accountSubject`（union_id→open_id）/`mapProfileToUser`；**`disableSignUp:true` 强制不独立建号**、`pkce:false`；`oauth.genericProviders`+`FEISHU_APP_*` 走 env（NFR-3）；微信/钉钉/企微仅 registry 接口位（D8 暂缓）；契约单测全 mock、本地 CI 全绿（未接真实飞书沙箱，依 NFR-4）。
+- [x] **C1** PIPL 基线已落地：新增 `consent` 表（purpose×version 粒度、`userId` FK `onDelete: set null`，expand 迁移 `drizzle/0001_*.sql` · 零删改旧表）；`SessionGuard`+`@CurrentUser` 仅护 `/users/me/*`（不动旧端点，无契约破坏）；`GET /users/me/data-export` 聚合 user/accounts/sessions/consents，**投影剔除** password/tokens/session token/consent evidence；`DELETE /users/me` 硬删（account/session cascade、consent 匿名保留）；契约单测覆盖 guard/handler/controller、本地 CI 全绿。C2 数据驻留启动校验仍待落地。
 
 ## 11. 未决问题（审计前须澄清或标注占位）
 
@@ -259,8 +260,9 @@ i18n 装配处（`src/i18n`，实现时定位 fallback）默认 / fallback local
 | 2026-10-13 | 0.2.0 | 需求草案 → **正式技术方案**（D1–D7 已定后，人指示升级） | 新增 §6 方案设计（PaymentProvider 接口、genericOAuth 方案 C 绑定流、镜像/i18n/日志、PIPL 基线）、§8 垂直切片映射、§9 影响面与 expand–contract；§10 完成判据扩充；§11 未决细化；§12 审计记录占位；性质/版本/状态改写 |
 | 2026-10-13 | 0.3.0 | **过审计门（人签核）**，开工低风险项 | §12 落审签结论：高危六点全接受附缓解、未决 1–5 按倾向处置；§10 判据勾选（切片映射/迁移/审计门）；索引置「已审计·进行中」；启动 M1（npmmirror）/L1（默认 zh）/G1（去 Datadog） |
 | 2026-10-13 | 0.4.0 | **D8 登录交付排序裁决**（人澄清：飞书先行、余仅留接口） | §5 新增 D8；§6.2 分期改「飞书先行 / 微信钉钉企微仅留接口」；§7 Must 收敛为飞书 A1、新增 Should 暂缓行；开工 A1 |
+| 2026-10-13 | 0.5.0 | **C1 PIPL 基线落地**（人签核高危 #1 硬删 · consent `set null` 匿名保留方案 A） | §8 C1 标记已落地（具体落点 + 迁移）；§10 新增 C1 checkbox；§11-3 粒度→「用途×版本」实现确认；开工信号同步 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-13 / v0.4.0 裁决 D8（飞书先行、余留接口暂缓）并开工 A1；v0.3.0 过审计门、v0.1.0 讨论期多次澄清属同一初稿形成，不单列演变。以当前正文内容为准。
+正文已于 2026-10-13 / v0.5.0 落地 C1（PIPL consent/导出/硬删）；v0.4.0 裁决 D8、v0.3.0 过审计门、v0.1.0 讨论期多次澄清属同一初稿形成，不单列演变。以当前正文内容为准。

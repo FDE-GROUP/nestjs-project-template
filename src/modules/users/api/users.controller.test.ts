@@ -67,4 +67,21 @@ describe('UsersController (bus-backed)', () => {
     executeQuery.mockRejectedValue(new NotFoundException('User with ID 999 not found'));
     await expect(controller.findOne('999')).rejects.toThrow(NotFoundException);
   });
+
+  it('GET /users/me/data-export dispatches ExportUserDataQuery with session user id', async () => {
+    const payload = { user: { id: 'u9' }, accounts: [], sessions: [], consents: [] } as never;
+    executeQuery.mockResolvedValue(payload);
+
+    await expect(controller.exportMe({ id: 'u9', email: 'a@b.c' })).resolves.toBe(payload);
+    const q = executeQuery.mock.calls[0][0];
+    expect(q).toMatchObject({ userId: 'u9' });
+  });
+
+  it('DELETE /users/me dispatches DeleteUserCommand with session user id', async () => {
+    executeCommand.mockResolvedValue(undefined);
+
+    await expect(controller.deleteMe({ id: 'u9', email: 'a@b.c' })).resolves.toBeUndefined();
+    const cmd = executeCommand.mock.calls[0][0];
+    expect(cmd).toMatchObject({ userId: 'u9' });
+  });
 });

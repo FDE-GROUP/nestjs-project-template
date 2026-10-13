@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { account, post, Role, roleEnum, schema, session, user, verification } from './schema';
+import {
+  account,
+  consent,
+  post,
+  Role,
+  roleEnum,
+  schema,
+  session,
+  user,
+  verification,
+} from './schema';
 
 describe('database schema', () => {
   it('exports every table under the schema aggregate', () => {
     expect(Object.keys(schema).sort()).toEqual(
-      ['account', 'post', 'session', 'user', 'verification'].sort(),
+      ['account', 'consent', 'post', 'session', 'user', 'verification'].sort(),
     );
   });
 
@@ -37,5 +47,14 @@ describe('database schema', () => {
     expect(post.title).toBeDefined();
     expect(post.published).toBeDefined();
     expect(post.createdAt).toBeDefined();
+  });
+
+  it('consent (PIPL ledger · C1) exposes purpose/version/grantedAt/revokedAt', () => {
+    expect(consent.id).toBeDefined();
+    expect(consent.userId).toBeDefined();
+    expect(consent.purpose).toBeDefined();
+    expect(consent.version).toBeDefined();
+    expect(consent.grantedAt).toBeDefined();
+    expect(consent.revokedAt).toBeDefined();
   });
 });

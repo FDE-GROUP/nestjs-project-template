@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { boolean, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { boolean, index, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // Role enum (replaces Prisma `enum Role`)
 export const roleEnum = pgEnum('role', ['USER', 'ADMIN']);
@@ -82,6 +82,28 @@ export const verification = pgTable('verification', {
     .$onUpdate(() => new Date()),
 });
 
+// PIPL consent ledger (C1 · FR-7 / D7).
+// Records "purpose × version" granularity per §11-3.
+// `userId` uses ON DELETE SET NULL so that a hard user deletion (PIPL right to erase)
+// leaves the consent row anonymous yet retained for compliance audit trail.
+export const consent = pgTable(
+  'consent',
+  {
+    id: text('id').primaryKey(),
+    userId: text('userId').references(() => user.id, { onDelete: 'set null' }),
+    purpose: text('purpose').notNull(),
+    version: text('version').notNull(),
+    grantedAt: timestamp('grantedAt', { mode: 'date' }).notNull().defaultNow(),
+    revokedAt: timestamp('revokedAt', { mode: 'date' }),
+    evidence: text('evidence'),
+    createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' })
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index('consent_user_purpose_idx').on(table.userId, table.purpose)],
+);
+
 // Sample business model
 export const post = pgTable('post', {
   id: text('id').primaryKey(),
@@ -97,6 +119,14 @@ export const post = pgTable('post', {
 export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   sessions: many(session),
+  consents: many(consent),
+}));
+
+export const consentRelations = relations(consent, ({ one }) => ({
+  user: one(user, {
+    fields: [consent.userId],
+    references: [user.id],
+  }),
 }));
 
 export const accountRelations = relations(account, ({ one }) => ({
@@ -118,11 +148,14 @@ export const schema = {
   account,
   session,
   verification,
+  consent,
   post,
 };
 
 export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
+export type Consent = typeof consent.$inferSelect;
+export type NewConsent = typeof consent.$inferInsert;
 export type Post = typeof post.$inferSelect;
 export type NewPost = typeof post.$inferInsert;
 

@@ -12,6 +12,7 @@ import { AuthController } from './auth.controller';
 import type { AuthInstance } from './auth.interface';
 import { AuthMiddleware } from './auth.middleware';
 import { AuthService } from './auth.service';
+import { SessionGuard } from './guards/session.guard';
 
 @Module({})
 export class AuthModule implements NestModule {
@@ -34,9 +35,9 @@ export class AuthModule implements NestModule {
     return {
       module: AuthModule,
       imports: [ConfigModule, DatabaseModule],
-      providers: [AuthService, authProvider],
+      providers: [AuthService, SessionGuard, authProvider],
       controllers: [AuthController],
-      exports: [AuthService, authProvider],
+      exports: [AuthService, SessionGuard, authProvider],
       global: true,
     };
   }
