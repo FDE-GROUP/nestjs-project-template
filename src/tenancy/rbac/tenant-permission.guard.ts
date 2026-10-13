@@ -7,8 +7,8 @@ import {
   Inject,
   Injectable,
 } from '@nestjs/common';
-import type { Reflector } from '@nestjs/core';
-import type { TenantContextService } from '../tenant-context.service';
+import { Reflector } from '@nestjs/core';
+import { TenantContextService } from '../tenant-context.service';
 import { REQUIRED_PERMISSIONS_KEY, toPermissionMap } from './permissions';
 
 interface PermissionRequest {
@@ -27,8 +27,8 @@ interface PermissionRequest {
 @Injectable()
 export class TenantPermissionGuard implements CanActivate {
   constructor(
-    private readonly reflector: Reflector,
-    private readonly tenantContext: TenantContextService,
+    @Inject(Reflector) private readonly reflector: Reflector,
+    @Inject(TenantContextService) private readonly tenantContext: TenantContextService,
     @Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance,
   ) {}
 

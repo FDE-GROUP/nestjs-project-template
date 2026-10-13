@@ -2,9 +2,10 @@ import {
   type CanActivate,
   type ExecutionContext,
   ForbiddenException,
+  Inject,
   Injectable,
 } from '@nestjs/common';
-import type { TenantContextService } from './tenant-context.service';
+import { TenantContextService } from './tenant-context.service';
 
 /**
  * Fail-closed gate for tenant-scoped routes (global-tenancy §9.3 / FR-5, seed of the
@@ -16,7 +17,7 @@ import type { TenantContextService } from './tenant-context.service';
  */
 @Injectable()
 export class TenantScopeGuard implements CanActivate {
-  constructor(private readonly tenant: TenantContextService) {}
+  constructor(@Inject(TenantContextService) private readonly tenant: TenantContextService) {}
 
   canActivate(_context: ExecutionContext): boolean {
     if (!this.tenant.tenantId) {
