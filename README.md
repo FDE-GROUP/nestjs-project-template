@@ -77,12 +77,17 @@ src/
 - [项目架构](./docs/specs/architecture.md) | [中文](./docs/specs/architecture-zh.md)
 - [工具标准](./docs/specs/tooling-standards.md)
 - [开发工作流程](./docs/specs/workflow.md) _（候选稿 · 待裁决）_
-- [事件溯源路线图](./docs/specs/event-sourcing-roadmap.md)
 
 **方案**（`docs/plans/` — 技术方案，开发依据）
 
 - [方案索引](./docs/plans/README.md) · [方案模板](./docs/plans/_template.md)
 - [多租户能力需求](./docs/plans/global-tenancy.md)
+- [中国大陆地域适配需求](./docs/plans/global-cn-adaptation.md)
+- [事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)
+
+**调研**（`docs/research/` — 参考，非开发依据）
+
+- [Better Auth 承载境内登录渠道](./docs/research/better-auth-cn-providers.md)
 
 **指南**（`docs/` — 操作手册）
 

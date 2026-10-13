@@ -42,6 +42,7 @@
 | 容器/DB 环境 | **Docker Compose** | Docker 29.x | 本地 Postgres 供给 | 强制（dev） |
 | 密码哈希 | **bcryptjs** | ^3.0.3 | 纯 JS、免原生编译 | 强制 |
 | 支付 | **stripe** | ^23.0.0 | stripe 上下文 | 领域相关 |
+| AI 编码入口（L4） | **AGENTS.md** | — | 面向 agent 的统一项目指令 / 约束入口，与 `.claude/settings.local.json` 并存（定位见 workflow §4 / §9.5） | 推荐 |
 
 ## 3. 选型红线（禁止项）
 

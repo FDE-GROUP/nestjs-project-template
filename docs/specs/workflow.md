@@ -63,14 +63,14 @@
 | `docs/plans/` | 技术方案 | **开发依据**；带审计与执行状态；完成**留原地、不归档** |
 | `docs/recycle/` | 弃用文档 | **只进不出** |
 
-- **现状归类**：`vision.md`（宪法·愿景·顶层）、`architecture*.md`（宪法·结构）、`tooling-standards.md`（宪法·工具）、本文（宪法·流程）属 specs；`event-sourcing-roadmap.md` 实为**技术方案**，宜迁入 `docs/plans/`（待裁决，见 §9）。
+- **现状归类**：`vision.md`（宪法·愿景·顶层）、`architecture*.md`（宪法·结构）、`tooling-standards.md`（宪法·工具）、本文（宪法·流程）属 specs；`event-sourcing-roadmap.md` **已迁至** [`docs/plans/`](../plans/event-sourcing-roadmap.md)（§9.3 已裁决：技术方案非长期规格）。
 - **plans 状态单源** 在 [`docs/plans/README.md`](../plans/README.md) 索引表（列：`Plan | 主题 | 审计 | 执行状态 | 关联`）；**文档头不重复标状态**（沿用「单标记防漂移」教训）。
-- **`docs/research/` `docs/recycle/` 用到再建**（§9 待裁决），避免空目录噪音。
+- **`docs/research/` `docs/recycle/` 已预先建立**（§9.2 已裁决）：`research/` 收调研参考（非依据）、`recycle/` 以 `.gitkeep` 占位、只进不出。
 - **2.4 specs 修订（重写型）**：正文**整体重写**（不增量补丁）+ **显式变更戳** + **演变过程单列**（§10），三者齐备；`specs` 为「当前真相」，正文 > 演变记录。
 
 ## 3. 审计门（无已审方案不写码）
 
-- 方案**须先审计、后依据 / 执行**。审计记录（结论 / 未决项 / 审计人 / 日期）写入 plan 文档头部；审计状态入 §2 索引表。
+- 方案**须先审计、后依据 / 执行**。审计记录（结论 / 未决项 / 审计人 / 日期）写入 plan 文档头部；审计状态入 §2 索引表。**强制**：即便**单人开发亦不得豁免**（§9.1 已裁决）——深度按 blast radius 分级（全局 / 不可逆=人签核，局部可逆=轻量自审），但**自审仍是必经环节、不得跳过**。
 - **深度随 blast radius 分级**（呼应授权粒度 E-001）：
   - 全局 / 不可逆 → **人签核**；
   - 局部可逆 → **轻量自审**（作者对照完成判据自查即可）。
@@ -78,7 +78,8 @@
   1. 数据库 schema 变更与迁移（`drizzle:generate` 产出的 SQL 须人工审 → `drizzle:migrate`；`drizzle:push --force` 仅限 dev）；
   2. 删除依赖 / 删除代码 / 大范围重构（尤其据 fallow 结论者——**必须二次人工核验**，见 tooling-standards §4.7）；
   3. 修改门禁 / CI / husky 钩子 / commitlint / Biome 规则本身；
-  4. 修改 `docs/specs/` 宪法条款、公共 API 契约、DI 注入形态（§4.3 陷阱）。
+  4. 修改 `docs/specs/` 宪法条款、公共 API 契约、DI 注入形态（§4.3 陷阱）；
+  5. 修改 `.env` / `.env.example` 等**密钥、令牌、连接串**敏感配置（含新增 / 轮换凭证）——须人签核（§9.4 已裁决）；agent **不得自行写入真实凭证**。
 
 ## 4. 门禁与工具绑定（工具矩阵 L1–L4）
 
@@ -89,7 +90,7 @@
 | **L1 裁决门禁** | 合并与否唯一裁决 | 本地 CI（`bun run ci` = check→build→test）+ `.husky/pre-push` + commitlint | **硬门**，任何工具不越此层 |
 | **L2 前置发现** | 产出候选供人二判 | `bunx fallow`（dead-code / dupes / architecture） | 参考，**永不裁决**，须二次人工核验 |
 | **L3 AI 情报** | 只读取证 / 检索 / 导航 | 暂缓（后续章）；结论须**可引注到源** | 证据可引注 |
-| **L4 驾驶舱** | AI 编码工具与配置 | 当前 `.claude/settings.local.json`；`AGENTS.md` 待裁决 | 消费者，**非裁判** |
+| **L4 驾驶舱** | AI 编码工具与配置 | [`AGENTS.md`](../../AGENTS.md)（**统一入口 · §9.5 已引入**）+ `.claude/settings.local.json` | 消费者，**非裁判** |
 
 - **该跑什么**：局部可逆改动 → `bun run ci:quick`（check+test）；提交前 / push → `bun run ci`（full，含类型检查与 fallow 佐证）；涉清理/去重 → 先 fallow 候选 → 人工二判 → 回归。
 - **新工具纳入**：先定层、再登记（提案 → 试跑评估 → 定层 → 回写 tooling-standards 矩阵）。
@@ -122,14 +123,14 @@
 - **多人 + 多 Agent 编排细节**（归属 / 任务图 / agent↔agent 契约 / 合并门禁）：后续章。
 - **skills 层**：本项目暂无可复用 skill（`oh-my-env` 的 baseline-upgrade 属 Odoo 语境，不适用）。
 
-## 9. 待裁决点（请逐条 `✅ / ✏️ / ⏸`）
+## 9. 裁决结果（§9 逐条）
 
-1. §1 **审计门**在本模板作**强制**（即便单人开发）还是**建议**？（团队规模靠执法，单人易流于形式）
-2. §2 `docs/research/` `docs/recycle/` **现在就建**空目录，还是**用到再建**？
-3. §2 `event-sourcing-roadmap.md` 是否**迁往 `docs/plans/`**（它是技术方案非长期规格）？
-4. §3 **高危清单**是否需增删（如加「改 `.env` / 密钥」项）？
-5. §4 **`AGENTS.md`** 是否引入作 L4 统一入口（当前仅 `.claude/settings.local.json`）？
-6. §8 `.ai/` 双平面的**引入时机**：本轮完全不做，还是先加「受众」软标记？
+1. ✅ **审计门**：作**强制**，即便单人开发（落实见 §3）。
+2. ✅ `docs/research/` `docs/recycle/`：**预先建目录**（已建；`recycle/` 以 `.gitkeep` 占位）。
+3. ✅ `event-sourcing-roadmap.md`：**已迁往** [`docs/plans/`](../plans/event-sourcing-roadmap.md)。
+4. ✅ **高危清单**：**增列**「改 `.env` / 密钥」项（见 §3 第 5 条）。
+5. ✅ `AGENTS.md`：**引入**作 L4 统一入口（见 §4）。
+6. ⏳ `.ai/` 双平面**引入时机**：**待解释后裁决**（选项见讨论）。
 
 ## 10. 演变记录
 
