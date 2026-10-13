@@ -74,7 +74,7 @@
 - **NFR-3 迁移可回滚**：行级共享表 = **单一 schema**，迁移走常规 Drizzle migrate（无 per-tenant schema fan-out），须可回滚 + 存量数据 `tenant_id` 回填。
 - **NFR-4 可观测**：日志/指标带 `tenant_id` 维度，可按租户排障（pino 结构化字段）。
 - **NFR-5 可扩展**：租户规模增长时支持水平扩展；连接池按档位可配。
-- **NFR-6 合规预留**：数据导出 / 删除以租户为单位可执行（GDPR 被遗忘权，实现留阶段 3）。
+- **NFR-6 合规预留**：数据导出 / 删除以**租户**为单位可执行（GDPR 被遗忘权，实现留阶段 3）；**PIPL 按自然人 user** 的查阅/导出/删除见 [global-cn-adaptation](./global-cn-adaptation.md) FR-7（与按租户维度不同）。
 - **NFR-7 隔离可测试**：DI/请求上下文有集成测试覆盖（对齐既有「Nest DI 集成测试」规范与 `design:paramtypes` 回归）。
 
 ## 5. 关键设计决策（**gate，待裁决**——决定方案形态，须人签核）

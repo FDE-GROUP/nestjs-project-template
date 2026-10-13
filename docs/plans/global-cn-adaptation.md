@@ -2,7 +2,7 @@
 
 > 适用范围: `全局` ← blast radius，审计深度=人签核（`workflow.md` §3/§5）
 > 关联: [vision.md](../specs/vision.md) §4.3 计费 / §6 地域与合规约束 · [global-tenancy.md](./global-tenancy.md) FR-8/D5（计费挂钩，需据本 plan 改为多通道）· [architecture.md](../specs/architecture.md)（provider 落 infrastructure 层）· [tooling-standards.md](../specs/tooling-standards.md)（选型 SSOT，待落）· [workflow.md](../specs/workflow.md) §1/§3
-> 性质: **需求草案（pre-plan）**，重写型 · 版本 0.1.0 · 日期 2026-10-13 · 状态: **核心选型 D1–D3 已落定**（见 §5），D4–D7 部分待定；待升级为技术方案 + 过审计门（`workflow.md` §3）
+> 性质: **需求草案（pre-plan）**，重写型 · 版本 0.1.0 · 日期 2026-10-13 · 状态: **决策 D1–D7 全部落定**（见 §5）；待升级为技术方案 + 过审计门（`workflow.md` §3）
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
 
 ---
@@ -53,8 +53,8 @@
 - **FR-3 境内登录 provider**：以 **Better Auth 自定义 provider** 接入 微信（开放平台网站应用 / 公众号）、企业微信、钉钉、飞书；各渠道唯一标识（unionid / corpid+userid 等）归并到**平台全局 user**（接 global-tenancy D3 / FR-3），不与租户维度耦合。保留 Google / GitHub。
 - **FR-4 依赖镜像境内化**：`bunfig.toml` / `.npmrc` 配 **npmmirror** registry；`Dockerfile` 基础镜像与构建期拉取改用**国内镜像 / 镜像仓库**；相关文档同步。
 - **FR-5 默认语言中文**：i18n fallback / 默认 locale 置 `zh`；校验消息、邮件模板以中文为默认准。
-- **FR-6 日志后端替换**：移除 `pino-datadog-transport` 硬依赖，pino transport **可配置**——默认 stdout / 文件，预留 **阿里云 SLS / Loki** 等境内或自建 sink（最终 sink 见 D6）。
-- **FR-7 合规落点**：PIPL 告知-同意接入注册 / 授权流程；数据导出 / 删除以租户为单位（复用 global-tenancy NFR-6）；数据驻留体现为部署 region 选项；ICP 备案列为部署文档前置（非代码）。
+- **FR-6 日志后端**：移除 `pino-datadog-transport`；pino 输出**默认落文件**（本地 / 滚动），**本期不引入集中监控**（SLS / Loki 不做，留后）。
+- **FR-7 合规落点**：① **PIPL** 注册/授权告知-同意（consent 留痕）+ **按自然人 user** 的数据查阅/导出/删除接口（区别于 global-tenancy NFR-6 的按租户）+ 最小必要字段；② **数据驻留强制境内**：DB / OSS / 日志默认境内 region、不可出境（配置层约束）；③ **ICP 备案**归部署文档前置、不作代码门禁；法务/流程（DPO、出境评估、泄露应急、未成年人监护同意）本 plan 不代办。
 
 ### 4.2 非功能需求（NFR）
 
@@ -74,21 +74,20 @@
 | **D2** ✅ | **登录渠道** | 已裁决 | 保留 Google/GitHub（例外不受约束）+ **新增 微信、企业微信、钉钉、飞书**；Better Auth 自定义 provider |
 | **D3** ✅ | **手机验证码登录** | 已裁决 | **不做**；实名走平台人工审批（global-tenancy CL-2），**无需短信服务商** |
 | **D4** ✅ | **依赖镜像 / 默认语言** | 倾向采纳 | npmmirror + Docker 国内基础镜像；i18n 默认 `zh`（低风险，实现期确认具体源） |
-| **D5** ⏳ | **对象存储默认通道** | 待定 | S3/OSS/COS 已具；大陆默认建议 **阿里云 OSS 或腾讯云 COS**（择一为默认，其余可选） |
-| **D6** ⏳ | **日志 / 监控后端** | 待定 | 去 Datadog；候选 **文件（默认）/ 阿里云 SLS / Loki**（是否引入集中监控待决策） |
-| **D7** ⏳ | **合规落点边界** | 待定 | 确认 ICP=部署前置、数据驻留=region 选项、PIPL=代码+流程；哪些进本 plan、哪些归部署文档 |
+| **D5** ✅ | **对象存储默认通道** | 已裁决 | 默认 **阿里云 OSS**（已有专用 provider、生态最成熟）；COS / S3 作可选通道，经环境变量切换 |
+| **D6** ✅ | **日志 / 监控后端** | 已裁决 | **移除 Datadog**；日志落 **文件（默认，pino transport）**，**不引入集中监控**（SLS / Loki 本期不做） |
+| **D7** ✅ | **合规落点边界** | 已裁决 | **ICP**=部署/运营前置、**不进代码门禁**（归部署文档）；**数据驻留=强制境内**（DB/存储/日志默认境内 region、不可出境）；**PIPL=代码基线**（注册告知-同意 + **按 user** 导出/删除 + 最小必要），法务/流程不代办 |
 
 ## 6. 优先级（MoSCoW）
 
 - **Must**：D1–D4；FR-1 支付抽象、FR-3 境内登录、FR-4 镜像、FR-5 默认 zh + NFR-1/2/3/4。
 - **Should**：FR-6 日志替换、D5 存储默认、FR-7 合规代码侧（同意 / 导出删除复用）。
-- **Could**：FR-2 周期扣款（依资质）、D6 集中监控。
-- **Won't**：手机验证码登录、海外其它支付、第三方密钥/资质代办。
+- **Could**：FR-2 周期扣款（依资质）。
+- **Won't**：手机验证码登录、海外其它支付、第三方密钥/资质代办、**集中日志监控（SLS/Loki，本期）**。
 
 ## 7. 完成判据（草拟，可核验 + 穷尽）
 
-- [x] D1–D4 已裁决并回写本文；
-- [ ] D5–D7 定案；
+- [x] D1–D7 全部裁决并回写本文；
 - [ ] 选型（支付 / 登录 / 镜像 / 日志 / 存储默认）落 [tooling-standards.md](../specs/tooling-standards.md)（技术栈 SSOT）；
 - [ ] 回改 [global-tenancy.md](./global-tenancy.md) FR-8 / D5：Stripe 单挂 → 多通道 provider；
 - [ ] 每条 Must FR/NFR 有「未来方案垂直切片」映射（无遗漏）；
@@ -99,8 +98,6 @@
 1. 微信支付 / 支付宝**周期扣款 / 委托代扣资质**是否已具备？决定 FR-2 能否落地及订阅续费形态（否则先「预付费时长 + 手动续费」过渡）。
 2. 微信 / 企业微信 / 钉钉 / 飞书 各自账号体系如何归并到平台全局 user（unionid、corpid+userid、staffId）与 membership；同一自然人多渠道身份合并策略。
 3. Better Auth 自定义 OAuth provider 的实现成本与边界（是否够用、是否需 plugin）——宜先 `docs/research/` 调研（非依据）。
-4. 数据驻留是否要求**强制境内**（影响 DB / 存储 region 配置默认），或允许海外部署。
-5. 集中日志/监控（D6）是否为本期所需，抑或先「结构化 stdout + 后续接 SLS」。
 
 ## 9. 演变记录
 
