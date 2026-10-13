@@ -1,0 +1,15 @@
+{
+  "name": "reference-app",
+  "version": "0.0.0",
+  "description": "多租户 SaaS 参考应用（依赖 @core/saas-kit·运行时依赖 hoist 于 workspace 根·§9.5.4②）",
+  "type": "module",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build:nest": "nest build --builder swc",
+    "start": "bun run src/main.ts",
+    "start:dev": "bun --watch run src/main.ts",
+    "start:prod": "bun dist/main.js",
+    "db:seed": "bun src/database/seed.ts"
+  }
+}

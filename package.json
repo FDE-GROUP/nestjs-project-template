@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/main.js",
   "workspaces": [
+    "apps/*",
     "packages/*"
   ],
   "scripts": {
