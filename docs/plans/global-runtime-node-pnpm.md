@@ -179,13 +179,22 @@
 - **Actions 面 ✅（真实运行存照·非 dry-run）**：`deploy-swagger.yml` 在 push `0c73ef7` 上被 `apps/**` 路径触发，run `38619434210` **success**（57s），日志坐实 `pnpm/action-setup@v4` + `actions/setup-node@v4`（`node-version: 22`·`cache: pnpm`·`cache_dependency_path: pnpm-lock.yaml`）→ `pnpm install --frozen-lockfile` → `pnpm run openapi:export` → Pages 发布全链跑通。
 - **本机环境噪声（非模板问题·如实区分）**：Docker Desktop VM 对 `registry.npmmirror.com` **DNS 不可解析**（临时把 WSL `/etc/resolv.conf` 改公共 DNS 后容器 `--dns` 实测 HTTP 200 可达），且 buildkit `--network=host` 走的是 VM 而非 WSL 网络 → 为完成实跑，临时起 `moby/buildkit` 容器（`--dns 223.5.5.5`）挂为 remote builder 执行构建，验毕已 `buildx rm` + 删容器 + 删镜像，无残留。**结论口径：模板构建链本身无障碍，卡点纯属开发机网络环境。**
 
+## 4.11 部署纪律升格入宪法（**人签核·两条都升**·2026-10-15）
+
+> 人于 AskUserQuestion 择「**两条都升**」（改 `docs/specs` 属高危·已签核）。切片 D 拓出的三条教训不留在 plan，已成文为现行纪律：
+
+- `tooling-standards.md` **新增 §4.10「部署声明对拍（Docker / Compose / Actions）」**：① 探针不得依赖镜像外工具（slim 无 wget/curl → 永 unhealthy·用运行时自身 fetch）；② 境内化两条注入通道不同（`.npmrc` vs `COREPACK_NPM_REGISTRY`）；③ 部署声明=可执行契约，验收口径为实跑链（build→run→`/health` 200→`healthy`）而非「构建通过」；④ 镜像内不留不可用死面。
+- `tooling-standards.md` **§3 新增一条红线**：禁止把未真跑对拍的部署声明当作可用。
+- `tooling-standards.md` **§2.1 依赖镜像行**补写 corepack 不吃 `.npmrc` 的双通道口径。
+- `AGENTS.md` **§2 新增铁律指针**「部署声明必须真跑对拍（tooling §4.10）」（只指不复述）。
+
 ## 5. 完成判据（过审计门后·可核验 + 穷尽）
 
 - [x] 切片 A：`pnpm install` 成功 + 布局解析方案定档（**isolated 无需 hoist**·唯一配置=`allowBuilds` 放行 @swc/core+esbuild）已写进 tooling §2/§4
 - [x] 切片 B：`node` 起编译产物 prod `start:prod` + `/api/v1/health` 200 实机存照（`verify:prod-boot`；dev `nest start --watch` 同源 SWC）
 - [x] 切片 C：`pnpm run ci` full/quick 与旧 `scripts/ci.ts` 逐步等价（`node:child_process`·含 fallow advisory 不阻断语义）
-- [x] 切片 D：`Dockerfile`/`deploy-swagger.yml`/husky 已切 node/pnpm，**并已实机核验**（`docker build` EXIT=0 · 容器 `/health` 200 · compose 全图 `Up (healthy)` · Actions run `38619434210` success）；期间拓修 R-θ（slim 无 wget/curl→node fetch 探针）与 R-ι（`COREPACK_NPM_REGISTRY` 注入）——见 §4.9.1
-- [x] 切片 E：`docs/specs` §1/§2/§2.1/§3 + `AGENTS.md` §2/§3 同步·无残留 Bun 现行口径（演变记录与对比说明除外）
+- [x] 切片 D：`Dockerfile`/`deploy-swagger.yml`/husky 已切 node/pnpm，**并已实机核验**（`docker build` EXIT=0 · 容器 `/health` 200 · compose 全图 `Up (healthy)` · Actions run `38619434210` success）；期间拓修 R-θ（slim 无 wget/curl→node fetch 探针）、R-ι（`COREPACK_NPM_REGISTRY` 注入）与 R-κ（runner 不可用死面删净）——见 §4.9.1
+- [x] 切片 E：`docs/specs` §1/§2/§2.1/§3 + `AGENTS.md` §2/§3 同步·无残留 Bun 现行口径（演变记录与对比说明除外）；**部署纪律另经人签核升格**（§4.11：tooling 新增 §4.10 + §3 红线一条 + §2.1 行订正 + AGENTS 指针）
 - [x] `bun`→`node/pnpm` 全链 `pnpm run ci` 全绿·**343 测试基线零掉**（gated e2e 16 项无库照 skip·与 Bun 基线一致）
 - [x] DI/元数据回归测（`design:paramtypes`/`app.module.test`/`di-context.integration`/`three-layer-permission.matrix`）全绿（§4.3 未回退·SWC 沿用）
 - [x] `bun.lock`/`bunfig.toml` 删除、`pnpm-lock.yaml`/`pnpm-workspace.yaml`/`.npmrc` 就位并被 Git 追踪
@@ -203,8 +212,9 @@
 | 2026-10-15 | 0.7.0 | S1–S4 实现完成·两运行时 prod 起服 200 | 新增 §4.8 实证结果：**R-δ 根治**（libs/core 独立 swc 构建→dist·裸句柄不重写·node+bun 均 /health 200）·**R-ε 证伪**（无扩展深子路径经 exports→dist 双理解析）·**R-ζ 证伪**（跨包 DI 健在）；拓出 **R-η**（Bun 掩盖的 Node-ESM 源不兼容集群：joi CJS interop / `__dirname` / dotenv 时序·boot 路径已修·余留归 S5）；**关键结论：S5 非 flag 切换而是 Node-ESM 源兼容清扫·量级上修·待 S5 签核重定范围**；状态转 **S1–S4 完成·待 S5 签核** |
 | 2026-10-15 | 0.8.0 | 人择「现在就执行 S5 全量切换」（高危三项签核）·S5 落地实证全绿 | 新增 §4.9 S5 落地实证：**Node-ESM 源兼容清扫**（openapi-codegen→load-env·cos/seed 保留）+ **工具链切 node/pnpm**（scripts/engines/packageManager·ci.ts→node:child_process·tsconfig types node·删 @types/bun）+ **workspace/制品**（pnpm-workspace `allowBuilds`+.npmrc 转追踪+pnpm-lock·删 bun.lock/bunfig）+ **hooks/Docker/GHA 切 node/pnpm** + **宪法成文**（tooling/AGENTS/architecture/workflow/README/运维文档 Bun 现行口径归零）+ **回归防线成文**（`scripts/verify-prod-boot.ts`·继承 env 与数据驻留正交）；§5 判据诚实勾选（D 片 docker/Actions 待实机）；实证 `pnpm install` EXIT=0·`pnpm run ci` **PASSED 343**·`verify:prod-boot` **/health 200**；状态转 **S0–S5 全落地·迁移完成·待人类验收** |
 | 2026-10-15 | 0.9.0 | 切片 D 挂账实机补验（docker/build/compose/Actions 全跑） | 新增 §4.9.1：**`docker build` EXIT=0·容器 `/health` 200·compose 全图 healthy·Actions run 38619434210 success**；拓并修三真缺陷 **R-θ**（`node:22-slim` 无 wget/curl→HEALTHCHECK 永 unhealthy·改 node 内置 fetch）**R-ι**（corepack 不吃 `.npmrc`→补 `COREPACK_NPM_REGISTRY` 指 npmmirror）**R-κ**（runner 带不可用的 corepack/pnpm 与 `drizzle.config.ts` 死面→删净并重验 EXIT=0/200/healthy）；据实登记部署前提（compose 生产档 + 占位 `.env` 触发数据驻留 fail-closed·属正确行为）入 `docker-deployment.md`；§5 切片 D 由 [~] 翻 [x]；本机 Docker VM DNS 噪声与模板问题明确区分 |
+| 2026-10-15 | 0.10.0 | 人签核「两条都升」→ 部署纪律入宪法 | 新增 §4.11：`tooling-standards.md` 成文 **§4.10 部署声明对拍**（探针工具实存 / `.npmrc` vs `COREPACK_NPM_REGISTRY` 双通道 / 实跑链为验收口径 / 不留不可用死面）+ **§3 新增红线**（禁把未真跑对拍的部署声明当可用）+ §2.1 依赖镜像行订正；`AGENTS.md` §2 新增铁律指针；§5 切片 E 判据补登升格事实 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.9.0 变更，以当前正文内容为准。
+正文已于 2026-10-15 / v0.10.0 变更，以当前正文内容为准。

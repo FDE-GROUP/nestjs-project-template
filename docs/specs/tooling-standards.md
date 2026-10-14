@@ -54,7 +54,7 @@
 |--------|------|------|------------|
 | **支付通道** | Stripe（海外）+ 微信支付 + 支付宝（大陆） | **部分落地**：统一 `PaymentProvider` 端口 + Stripe 收敛已落地（P1，`src/modules/payment`）；微信/支付宝 **劣后暂缓**（D9，`PaymentProviderId` 接口位 `alipay`/`wechat_pay` 保留、实现待资质择机开发） | 与存储同构，`PaymentModule.register()` 依配置装配、未配即降级；周期扣款随资质（FR-1/FR-2 · D1 · D9） |
 | **登录渠道** | Google/GitHub（保留）+ 微信 / 企业微信 / 钉钉 / 飞书 | 海外现行；**飞书已落地（A1，`genericOAuth`）**；微信/钉钉/企微 **仅留接口·劣后暂缓**（D8） | Better Auth `genericOAuth`；方案 C 邮箱为体、社交为用（`disableSignUp:true`）；**不做**手机验证码登录（FR-3/D2/D3） |
-| **依赖镜像** | npm→npmmirror（`.npmrc` + pnpm registry）+ Docker 国内基础镜像 | **已落地**（M1，commit `9e27d63`） | 纯配置；Dockerfile 基础镜像经 ARG 可覆盖（FR-4/D4） |
+| **依赖镜像** | npm→npmmirror（`.npmrc` + pnpm registry）+ Docker 国内基础镜像 | **已落地**（M1，commit `9e27d63`） | 纯配置；Dockerfile 基础镜像经 ARG 可覆盖（FR-4/D4）。**corepack 不吃 `.npmrc`**：拉 `pnpm` tarball 只认 `COREPACK_NPM_REGISTRY`，境内化须与该 ENV **分别注入**（见 §4.10） |
 | **默认语言** | i18n 默认 / fallback 置 `zh`（保留 en/ja）；`nestjs-i18n@10` | **已落地**（L1 分阶 A+B：全局单源 `AppI18nModule`、**邮件正文/主题 + 校验消息均按 locale 本地化**） | 文档中文为准（FR-5/D4）；locale 取 `accept-language`、回退 zh；校验保形由 `I18nValidationExceptionFilter`+`responseBodyFormatter`；无生成类型时 `translate` key 为 `never`、测试处断言松类型 |
 | **日志后端** | pino 默认落文件；**移除** `pino-datadog-transport` | **已落地**（G1，commit `9e27d63`） | 本期**不引**集中监控（SLS/Loki 留后）（FR-6/D6） |
 | **对象存储默认** | 默认阿里云 OSS，COS/S3 经 env 切换 | provider 现行；**默认已切 OSS**（S1，境内 region 默认） | 已有 OSS/COS/S3 provider（D5） |
@@ -71,6 +71,7 @@
 - **禁止** 未经二次人工核验即按 fallow（或任何前置分析器）的结论删除代码/依赖或重构 —— 其输出为候选线索而非判决（见 §4.7）。
 - **禁止** 用 `--no-verify` 绕过 husky/commitlint；**禁止** 修改全局 git 身份（提交用内联身份，见 §6）。
 - **禁止** 依赖远程 CI 做质量门禁 —— 本仓库 GitHub Actions 仅部署 Swagger Pages，不跑测试/构建；门禁一律在本地经 `pnpm run ci`（pre-push 强制，见 §4.8）。
+- **禁止** 把未真跑对拍的部署声明当作可用 —— `Dockerfile`/compose/HEALTHCHECK/workflows 属可执行契约，须以实跑结果（build→run→`/health` 200→`healthy`）存照，且镜像内不得保留产物实际不支持的能力（见 §4.10）。
 
 ## 4. 使用规范
 
@@ -135,6 +136,12 @@
 ### 4.9 横切设施落位纪律
 - **新横切能力 = 独立目录**（对齐 config/logger/i18n/mailer/database 既有惯例）：实现落 `apps/api/src/<facility>/`；若领域/跨模块需要其抽象，契约落 `libs/core/src/shared-kernel/<concept>/`（如 `context/` 装 ALS 请求上下文、`domain/` 装分页契约），禁止业务模块 import 实现细节。
 - **单文件不开目录；第二个同类文件出现时归拢**（YAGNI，不为假想需求预建空目录）；缓存类设施将来立项时按本条落位。
+
+### 4.10 部署声明对拍（Docker / Compose / Actions）
+- **探针不得依赖镜像外工具**：容器 `HEALTHCHECK` / liveness 只能使用**镜像内实存**的能力。`node:*-slim` 既无 `wget` 也无 `curl`，沿用 shell 探针会使容器**永远 `unhealthy`**（静默失效·`build` 成功不报错）；统一用运行时自身探测，如 `node -e "fetch(url).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"`（零额外 apt 层）。
+- **境内化两条注入通道不同**：包管理器 registry 走 `.npmrc`，**corepack 拉 `pnpm` 本体走 `COREPACK_NPM_REGISTRY`**；只配前者会在境内首次构建即卡 `registry.npmjs.org` 解析失败。
+- **部署声明 = 可执行契约，必须真跑对拍**：改 `Dockerfile`/`docker-compose*.yml`/`.github/workflows/*` 后，验收口径为实跑结果（`docker build` EXIT=0 → `docker run` 真起服命中 `/api/v1/health` 200 → `docker inspect --format='{{.State.Health.Status}}'` 为 `healthy` → compose 全图 `Up (healthy)`），**不得以「配置就位」「构建通过」代替**；Actions 面以真实 run 结论为证。同型教训：声明的路由与代码实现脱节、探针工具不存在，均属「声明有、实现无」且静态门禁全绿无征兆。
+- **镜像内不留不可用死面**：若某声明隐含能力而产物实际不支持（如 runner 携 `drizzle.config.ts`，其 `schema` 指 TS 源而产物镜像无源文件 → 容器内迁移跑不通），**删净并在文档写明能力边界**（迁移归运维机/CI），不加「看起来能用」的兼容配置。
 
 ## 5. Biome 规范
 

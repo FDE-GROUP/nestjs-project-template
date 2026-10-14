@@ -23,7 +23,7 @@
 **目标**
 - 支付抽象为 **provider 接口**，三通道并存：Stripe（海外）+ 微信支付 + 支付宝（大陆）。
 - 登录在保留 Google/GitHub 之外，**新增境内 provider**：微信、企业微信、钉钉、飞书。
-- 依赖镜像境内化：`bun install` / Docker 基础镜像走国内源。
+- 依赖镜像境内化：`pnpm install`（`.npmrc`→npmmirror；corepack 另经 `COREPACK_NPM_REGISTRY`）/ Docker 基础镜像走国内源。
 - i18n **默认中文**；文档以中文为准。
 - 日志 / 监控后端去 Datadog，输出默认落文件。
 - 明确 **PIPL / 数据驻留 / ICP** 的落点（代码 vs 部署）。
