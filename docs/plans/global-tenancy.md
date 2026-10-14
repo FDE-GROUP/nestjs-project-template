@@ -245,6 +245,8 @@
 
 > **tenancy 形态观察项（2026-10-14·softkit boilerplate 评价借鉴 #3·记账不落地）**：本仓固定「多租户 + BA 会话/active-org 识别」单一形态。对方枚举的分类学——单租户（同邮箱跨租互斥）/无租户 B2C × 识别载体 subdomain/path/header——其中 **subdomain/path 识别对国内私有化部署（每客户独立域名）是真需求**。触发判据：**私有化需求出现时才开租户识别轴设计切片**，本阶段不动不作；另同步挂账：对方 header 声明式租户 id（客户端可传）恰与本仓 S2「port 不暴露 tenantId·adapter 从 ALS 注入 fail-closed」相反，**勿被「更灵活的 header 指定租户」说服**（留档防复报）。
 
+> **softkit-core 评价观察项（2026-10-14·同一借鉴线第二轮·记账不落地）**：核仓取证坐实——单核维护（主作者 ~75%）+ npm 停摆 2025-02 + **无 LICENSE** + 非生产就绪自认，**作依赖引入一票否决**（与上轮 boilerplate 反向教训同构加重·印证 S2 隔离卡点/分页契约/class-validator 继承雷四项均获独立旁证）。仅榨得两条真实观察项：① **出站弹性缺位**——本仓对 Stripe / S3 / OSS 的出站 HTTP 调用**无重试 + 无熔断**（对方 `server-http-client` 用 opossum 补此面）：触发判据 = 支付/存储出现生产弹性需求时立项（涉 [global-cn-adaptation](./global-cn-adaptation.md) P1 Stripe / 存储 provider 链）；② **`sort` 白名单形态**——对方 `service-api` 泛型 CRUD 采「可排序字段显式声明」白名单，本仓分页片甲丁裁缓行的 sort 参数化将来立项时据此防列名注入（参考形态非引入·见 [module-common-pagination-contract](./module-common-pagination-contract.md) §6-丁）。**路线冲突留档**：对方「生成器/泛型 CRUD 黑箱」与本仓「显式性即教学内容」宪法正面冲突，此路不借鉴。
+
 ## 11. 影响面与迁移
 
 - **迁移策略（NFR-3）**：行级共享 = **单一 schema、无 per-tenant fan-out**，走常规 Drizzle migrate。**风险②已 S0 boot 坐实**（见 [research §7–§8](../research/better-auth-org.md)）：org 三表 + `session.activeOrganizationId` 并入手写单文件 `src/database/schema.ts`，`drizzle-kit generate` 产**纯 additive、FK 可解析** SQL（→ `0002`），runtime adapter 按列真实读写、`metadata` 为 **jsonb 真对象**（非 JSON string）、`activeOrganizationId` 无需额外 FK 均经真实库往返验证。
