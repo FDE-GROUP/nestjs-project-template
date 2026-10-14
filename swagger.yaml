@@ -236,7 +236,23 @@ paths:
         - users
     get:
       operationId: UsersController_findAll_v1
-      parameters: []
+      parameters:
+        - name: limit
+          required: false
+          in: query
+          description: Page size (1-100)
+          schema:
+            example: 20
+            allOf:
+              - $ref: '#/components/schemas/Object'
+        - name: offset
+          required: false
+          in: query
+          description: Offset (rows to skip)
+          schema:
+            example: 0
+            allOf:
+              - $ref: '#/components/schemas/Object'
       responses:
         '200':
           description: Return all users
@@ -284,7 +300,23 @@ paths:
   /api/v1/posts:
     get:
       operationId: PostsController_list_v1
-      parameters: []
+      parameters:
+        - name: limit
+          required: false
+          in: query
+          description: Page size (1-100)
+          schema:
+            example: 20
+            allOf:
+              - $ref: '#/components/schemas/Object'
+        - name: offset
+          required: false
+          in: query
+          description: Offset (rows to skip)
+          schema:
+            example: 0
+            allOf:
+              - $ref: '#/components/schemas/Object'
       responses:
         '200':
           description: Posts owned by the active tenant.
@@ -312,7 +344,23 @@ paths:
   /api/v1/workspaces:
     get:
       operationId: WorkspacesController_list_v1
-      parameters: []
+      parameters:
+        - name: limit
+          required: false
+          in: query
+          description: Page size (1-100)
+          schema:
+            example: 20
+            allOf:
+              - $ref: '#/components/schemas/Object'
+        - name: offset
+          required: false
+          in: query
+          description: Offset (rows to skip)
+          schema:
+            example: 0
+            allOf:
+              - $ref: '#/components/schemas/Object'
       responses:
         '200':
           description: Workspaces owned by the active tenant.
@@ -881,6 +929,9 @@ components:
       required:
         - email
         - password
+    Object:
+      type: object
+      properties: {}
     CreatePostDto:
       type: object
       properties:
@@ -937,9 +988,6 @@ components:
       required:
         - name
         - slug
-    Object:
-      type: object
-      properties: {}
     SuspendUserDto:
       type: object
       properties:
