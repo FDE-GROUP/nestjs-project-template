@@ -1,0 +1,831 @@
+openapi: 3.1.0
+paths:
+  /api/v1/better-auth/token:
+    get:
+      operationId: AuthController_getOrVerifyToken_v1
+      parameters:
+        - name: token
+          required: true
+          in: query
+          schema:
+            type: string
+        - name: id
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      tags: &ref_0
+        - Auth
+    post:
+      operationId: AuthController_generateToken_v1
+      parameters: []
+      responses:
+        '201':
+          description: ''
+      tags: *ref_0
+    delete:
+      operationId: AuthController_deleteToken_v1
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      tags: *ref_0
+  /api/v1/better-auth/session:
+    get:
+      operationId: AuthController_getSession_v1
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      tags: *ref_0
+  /api/v1/better-auth/providers:
+    get:
+      operationId: AuthController_getProviders_v1
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      tags: *ref_0
+  /api/v1/users:
+    post:
+      operationId: UsersController_create_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserDto'
+      responses:
+        '201':
+          description: User successfully created
+        '400':
+          description: Bad Request
+        '409':
+          description: User already exists
+      summary: Create a new user
+      tags: &ref_1
+        - users
+    get:
+      operationId: UsersController_findAll_v1
+      parameters: []
+      responses:
+        '200':
+          description: Return all users
+      summary: Get all users
+      tags: *ref_1
+  /api/v1/users/me/data-export:
+    get:
+      operationId: UsersController_exportMe_v1
+      parameters: []
+      responses:
+        '200':
+          description: Aggregated personal data (no credentials).
+        '401':
+          description: Missing or invalid session.
+      summary: 'PIPL right-to-access: export current user personal data (C1 · FR-7)'
+      tags: *ref_1
+  /api/v1/users/me:
+    delete:
+      operationId: UsersController_deleteMe_v1
+      parameters: []
+      responses:
+        '204':
+          description: User deleted; consent rows retained anonymously.
+        '401':
+          description: Missing or invalid session.
+      summary: 'PIPL right-to-erase: hard-delete current user (C1 · FR-7)'
+      tags: *ref_1
+  /api/v1/users/{id}:
+    get:
+      operationId: UsersController_findOne_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: User ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Return the user
+        '404':
+          description: User not found
+      summary: Get a user by ID
+      tags: *ref_1
+  /api/v1/posts:
+    get:
+      operationId: PostsController_list_v1
+      parameters: []
+      responses:
+        '200':
+          description: Posts owned by the active tenant.
+        '403':
+          description: No active tenant context.
+      summary: List posts in the active tenant
+      tags: &ref_2
+        - posts
+    post:
+      operationId: PostsController_create_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostDto'
+      responses:
+        '201':
+          description: Created post stamped with the active tenant.
+        '403':
+          description: No active tenant context.
+      summary: Create a post in the active tenant
+      tags: *ref_2
+  /api/v1/workspaces:
+    get:
+      operationId: WorkspacesController_list_v1
+      parameters: []
+      responses:
+        '200':
+          description: Workspaces owned by the active tenant.
+        '403':
+          description: No active tenant, or missing workspace:read.
+      summary: List workspaces in the active tenant
+      tags: &ref_3
+        - workspaces
+    post:
+      operationId: WorkspacesController_create_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceDto'
+      responses:
+        '201':
+          description: Created workspace stamped with the active tenant.
+        '403':
+          description: Missing workspace:create (members are rejected).
+      summary: Create a workspace (owner/admin)
+      tags: *ref_3
+  /api/v1/workspaces/{id}:
+    patch:
+      operationId: WorkspacesController_update_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkspaceDto'
+      responses:
+        '200':
+          description: Updated workspace.
+        '404':
+          description: Workspace not found in the active tenant.
+      summary: Update a workspace (owner/admin)
+      tags: *ref_3
+    delete:
+      operationId: WorkspacesController_remove_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Workspace deleted.
+        '404':
+          description: Workspace not found in the active tenant.
+      summary: Delete a workspace (owner/admin)
+      tags: *ref_3
+  /api/v1/tenants/applications:
+    post:
+      operationId: TenantsController_apply_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantApplicationDto'
+      responses:
+        '201':
+          description: Pending tenant created; inactive until approved.
+        '401':
+          description: Missing or invalid session.
+      summary: Apply to create a tenant (user-level · lands pending_approval)
+      tags: &ref_4
+        - tenants
+  /api/v1/tenants/applications/{id}/approve:
+    post:
+      operationId: TenantsController_approve_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant activated.
+        '403':
+          description: Not a platform operator.
+        '404':
+          description: Tenant not found.
+      summary: Approve a pending tenant (platform operator · pending → active)
+      tags: *ref_4
+  /api/v1/tenants/applications/{id}/reject:
+    post:
+      operationId: TenantsController_reject_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Pending tenant discarded.
+        '403':
+          description: Not a platform operator.
+        '404':
+          description: Tenant not found.
+      summary: Reject a pending tenant (platform operator · hard-delete)
+      tags: *ref_4
+  /api/v1/platform/tenants:
+    get:
+      operationId: PlatformTenantsController_list_v1
+      parameters:
+        - name: limit
+          required: false
+          in: query
+          description: Page size (1-100)
+          schema:
+            example: 20
+            allOf:
+              - $ref: '#/components/schemas/Object'
+        - name: offset
+          required: false
+          in: query
+          description: Offset (rows to skip)
+          schema:
+            example: 0
+            allOf:
+              - $ref: '#/components/schemas/Object'
+        - name: search
+          required: false
+          in: query
+          description: Match against tenant name or slug (substring)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A page of tenants with lifecycle status.
+        '403':
+          description: Not the platform operator.
+      summary: List all tenants across the platform (operator only)
+      tags: &ref_5
+        - platform
+  /api/v1/platform/tenants/{id}:
+    get:
+      operationId: PlatformTenantsController_detail_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant row.
+        '404':
+          description: Tenant not found.
+      summary: Get one tenant (operator only)
+      tags: *ref_5
+    delete:
+      operationId: PlatformTenantsController_remove_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant marked deleted.
+        '404':
+          description: Tenant not found.
+        '409':
+          description: Already deleted (illegal transition).
+      summary: Soft-delete a tenant (→ deleted terminal · row kept for export)
+      tags: *ref_5
+  /api/v1/platform/tenants/{id}/diagnostics:
+    get:
+      operationId: PlatformTenantsController_diagnostics_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Diagnostics bundle.
+        '404':
+          description: Tenant not found.
+      summary: 'Per-tenant diagnostics: member/invitation/workspace/post counts'
+      tags: *ref_5
+  /api/v1/platform/tenants/{id}/suspend:
+    patch:
+      operationId: PlatformTenantsController_suspend_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant suspended.
+        '404':
+          description: Tenant not found.
+        '409':
+          description: Illegal transition for the current status.
+      summary: Suspend an active tenant (active → suspended · fail-closed失能)
+      tags: *ref_5
+  /api/v1/platform/tenants/{id}/resume:
+    patch:
+      operationId: PlatformTenantsController_resume_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant resumed.
+        '404':
+          description: Tenant not found.
+        '409':
+          description: Illegal transition for the current status.
+      summary: Resume a suspended tenant (suspended → active)
+      tags: *ref_5
+  /api/v1/platform/users:
+    get:
+      operationId: PlatformUsersController_list_v1
+      parameters:
+        - name: limit
+          required: false
+          in: query
+          description: Page size (1-100)
+          schema:
+            example: 20
+            allOf:
+              - $ref: '#/components/schemas/Object'
+        - name: offset
+          required: false
+          in: query
+          description: Offset (rows to skip)
+          schema:
+            example: 0
+            allOf:
+              - $ref: '#/components/schemas/Object'
+        - name: search
+          required: false
+          in: query
+          description: Against user name or email (substring)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A page of users with suspension status.
+        '403':
+          description: Not the platform operator.
+      summary: List all platform users with lifecycle status (operator only)
+      tags: &ref_6
+        - platform
+  /api/v1/platform/users/{id}/suspend:
+    patch:
+      operationId: PlatformUsersController_suspend_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuspendUserDto'
+      responses:
+        '200':
+          description: User suspended.
+        '404':
+          description: User not found.
+        '409':
+          description: Illegal transition for the current status.
+      summary: >-
+        Suspend a platform user (active → suspended · sessions invalidated ·
+        fail-closed失能)
+      tags: *ref_6
+  /api/v1/platform/users/{id}/resume:
+    patch:
+      operationId: PlatformUsersController_resume_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User resumed.
+        '404':
+          description: User not found.
+        '409':
+          description: Illegal transition for the current status.
+      summary: Resume a suspended platform user (suspended → active)
+      tags: *ref_6
+  /api/v1/subscriptions/current:
+    get:
+      operationId: SubscriptionsController_getCurrent_v1
+      parameters: []
+      responses:
+        '200':
+          description: Effective subscription snapshot for the active tenant.
+        '403':
+          description: No active tenant context.
+      summary: 'Current tenant subscription: plan, seat quota, usage, customer mapping'
+      tags: &ref_7
+        - subscriptions
+  /api/v1/subscriptions:
+    post:
+      operationId: SubscriptionsController_create_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubscriptionDto'
+      responses:
+        '201':
+          description: Subscription created; returns the updated snapshot.
+        '403':
+          description: Not allowed to update the organization.
+        '503':
+          description: No payment provider configured.
+      summary: >-
+        Provision/upgrade the tenant subscription (creates the provider
+        customer)
+      tags: *ref_7
+  /api/v1/storage/upload:
+    post:
+      operationId: StorageController_uploadFile_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload
+      responses:
+        '201':
+          description: ''
+      summary: Upload a single file
+      tags: &ref_8
+        - storage
+  /api/v1/storage/{key}:
+    delete:
+      operationId: StorageController_deleteFile_v1
+      parameters:
+        - name: key
+          required: true
+          in: path
+          description: Unique identifier of the file
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      summary: Delete a file
+      tags: *ref_8
+  /api/v1/storage/{key}/url:
+    get:
+      operationId: StorageController_getFileUrl_v1
+      parameters:
+        - name: key
+          required: true
+          in: path
+          description: Unique identifier of the file
+          schema:
+            type: string
+        - name: expiresIn
+          required: false
+          in: query
+          description: Expiration time for URL (seconds)
+          schema:
+            type: number
+      responses:
+        '200':
+          description: ''
+      summary: Get a signed URL for a file
+      tags: *ref_8
+  /api/v1/payment/test:
+    get:
+      operationId: PaymentController_test_v1
+      parameters: []
+      responses:
+        '200':
+          description: Current provider selection and available channels
+      summary: Payment integration status
+      tags: &ref_9
+        - payment
+  /api/v1/payment/customers:
+    post:
+      operationId: PaymentController_createCustomer_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerDto'
+      responses:
+        '201':
+          description: Customer created successfully
+      summary: Create a payment customer
+      tags: *ref_9
+  /api/v1/payment/checkouts:
+    post:
+      operationId: PaymentController_createCheckout_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutDto'
+      responses:
+        '201':
+          description: Checkout created successfully
+        '400':
+          description: Bad request
+      summary: Create a checkout (payment intent)
+      tags: *ref_9
+  /api/v1/payment/checkouts/{id}:
+    get:
+      operationId: PaymentController_retrieveCheckout_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: Checkout (payment intent) ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Checkout retrieved successfully
+        '404':
+          description: Checkout not found
+      summary: Retrieve a checkout
+      tags: *ref_9
+  /api/v1/payment/refunds:
+    post:
+      operationId: PaymentController_refund_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundPaymentDto'
+      responses:
+        '201':
+          description: Refund created successfully
+        '400':
+          description: Bad request
+      summary: Refund a checkout
+      tags: *ref_9
+  /api/v1/payment/webhooks:
+    post:
+      operationId: PaymentController_handleWebhook_v1
+      parameters:
+        - name: stripe-signature
+          required: true
+          in: header
+          description: Payment provider webhook signature
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook processed successfully
+        '400':
+          description: Invalid webhook signature
+      summary: Handle payment webhook events
+      tags: *ref_9
+info:
+  title: NestJS SaaS Start API
+  description: NestJS SaaS Start API documentation
+  version: 1.0.0
+  contact: {}
+tags: []
+servers: []
+components:
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+  schemas:
+    CreateUserDto:
+      type: object
+      properties:
+        email:
+          type: string
+          description: The email of the user
+          example: user@example.com
+        password:
+          type: string
+          description: The password of the user
+          example: Password123!
+          minLength: 8
+        firstName:
+          type: string
+          description: The first name of the user
+          example: John
+        lastName:
+          type: string
+          description: The last name of the user
+          example: Doe
+      required:
+        - email
+        - password
+    CreatePostDto:
+      type: object
+      properties:
+        title:
+          type: string
+          description: The title of the post
+          example: Hello tenant
+        content:
+          type: string
+          description: The post body
+          example: Content...
+        published:
+          type: boolean
+          description: Whether the post is published
+          example: false
+      required:
+        - title
+    CreateWorkspaceDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Workspace display name
+          example: Design
+        slug:
+          type: string
+          description: URL-friendly slug (unique within the tenant)
+          example: design
+      required:
+        - name
+        - slug
+    UpdateWorkspaceDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Workspace display name
+          example: Design
+        slug:
+          type: string
+          description: URL-friendly slug
+          example: design
+    CreateTenantApplicationDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Tenant display name
+          example: Acme Inc.
+        slug:
+          type: string
+          description: Globally-unique tenant slug
+          example: acme
+      required:
+        - name
+        - slug
+    Object:
+      type: object
+      properties: {}
+    SuspendUserDto:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Free-text suspension reason (audit trail)
+    CreateSubscriptionDto:
+      type: object
+      properties:
+        plan:
+          type: string
+          description: Subscription plan/tier
+          enum:
+            - free
+            - pro
+            - enterprise
+          example: pro
+        customerEmail:
+          type: string
+          description: Billing contact email (creates the provider customer · FR-8)
+        seatsLimit:
+          type: number
+          description: Override the plan seat limit (defaults to the plan)
+        storageQuota:
+          type: number
+          description: Storage quota (bytes) placeholder
+        apiQuota:
+          type: number
+          description: API quota placeholder
+      required:
+        - plan
+        - customerEmail
+    CreateCustomerDto:
+      type: object
+      properties:
+        email:
+          type: string
+          description: Customer email address
+          example: customer@example.com
+        name:
+          type: string
+          description: Customer name
+          example: John Doe
+        metadata:
+          type: object
+          description: Set of key-value pairs for additional information
+          example:
+            userId: '1234'
+      required:
+        - email
+    CreateCheckoutDto:
+      type: object
+      properties:
+        amount:
+          type: number
+          description: Amount in smallest currency unit (e.g., cents for USD)
+          example: 2000
+        currency:
+          type: string
+          description: Three-letter ISO currency code
+          example: usd
+        description:
+          type: string
+          description: Description of the checkout
+          example: 'Payment for order #1234'
+        metadata:
+          type: object
+          description: Set of key-value pairs for additional information
+          example:
+            orderId: '1234'
+      required:
+        - amount
+        - currency
+    RefundPaymentDto:
+      type: object
+      properties:
+        checkoutId:
+          type: string
+          description: Checkout (payment intent) id to refund
+          example: pi_1AbcDef
+        amount:
+          type: number
+          description: Amount to refund (defaults to full amount when omitted)
+          example: 500
+        reason:
+          type: string
+          description: Refund reason
+          example: requested_by_customer
+      required:
+        - checkoutId
