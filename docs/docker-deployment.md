@@ -45,13 +45,13 @@ You can then run the NestJS application locally:
 
 ```bash
 # Install dependencies
-bun install
+pnpm install
 
 # Apply schema (development)
-bun drizzle:push
+pnpm run drizzle:push
 
 # Start the application in development mode
-bun start:dev
+pnpm run start:dev
 ```
 
 ### Stopping the Development Environment

@@ -4,11 +4,12 @@
   <a href="https://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-<p align="center">一个采用最佳实践的现代 NestJS 工程骨架：Fastify + Drizzle + PostgreSQL + Bun，<br/>多租户 SaaS 核心能力已就位（租户→工作区两级、全局用户 + membership、三层权限）。</p>
+<p align="center">一个采用最佳实践的现代 NestJS 工程骨架：Fastify + Drizzle + PostgreSQL + Node/pnpm，<br/>多租户 SaaS 核心能力已就位（租户→工作区两级、全局用户 + membership、三层权限）。</p>
 
 <p align="center">
   <a href="https://github.com/nestjs/nest" target="_blank"><img src="https://img.shields.io/github/license/nestjs/nest.svg" alt="Package License" /></a>
-  <a href="https://bun.sh/" target="_blank"><img src="https://img.shields.io/badge/bun-%3E%3D%201.0.0-FFC0CB?style=flat&logo=bun&logoColor=white" alt="Bun Runtime" /></a>
+  <a href="https://nodejs.org/" target="_blank"><img src="https://img.shields.io/badge/node-%3E%3D%2022-339933?style=flat&logo=node.js&logoColor=white" alt="Node Runtime" /></a>
+  <a href="https://pnpm.io/" target="_blank"><img src="https://img.shields.io/badge/pnpm-11-F69220?style=flat&logo=pnpm&logoColor=white" alt="pnpm Package Manager" /></a>
   <a href="https://www.postgresql.org/" target="_blank"><img src="https://img.shields.io/badge/database-PostgreSQL-green.svg" alt="Database" /></a>
 </p>
 
@@ -35,7 +36,7 @@
 
 ## 技术栈
 
-- **运行时**：[Bun](https://bun.sh/)（ESM，`"type": "module"`；开发直接运行 TS 源码）
+- **运行时**：[Node LTS ≥22](https://nodejs.org/)（ESM，`"type": "module"`；开发经 `nest start --watch`、生产运行 SWC 编译产物）+ [pnpm](https://pnpm.io/)（包管理·workspace）
 - **框架**：[NestJS 12](https://nestjs.com/) + [Fastify 5](https://www.fastify.io/)
 - **架构范式**：Clean Architecture + DDD + CQRS（[`@nestjs/cqrs`](https://docs.nestjs.com/recipes/cqrs)）垂直切片，叠加分阶段 **ES + EDA**（Phase A 进程内事件派发 · Phase B event store 影子追加（缺省关）· Phase C 投影/saga 待排，路线见[事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)）
 - **数据库**：[PostgreSQL](https://www.postgresql.org/) + [Drizzle ORM](https://orm.drizzle.team/)（迁移与种子）
@@ -54,7 +55,7 @@
 
 ## 架构
 
-采用 **Clean Architecture + DDD + CQRS 的垂直切片**与**分阶段 ES + EDA**（范式定义与阶段现状见 §技术栈·架构范式及[事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)：写路径统一 Command/Handler，跨上下文经领域事件通信，当前处 Phase B 影子追加）组织业务，并以 **Bun workspaces** 拆为共享内核与参考应用两包（参考应用目录按行业惯例命名 `apps/api`，“参考实现”语义由文档承担）：
+采用 **Clean Architecture + DDD + CQRS 的垂直切片**与**分阶段 ES + EDA**（范式定义与阶段现状见 §技术栈·架构范式及[事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)：写路径统一 Command/Handler，跨上下文经领域事件通信，当前处 Phase B 影子追加）组织业务，并以 **pnpm workspace** 拆为共享内核与参考应用两包（参考应用目录按行业惯例命名 `apps/api`，“参考实现”语义由文档承担）：
 
 ```
 libs/core/src/              # @core 共享内核：领域事件/聚合基类、tenancy 契约、subscriptions/workspaces 领域层
@@ -127,13 +128,13 @@ apps/api/src/
 安装与运行的完整步骤见 [安装与运行指南](./docs/install&run.md)。常用命令：
 
 ```bash
-bun install                 # 安装依赖
+pnpm install                # 安装依赖
 cp .env.example .env        # 配置环境变量（数据库等）
-bun run db:setup            # 推送 schema 并写入种子（drizzle push + seed）
+pnpm run db:setup           # 推送 schema 并写入种子（drizzle push + seed）
 
-bun run start:dev           # 开发：Bun watch 直接运行源码
-bun run build:nest          # 构建：nest build（SWC）
-bun run start:prod          # 生产：bun dist/main.js
+pnpm run start:dev          # 开发：nest start --watch
+pnpm run build              # 构建：先 build:libs 再 nest build --builder swc
+pnpm run start:prod         # 生产：node dist/apps/api/src/main.js
 ```
 
 ## 开发工作流
@@ -141,13 +142,13 @@ bun run start:prod          # 生产：bun dist/main.js
 本项目走**本地 CI 门禁**（不依赖远程 CI），提交前一键校验：
 
 ```bash
-bun run ci          # 完整门禁：check → build → test（+ fallow architecture 佐证）
-bun run ci:quick    # 轻量门禁：check + test
+pnpm run ci          # 完整门禁：check → build → test（+ fallow architecture 佐证）
+pnpm run ci:quick    # 轻量门禁：check + test
 ```
 
-- **Git Hooks**：Husky `pre-commit`（biome `lint:fix`）、`commit-msg`（commitlint）、`pre-push`（跑 `bun run ci`）。
+- **Git Hooks**：Husky `pre-commit`（biome `lint:fix`）、`commit-msg`（commitlint）、`pre-push`（跑 `pnpm run ci`）。
 - **提交规范**：Conventional Commits，见 [约定文档](./COMMIT_CONVENTION.md)。
-- **代码智能分析**：`fallow`（经 `bunx fallow`）作为 L2 佐证工具（结果须人工二判），详见 [工具标准](./docs/specs/tooling-standards.md)。
+- **代码智能分析**：`fallow`（经 `pnpm dlx fallow`）作为 L2 佐证工具（结果须人工二判），详见 [工具标准](./docs/specs/tooling-standards.md)。
 
 ## 联系方式
 

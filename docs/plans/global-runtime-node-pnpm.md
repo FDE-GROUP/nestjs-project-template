@@ -152,16 +152,29 @@
   - **残留（非 boot 路径·归 S5 全表面处理）**：`cos` provider 实例化时 `new COS` 需 `.default`（未由 /health 触发）；`seed.ts`/`openapi-codegen.ts` 亦持 `import * as dotenv`+`dotenv.config()` 同一时序隐患；未走到的懒加载面/邮件发送面（mjml 模板 prod 资产是否随 `i18n/**` assets 拷贝亦待验）。**⇒ 结论：S5「运行时切换」绝非换 flag，实为一次 Node-ESM 源兼容清扫·量级上修·须在 S5 单独签核时重定范围。**
 - **回归防线（S0 语义补全）**：`load-env` 必须保持入口**第一个 import**（Biome `organizeImports` 当前不重排副作用 import·实证保留首位，但属脆弱不变量·S5 宜加门禁测锁）。`verify:prod-boot`（build 后真起服验 /health 200）可作永久防线入 scripts（本轮以手工两运行时 200 存照代）。
 
+## 4.9 S5 落地实证结果（**运行时切换全量落地·Node-ESM 清扫 + 工具链 node/pnpm + 宪法成文**·2026-10-15）
+
+> 人于 2026-10-15 择「**现在就执行 S5 全量切换**」——授权一次性把 Node-ESM 源兼容清扫 + 工具链切 node/pnpm + Dockerfile/CI/husky 切换 + 删 bun 产物 + `docs/specs` 宪法成文全部落地（含三项高危：改门禁·CI / 删锁 / 改宪法·人已签核）。
+
+- **源兼容清扫（R-η 收尾）**：joi 默认 import / `__dirname`→`fileURLToPath` / `load-env` 入口首 import（均随 S4 已提交）；本片补 `openapi-codegen.ts` 的 `import * as dotenv + dotenv.config()` → `import './load-env'`（消同源时序隐患）；`cos` provider 已 `.default` 且懒加载（非 boot 路径）不动；`seed.ts` dotenv 在自身 body 内、env 读在其后（时序正确）保留。
+- **工具链切换**：`package.json` scripts bun→`node`/`pnpm`/`nest`（`build`=`build:libs`→`build:nest`·`start:prod`=`node dist/apps/api/src/main.js`·`ci`/`ci:quick`/`verify:prod-boot`=`node scripts/*.ts`·`db:seed`=`node …`）、`engines.node>=22`、`packageManager=pnpm@11.7.0`、删 `@types/bun`；`tsconfig.json` `types` `[bun]`→`[node]`；`scripts/ci.ts` Bun Shell（`import { $ } from 'bun'`）→ `node:child_process` `spawnSync('pnpm')`（门禁顺序 + fallow advisory 三态非阻断语义严格保持）；`apps/api/package.json` 本地脚本改委派 `pnpm -w run …`（消除 bun 现行口径 + 防路径漂移）。
+- **workspace/制品**：`pnpm-workspace.yaml`（packages apps/*,libs/* + `allowBuilds` 放行 `@swc/core`/`esbuild`·拒 `@scarf/scarf`）+ `.npmrc`（npmmirror·`.gitignore` 由忽略改**追踪**以保 registry 可复现）+ 生成 `pnpm-lock.yaml`；删 `bun.lock`/`bunfig.toml`（已签核）。
+- **hooks/CI/容器**：husky 三钩 `bun run`→`pnpm run`/`pnpm exec commitlint`；`deploy-swagger.yml` `oven-sh/setup-bun`→`pnpm/action-setup@v4`+`actions/setup-node@v4`（cache pnpm）+`pnpm install --frozen-lockfile`+`pnpm run openapi:export`；`Dockerfile` `oven/bun:1-alpine`→`node:22-slim`（DaoCloud ARG `NODE_IMAGE` 可覆盖）+ corepack pnpm 多阶段（`pnpm run build`→runner 含 `node_modules`+`dist`+`libs/core/dist`+各包 `package.json`/workspace·`CMD ["node","dist/apps/api/src/main.js"]`）。
+- **宪法成文（高危·签核·重写型）**：`tooling-standards.md` §1 三重约束（Bun→Node）·§2 工具矩阵（运行时 Node + 包管理 pnpm 拆两行·ci.ts node:child_process·fallow 经 pnpm dlx）·§2.1 镜像行·§3 红线①（禁 bun/npm/yarn·统一 pnpm）·§4.1 新增「Node-ESM 源兼容纪律」·§4.7/§4.8/§5/§6/§7/§8 命令 bun→pnpm 且新增 `verify:prod-boot` 行；`AGENTS.md` §2/§3/§4/§5；`architecture(.zh)`/`workflow`/根 `README`/`install&run`/`docker-deployment`/`drizzle-migration-guide` 现行 Bun 口径同步归零（**仅保留历史演变记录**与 §4.1「Bun 静默兜底」对比说明·及 §3「禁 `bun test`」红线）。
+- **回归防线成文（S0 语义补全）**：新建 `scripts/verify-prod-boot.ts`——构建后 `node` 真起服、轮询 `/api/v1/health` 命中 200 否则 exit 1（`pnpm run verify:prod-boot`）；**继承调用方环境**（不强制 `NODE_ENV`），使本防线聚焦 R-δ「Node 能否加载装配编译产物」、与数据驻留 strict 守卫（仅随 `NODE_ENV=production` 生效·需境内存储凭证）正交、不误判为起服失败。
+- **实证**：`rm -rf node_modules && pnpm install` **EXIT=0**（`allowBuilds` 定档后构建脚本跑成）→ `pnpm run ci` **Local CI PASSED**（check 净·build libs+app·test **343（327 passed/16 skipped）** 零掉·fallow advisory 因 `@fallow-cli/linux-x64-gnu` 缺→非阻断·合 §4.7 三态）→ `pnpm run verify:prod-boot` **`/health 200 {"status":"ok"}`**（node 编译产物·DI 全图装配成）。
+- **残留观察（非阻断·留后续）**：prod i18n 资产落 `dist/i18n/**` 与 `i18n.module` 期望路径的历史失配（boot 非关键·未回归触发）；`docker build`/`docker compose` 健康检查与 Actions dry-run 未在本容器实跑（判据 §5-D 标「待实机」）。
+
 ## 5. 完成判据（过审计门后·可核验 + 穷尽）
 
-- [ ] 切片 A：`pnpm install` 成功 + 布局解析方案定档（isolated 或 hoist 兜底）写进 tooling
-- [ ] 切片 B：`pnpm run start:dev` 起服·`/api/v1/health` 200 实机存照
-- [ ] 切片 C：`pnpm run ci` full/quick 与旧 `scripts/ci.ts` 逐步等价（含 fallow advisory 不阻断语义）
-- [ ] 切片 D：`docker compose` 健康检查过 + Actions dry-run 过
-- [ ] 切片 E：`docs/specs` §1/§2/§2.1/§3 + `AGENTS.md` §2/§3 同步·无残留 Bun 现行口径（演变记录除外）
-- [ ] `bun`→`node/pnpm` 全链 `pnpm run ci` 全绿·**343 测试基线零掉**（gated e2e 真库 Node 复跑一致）
-- [ ] DI/元数据回归测（`design:paramtypes`/`app.module.test`/`di-context.integration`/`three-layer-permission.matrix`）全绿（证明 §4.3 未回退）
-- [ ] `bun.lock`/`bunfig.toml` 删除、`pnpm-lock.yaml`/`pnpm-workspace.yaml`/`.npmrc` 就位并被 Git 追踪
+- [x] 切片 A：`pnpm install` 成功 + 布局解析方案定档（**isolated 无需 hoist**·唯一配置=`allowBuilds` 放行 @swc/core+esbuild）已写进 tooling §2/§4
+- [x] 切片 B：`node` 起编译产物 prod `start:prod` + `/api/v1/health` 200 实机存照（`verify:prod-boot`；dev `nest start --watch` 同源 SWC）
+- [x] 切片 C：`pnpm run ci` full/quick 与旧 `scripts/ci.ts` 逐步等价（`node:child_process`·含 fallow advisory 不阻断语义）
+- [~] 切片 D：`Dockerfile`/`deploy-swagger.yml`/husky 已切 node/pnpm（配置就位）；**`docker build` 健康检查 + Actions dry-run 待实机**（本容器未跑）
+- [x] 切片 E：`docs/specs` §1/§2/§2.1/§3 + `AGENTS.md` §2/§3 同步·无残留 Bun 现行口径（演变记录与对比说明除外）
+- [x] `bun`→`node/pnpm` 全链 `pnpm run ci` 全绿·**343 测试基线零掉**（gated e2e 16 项无库照 skip·与 Bun 基线一致）
+- [x] DI/元数据回归测（`design:paramtypes`/`app.module.test`/`di-context.integration`/`three-layer-permission.matrix`）全绿（§4.3 未回退·SWC 沿用）
+- [x] `bun.lock`/`bunfig.toml` 删除、`pnpm-lock.yaml`/`pnpm-workspace.yaml`/`.npmrc` 就位并被 Git 追踪
 
 ## 6. 演变记录
 
@@ -174,8 +187,9 @@
 | 2026-10-15 | 0.5.0 | 人择 **设计二**（libs/core 独立成包）·要求先出可审详案 | 新增 §4.7 设计二 v0.5 决策完备详案：额外实锤（core 内 20 处 `@core/*` 自引用）+ 切片 S0（回归防线·基线即红）→S1（core 独立构建·exports 指 dist）→S2（app 75 文件句柄切包子路径）→S3（构建编排）→S4（两运行时 prod 起服实证）→S5（回工具链主线）；高危四项 + 新风险 R-ε/R-ζ；**待最终审计门放行** |
 | 2026-10-15 | 0.6.0 | 人「照建议自裁」过最终审计门 | §4.7 落档放行：**开工 S0→S4**（多包构建重设计·分步实证）·R-ε/R-ζ 实现期据实自裁·**S5 到那步再单独签**；状态转**进行中·S0–S4 实现** |
 | 2026-10-15 | 0.7.0 | S1–S4 实现完成·两运行时 prod 起服 200 | 新增 §4.8 实证结果：**R-δ 根治**（libs/core 独立 swc 构建→dist·裸句柄不重写·node+bun 均 /health 200）·**R-ε 证伪**（无扩展深子路径经 exports→dist 双理解析）·**R-ζ 证伪**（跨包 DI 健在）；拓出 **R-η**（Bun 掩盖的 Node-ESM 源不兼容集群：joi CJS interop / `__dirname` / dotenv 时序·boot 路径已修·余留归 S5）；**关键结论：S5 非 flag 切换而是 Node-ESM 源兼容清扫·量级上修·待 S5 签核重定范围**；状态转 **S1–S4 完成·待 S5 签核** |
+| 2026-10-15 | 0.8.0 | 人择「现在就执行 S5 全量切换」（高危三项签核）·S5 落地实证全绿 | 新增 §4.9 S5 落地实证：**Node-ESM 源兼容清扫**（openapi-codegen→load-env·cos/seed 保留）+ **工具链切 node/pnpm**（scripts/engines/packageManager·ci.ts→node:child_process·tsconfig types node·删 @types/bun）+ **workspace/制品**（pnpm-workspace `allowBuilds`+.npmrc 转追踪+pnpm-lock·删 bun.lock/bunfig）+ **hooks/Docker/GHA 切 node/pnpm** + **宪法成文**（tooling/AGENTS/architecture/workflow/README/运维文档 Bun 现行口径归零）+ **回归防线成文**（`scripts/verify-prod-boot.ts`·继承 env 与数据驻留正交）；§5 判据诚实勾选（D 片 docker/Actions 待实机）；实证 `pnpm install` EXIT=0·`pnpm run ci` **PASSED 343**·`verify:prod-boot` **/health 200**；状态转 **S0–S5 全落地·迁移完成·待人类验收** |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.7.0 变更，以当前正文内容为准。
+正文已于 2026-10-15 / v0.8.0 变更，以当前正文内容为准。

@@ -70,7 +70,7 @@ Domain 纯净性由一个测试锁定：扫描 `src/modules/users/domain/**` 是
 
 ## 技术栈
 
-- **运行时**：Bun（ESM，`"type": "module"`）
+- **运行时**：Node LTS ≥22（ESM，`"type": "module"`）+ pnpm（包管理）
 - **框架**：NestJS 12 + Fastify
 - **架构**：Clean Architecture + DDD + CQRS（`@nestjs/cqrs`）
 - **数据库**：PostgreSQL + Drizzle ORM（显式迁移）
@@ -86,6 +86,6 @@ Controller 中的 DTO 必须**按值导入**（而非 `import type`），SWC 才
 
 ## 部署
 
-- **开发**：Bun + Docker PostgreSQL（`docker-compose.dev.yml`）
+- **开发**：Node + pnpm + Docker PostgreSQL（`docker-compose.dev.yml`）
 - **生产**：Docker Compose（应用 + PostgreSQL）
 - **文档**：Swagger/OpenAPI 自动生成（`/docs`）

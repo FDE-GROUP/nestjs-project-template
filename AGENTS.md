@@ -16,29 +16,30 @@
 
 ## 2. 铁律（不得违反）
 - **无已审方案不写码**：审计门**强制**（即便单人）；未过审计不得实现。
-- **ESM + Bun + 装饰器元数据** 三重约束：Controller 的 DTO（`@Body/@Param/@Query`）与构造函数注入的类**必须值导入**（勿 `import type`），否则 `design:paramtypes` 退化、DI/校验运行时静默失败（见 tooling §4.3）。
-- **工具红线**（tooling §3）：只用 `bun`/`bunx`（禁 npm/pnpm/yarn）；**Biome**（禁 ESLint/Prettier）；**Vitest**（禁 jest/`bun test`）；**Drizzle + PostgreSQL**（禁 Prisma/TypeORM）；生产只走 `generate`+`migrate`，`push` 仅限 dev。
+- **ESM + Node + 装饰器元数据** 三重约束：Controller 的 DTO（`@Body/@Param/@Query`）与构造函数注入的类**必须值导入**（勿 `import type`），否则 `design:paramtypes` 退化、DI/校验运行时静默失败（见 tooling §4.3）。Node-ESM 不兼容需人工防（CJS 默认导出、`__dirname`、dotenv 装载时序），见 tooling §4.1 R-η。
+- **工具红线**（tooling §3）：只用 `pnpm`/`pnpm dlx`（禁 bun/npm/yarn）；**Biome**（禁 ESLint/Prettier）；**Vitest**（禁 jest/`bun test`）；**Drizzle + PostgreSQL**（禁 Prisma/TypeORM）；生产只走 `generate`+`migrate`，`push` 仅限 dev。
 - **fallow 等静态分析结论必须二次人工核验**（大量假阳性源于反射/框架魔法，见 tooling §4.7）。
 - **高危动作须人签核**（workflow §3）：schema 迁移 / 删码删依赖 / 改门禁·CI·husky·commitlint·Biome / 改 `docs/specs` 宪法与公共契约 / **改 `.env`·密钥**——Agent 不得自行执行，**不得写入真实凭证**。
 
 ## 3. 常用命令
 ```bash
-bun install                # 依赖（registry 见 §5）
-bun run start:dev          # 开发（Bun watch 直跑源码，端口 7009，前缀 /api/v1）
-bun run build:nest         # 构建（nest build --builder swc）
-bun run test               # 测试（Vitest）；check = Biome（lint+format）
-bun run ci                 # L1 门禁：check → build → test（+ fallow 佐证）
-bun run ci:quick           # 轻量：check + test
-bun run drizzle:generate / drizzle:migrate / db:setup   # 迁移/数据
+pnpm install               # 依赖（registry 见 §6）
+pnpm run start:dev         # 开发（nest start --watch，端口 7009，前缀 /api/v1）
+pnpm run build             # 构建（先 build:libs 再 build:nest --builder swc）
+pnpm run test              # 测试（Vitest）；check = Biome（lint+format）
+pnpm run ci                # L1 门禁：check → build → test（+ fallow 佐证）
+pnpm run ci:quick          # 轻量：check + test
+pnpm run verify:prod-boot  # prod 回归防线：构建后真起服验 /health 200
+pnpm run drizzle:generate / drizzle:migrate / db:setup   # 迁移/数据
 ```
 
 ## 4. 门禁与提交
-- **L1 = 本地 CI**（`bun run ci`，不走远程 CI）；husky：`pre-commit`→`lint:fix`、`commit-msg`→commitlint、`pre-push`→`ci`。禁 `--no-verify`。
+- **L1 = 本地 CI**（`pnpm run ci`，不走远程 CI）；husky：`pre-commit`→`lint:fix`、`commit-msg`→commitlint、`pre-push`→`ci`。禁 `--no-verify`。
 - **提交**：Conventional Commits + **内联身份**（不改全局）——
   `git -c user.name='FDE Team' -c user.email='fde.team@example.com' commit ...`；header/body 每行 ≤100。
 
 ## 5. 目录地图
-Bun workspaces 双包：`libs/core/src`（@core 共享内核：`shared-kernel` + `tenancy` 契约 + `modules/{subscriptions,workspaces}` 领域层）与 `apps/api/src`（参考应用·目录名取行业惯例：`modules/<上下文>/{domain,application,infrastructure,api}`（users/auth/tenants/workspaces/payment/storage/subscriptions/posts）+ `tenancy/` 边界层 + `{common,config,database,i18n,logger,mailer}`）；文档四区 `docs/{specs,plans,research,recycle}`（`recycle/` 只进不出）。
+pnpm workspace 双包：`libs/core/src`（@core 共享内核：`shared-kernel` + `tenancy` 契约 + `modules/{subscriptions,workspaces}` 领域层）与 `apps/api/src`（参考应用·目录名取行业惯例：`modules/<上下文>/{domain,application,infrastructure,api}`（users/auth/tenants/workspaces/payment/storage/subscriptions/posts）+ `tenancy/` 边界层 + `{common,config,database,i18n,logger,mailer}`）；文档四区 `docs/{specs,plans,research,recycle}`（`recycle/` 只进不出）。
 
 ## 6. 地域与语言
 面向**中国大陆**用户：依赖镜像 `npmmirror` / Docker 国内源；第三方选型见 [global-cn-adaptation](./docs/plans/global-cn-adaptation.md)；**文档 / 注释中文优先**。

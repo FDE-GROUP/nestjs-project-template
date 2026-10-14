@@ -7,20 +7,20 @@ This document provides comprehensive guidance for using Drizzle ORM migrations a
 ### First Time Setup
 ```bash
 # Setup everything: apply schema and seed data (development)
-bun run db:setup
+pnpm run db:setup
 ```
 
 ### Development Workflow
 ```bash
 # 1. Make changes to src/database/schema.ts
 # 2. Generate SQL migration files from schema diff
-bun run drizzle:generate
+pnpm run drizzle:generate
 
 # 3. Apply migrations to the database
-bun run drizzle:migrate
+pnpm run drizzle:migrate
 
 # 4. Seed database with sample data
-bun run db:seed
+pnpm run db:seed
 ```
 
 ## Available Commands
@@ -28,46 +28,46 @@ bun run db:seed
 ### Migration Commands
 | Command | Description | Environment |
 |---------|-------------|-------------|
-| `bun run drizzle:generate` | Generate SQL migration files from schema changes | Development |
-| `bun run drizzle:migrate` | Apply generated migrations to the database | Dev / Production |
-| `bun run drizzle:push` | Push schema directly to database (no migration files, development only) | Development |
+| `pnpm run drizzle:generate` | Generate SQL migration files from schema changes | Development |
+| `pnpm run drizzle:migrate` | Apply generated migrations to the database | Dev / Production |
+| `pnpm run drizzle:push` | Push schema directly to database (no migration files, development only) | Development |
 
 ### Database Management
 | Command | Description |
 |---------|-------------|
-| `bun run db:seed` | Run database seeding |
-| `bun run db:reset` | Reset schema (force push) and reseed |
-| `bun run db:setup` | Full setup (push schema + seed) |
+| `pnpm run db:seed` | Run database seeding |
+| `pnpm run db:reset` | Reset schema (force push) and reseed |
+| `pnpm run db:setup` | Full setup (push schema + seed) |
 
 ### Drizzle Tools
 | Command | Description |
 |---------|-------------|
-| `bun run drizzle:studio` | Open Drizzle Studio (browse/edit data) |
+| `pnpm run drizzle:studio` | Open Drizzle Studio (browse/edit data) |
 
 ## 🌱 Seeding Options
 
 ### Basic Usage
 ```bash
 # Standard seeding
-bun run db:seed
+pnpm run db:seed
 
 # Only essential data (no test posts)
-bun run db:seed -- --no-test-data
+pnpm run db:seed -- --no-test-data
 
 # Custom number of users and posts
-bun run db:seed -- --users 5 --posts 10
+pnpm run db:seed -- --users 5 --posts 10
 ```
 
 ### Environment Variables
 ```bash
 # Custom admin password
-ADMIN_PASSWORD=your_secure_password bun run db:seed
+ADMIN_PASSWORD=your_secure_password pnpm run db:seed
 
 # Custom user password
-USER_PASSWORD=user_secure_password bun run db:seed
+USER_PASSWORD=user_secure_password pnpm run db:seed
 
 # Clean database before seeding
-SEED_CLEANUP=true bun run db:seed
+SEED_CLEANUP=true pnpm run db:seed
 ```
 
 ## PostgreSQL Specific Notes
@@ -94,11 +94,11 @@ drizzle/                   # Generated SQL migration files (created by drizzle:g
 
 ```bash
 # Generate migration files from schema (commit these to VCS)
-bun run drizzle:generate
+pnpm run drizzle:generate
 
 # Apply migrations against the production database
-NODE_ENV=production bun run drizzle:migrate
+NODE_ENV=production pnpm run drizzle:migrate
 
 # Seed essential data only
-bun run db:seed -- --no-test-data
+pnpm run db:seed -- --no-test-data
 ```

@@ -73,7 +73,7 @@ DDD/ES-ified later without disturbing the `users` pattern.
 
 ## Tech Stack
 
-- **Runtime**: Bun (ESM, `"type": "module"`)
+- **Runtime**: Node LTS ≥22 (ESM, `"type": "module"`) + pnpm (package manager)
 - **Framework**: NestJS 12 + Fastify
 - **Architecture**: Clean Architecture + DDD + CQRS (`@nestjs/cqrs`)
 - **Database**: PostgreSQL + Drizzle ORM (explicit migrations)
@@ -90,7 +90,7 @@ DTOs are imported **by value** in controllers (not `import type`) so SWC preserv
 
 ## Deployment
 
-- **Development**: Bun + Docker PostgreSQL (`docker-compose.dev.yml`)
+- **Development**: Node + pnpm + Docker PostgreSQL (`docker-compose.dev.yml`)
 - **Production**: Docker Compose (Application + PostgreSQL)
 - **Docs**: Swagger/OpenAPI auto-generation (`/docs`)
 

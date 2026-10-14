@@ -9,14 +9,15 @@
 
 - **单一职责、单一选型**：每类能力（运行时、格式化、测试、迁移……）只允许一个工具，禁止引入同类替代品混用。
 - **显式优于隐式**：工具行为（尤其是迁移、格式化、提交校验）必须可复现、可审阅，禁止依赖隐式默认。
-- **运行时约束优先**：本项目为 **ESM + Bun + 装饰器元数据** 三重约束，任何会擦除运行时类引用或改写导入形态的工具都必须配置豁免（见 §4、§6）。
+- **运行时约束优先**：本项目为 **ESM + Node + 装饰器元数据** 三重约束，任何会擦除运行时类引用或改写导入形态的工具都必须配置豁免（见 §4、§6）。
 - **版本以 `package.json` 为准**：本文件只记录选型与约束，精确版本以 lockfile 为唯一事实来源。
 
 ## 2. 工具矩阵
 
 | 能力域 | 选型工具 | 版本基线 | 定位 | 强制/推荐 |
 |--------|----------|----------|------|-----------|
-| 运行时 + 包管理 | **Bun** | ≥1.0（当前 1.3.14） | 执行 TS 源码、安装依赖、跑脚本 | 强制（唯一） |
+| 运行时 | **Node（LTS）** | ≥22（当前 22.23） | 执行编译产物、跑脚本（TS 源码经 SWC 编译后运行） | 强制（唯一） |
+| 包管理 | **pnpm** | 11.7.0（`packageManager` 锁定） | 安装依赖、workspace 链接、跑脚本 | 强制（唯一） |
 | 语言/类型系统 | **TypeScript** | ^5.9.3 | 类型检查；`emitDecoratorMetadata` 必需 | 强制 |
 | 应用框架 | **NestJS** | ^12.1.3 | 模块化 DI、装饰器 | 强制 |
 | HTTP 适配 | **Fastify**（platform-fastify） | ^5.12.5 | 替代 Express 的平台层 | 强制 |
@@ -33,8 +34,8 @@
 | 覆盖率 | **@vitest/coverage-v8** | ^5.0.4 | v8 provider | 强制 |
 | HTTP 断言 | **supertest** | ^7.3.1 | 端到端断言（按需） | 推荐 |
 | Lint + 格式化 | **Biome** | ^2.5.15 | 单工具替代 ESLint+Prettier（文件级） | 强制（唯一） |
-| 代码库智能/静态分析 | **fallow** | 3.33.1 | 前置分析器（非判决）：跨文件仓库图给出未用代码/重复/循环/复杂度/架构边界的**候选线索**；结论须二次人工核验 | 推荐（经 `bunx`） |
-| 本地 CI 编排 | **scripts/ci.ts**（Bun Shell） | — | 一键全量门禁：`check`→`build:nest`→`test` + fallow 佐证；pre-push 自动触发，**替代远程 CI** | 强制 |
+| 代码库智能/静态分析 | **fallow** | 3.33.1 | 前置分析器（非判决）：跨文件仓库图给出未用代码/重复/循环/复杂度/架构边界的**候选线索**；结论须二次人工核验 | 推荐（经 `pnpm dlx`） |
+| 本地 CI 编排 | **scripts/ci.ts**（node:child_process） | — | 一键全量门禁：`check`→`build`→`test` + fallow 佐证；pre-push 自动触发，**替代远程 CI** | 强制 |
 | Git Hooks | **husky** | ^9.1.7 | pre-commit → `lint:fix`；pre-push → `ci` | 强制 |
 | 提交校验 | **commitlint** | ^21.2.3 | Conventional Commits | 强制 |
 | 日志 | **pino**（+ pino-pretty） | ^10.4.0 | 结构化日志；dev pino-pretty、prod pino/file 落文件（Datadog 已移除） | 强制 |
@@ -53,7 +54,7 @@
 |--------|------|------|------------|
 | **支付通道** | Stripe（海外）+ 微信支付 + 支付宝（大陆） | **部分落地**：统一 `PaymentProvider` 端口 + Stripe 收敛已落地（P1，`src/modules/payment`）；微信/支付宝 **劣后暂缓**（D9，`PaymentProviderId` 接口位 `alipay`/`wechat_pay` 保留、实现待资质择机开发） | 与存储同构，`PaymentModule.register()` 依配置装配、未配即降级；周期扣款随资质（FR-1/FR-2 · D1 · D9） |
 | **登录渠道** | Google/GitHub（保留）+ 微信 / 企业微信 / 钉钉 / 飞书 | 海外现行；**飞书已落地（A1，`genericOAuth`）**；微信/钉钉/企微 **仅留接口·劣后暂缓**（D8） | Better Auth `genericOAuth`；方案 C 邮箱为体、社交为用（`disableSignUp:true`）；**不做**手机验证码登录（FR-3/D2/D3） |
-| **依赖镜像** | npm→npmmirror（`bunfig.toml`/`.npmrc`）+ Docker 国内基础镜像 | **已落地**（M1，commit `9e27d63`） | 纯配置；Dockerfile 基础镜像经 ARG 可覆盖（FR-4/D4） |
+| **依赖镜像** | npm→npmmirror（`.npmrc` + pnpm registry）+ Docker 国内基础镜像 | **已落地**（M1，commit `9e27d63`） | 纯配置；Dockerfile 基础镜像经 ARG 可覆盖（FR-4/D4） |
 | **默认语言** | i18n 默认 / fallback 置 `zh`（保留 en/ja）；`nestjs-i18n@10` | **已落地**（L1 分阶 A+B：全局单源 `AppI18nModule`、**邮件正文/主题 + 校验消息均按 locale 本地化**） | 文档中文为准（FR-5/D4）；locale 取 `accept-language`、回退 zh；校验保形由 `I18nValidationExceptionFilter`+`responseBodyFormatter`；无生成类型时 `translate` key 为 `never`、测试处断言松类型 |
 | **日志后端** | pino 默认落文件；**移除** `pino-datadog-transport` | **已落地**（G1，commit `9e27d63`） | 本期**不引**集中监控（SLS/Loki 留后）（FR-6/D6） |
 | **对象存储默认** | 默认阿里云 OSS，COS/S3 经 env 切换 | provider 现行；**默认已切 OSS**（S1，境内 region 默认） | 已有 OSS/COS/S3 provider（D5） |
@@ -61,7 +62,7 @@
 
 ## 3. 选型红线（禁止项）
 
-- **禁止** 使用 npm / pnpm / yarn 安装依赖 —— 统一 `bun` / `bunx`。
+- **禁止** 使用 bun / npm / yarn 安装依赖 —— 统一 `pnpm` / `pnpm dlx`（corepack 按 `packageManager` 锁定版本）。
 - **禁止** 引入 ESLint / Prettier 及任一 `eslint-*`/`prettier` 插件 —— 已由 Biome 全量承担。
 - **禁止** 使用 `jest` / `mocha` / `bun test`（`bun:test`）—— 测试统一 Vitest。
 - **禁止** Prisma / TypeORM / MongoDB 等第二套 ORM/DB —— 统一 Drizzle + PostgreSQL。
@@ -69,14 +70,15 @@
 - **禁止** 在依赖注入构造函数里对被注入类使用 `import type`（见 §4.3）。
 - **禁止** 未经二次人工核验即按 fallow（或任何前置分析器）的结论删除代码/依赖或重构 —— 其输出为候选线索而非判决（见 §4.7）。
 - **禁止** 用 `--no-verify` 绕过 husky/commitlint；**禁止** 修改全局 git 身份（提交用内联身份，见 §6）。
-- **禁止** 依赖远程 CI 做质量门禁 —— 本仓库 GitHub Actions 仅部署 Swagger Pages，不跑测试/构建；门禁一律在本地经 `bun run ci`（pre-push 强制，见 §4.8）。
+- **禁止** 依赖远程 CI 做质量门禁 —— 本仓库 GitHub Actions 仅部署 Swagger Pages，不跑测试/构建；门禁一律在本地经 `pnpm run ci`（pre-push 强制，见 §4.8）。
 
 ## 4. 使用规范
 
-### 4.1 运行时与脚本（Bun）
-- 本地运行只通过 `package.json` scripts，不裸调 `bun src/main.ts`（会绕过 i18n/模块加载顺序约定）。
+### 4.1 运行时与脚本（Node + pnpm）
+- 本地运行只通过 `package.json` scripts（经 `pnpm run …`），不裸调 `node dist/…/main.js` 之外的源码入口（会绕过 i18n/模块加载顺序约定）。
 - 服务端口 **7009**，全局前缀 `/api`，URI 版本 `v1`（如 `POST /api/v1/workspaces`）。
-- 常用：`bun install`、`bun run start`、`bun run start:dev`（--watch）、`bun run build:nest`。
+- 常用：`pnpm install`、`pnpm run start`、`pnpm run start:dev`（`nest start --watch`）、`pnpm run build`（先 `build:libs` 再 `build:nest`）。
+- **Node-ESM 源兼容纪律**（运行时修宪 R-η）：Node 不会像 Bun 静默兜底多类 ESM 不兼容——CJS 默认导出（如 `joi` 需默认 import 而非 `import * as`）、`__dirname`（ESM 无，用 `fileURLToPath(import.meta.url)` 等价推导）、dotenv 装载时序（`main.ts` 入口**首个 import** 必为 `./load-env`，令 env 先于 `config/envs/*` 顶层求值注入）。
 
 ### 4.2 TypeScript / 构建
 - `target`/`module` = `ES2022`，`moduleResolution` = `node`。
@@ -90,45 +92,45 @@
 - 上述两类文件依赖 §5 的 Biome 豁免，防止 auto-fix 回滚。
 
 ### 4.4 数据库（Drizzle）
-- 迁移流程：改 `src/database/schema` → `bun run drizzle:generate` → 审 SQL → `bun run drizzle:migrate`。
-- 本地快速同步可用 `bun run drizzle:push`（无 TTY 环境需 `--force`），**仅限 dev**。
+- 迁移流程：改 `src/database/schema` → `pnpm run drizzle:generate` → 审 SQL → `pnpm run drizzle:migrate`。
+- 本地快速同步可用 `pnpm run drizzle:push`（无 TTY 环境需 `--force`），**仅限 dev**。
 - `db:seed` / `db:reset` / `db:setup` 为数据准备入口；Postgres 由 `docker compose` 供给。
 
 ### 4.5 测试（Vitest）
-- 命令：`bun run test`（run）、`test:watch`、`test:cov`。
+- 命令：`pnpm run test`（run）、`test:watch`、`test:cov`。
 - 用例放被测模块同级 `*.test.ts`；`include` = `src/**/*.test.ts`。
 - 遵循既有规范：动态 `import` 必须 `await`；`env` 段提供最小必需环境变量；`testTimeout/hookTimeout` = 20s（全量 DI 图冷启动慢）。
 - DI/元数据相关改动须保留 `Reflect.getMetadata('design:paramtypes')` 回归测试与全图 `app.module.test.ts`。
 
 ### 4.6 API 文档
-- 运行 `bun run openapi:export`（需服务在 7009 在线）导出 `openapi/openapi.yaml`。
+- 运行 `pnpm run openapi:export`（DB-free codegen，无需起服务）导出 `openapi/openapi.yaml`。
 
 ### 4.7 代码库智能（fallow）
 - **定位（关键）**：fallow 是**前置分析 / 候选生成工具**——它输出的是**待核验的线索，不是可直接执行的判决**。任何结论（尤以 dead-code、未用依赖、边界告警）在据此**动手**（删代码、删依赖、重构）之前，**必须进行二次人工核验**。
 - **为何必须复核**：fallow 基于静态仓库图，无法感知**运行时反射与框架魔法**调用，故必然存在假阳性与漏判。
 - **二次核验（强制流程）**：
-  1. `bunx fallow dead-code --type-aware` 收敛候选；
-  2. `bunx fallow dead-code --trace <入口>:<符号>` 追踪引用链；
+  1. `pnpm dlx fallow dead-code --type-aware` 收敛候选；
+  2. `pnpm dlx fallow dead-code --trace <入口>:<符号>` 追踪引用链；
   3. 全仓 `grep`（含非 `.ts`、配置、注释、动态 import）反查；
   4. 处置分级：**真实问题**→修复；**假阳性**→加 `// fallow-ignore-next-line <issue-type>` 抑制并留因由；**存疑**→保留并记录。
-  5. 删依赖/删码后跑 `check` + `test` + `build:nest` + 启动冒烟回归。
+  5. 删依赖/删码后跑 `check` + `test` + `build` + 启动冒烟回归（必要时 `verify:prod-boot`）。
 - **本项目已实证的假阳性类型（勿据此删除）**：
   - `@nestjs/cqrs` 总线反射调用的 `@CommandHandler/@QueryHandler` 的 `execute`、`@EventsHandler` 的 `handle`；
   - 经实例/`this` 调用但静态图漏判的公共方法（实证：`User.toPublicProjection` 实际被 handler 调用却被报为未用）；
   - 注释内出现的 `import` 关键字（fallow 正确判为未引用，但人工 grep 需排除注释造成的反向误判）；
   - DI 容器注入、装饰器元数据、动态 `require` 等运行时依赖。
-- **调用方式**：统一经 `bunx fallow ...`（遵守 §3「禁 npm/pnpm/yarn」红线），不直接用 `npx`。
-- **入口命令**：`bunx fallow`（健康/重复/未用一次跑完）、`bunx fallow audit`（仅卡本次变更引入的问题，PR 门禁首选）、`bunx fallow dead-code`、`bunx fallow dupes`、`bunx fallow health --score`。
-- **架构边界**：`bunx fallow architecture` / `fallow guard` 提供 layered/hexagonal/feature-sliced 预设，作为 §4（architecture.md）分层依赖规则的**静态佐证**（同样需人工确认，非唯一门禁），与域纯度测试互补。
+- **调用方式**：统一经 `pnpm dlx fallow ...`（遵守 §3「禁 bun/npm/yarn」红线），不直接用 `npx`。
+- **入口命令**：`pnpm dlx fallow`（健康/重复/未用一次跑完）、`pnpm dlx fallow audit`（仅卡本次变更引入的问题，PR 门禁首选）、`pnpm dlx fallow dead-code`、`pnpm dlx fallow dupes`、`pnpm dlx fallow health --score`。
+- **架构边界**：`pnpm dlx fallow architecture` / `fallow guard` 提供 layered/hexagonal/feature-sliced 预设，作为 §4（architecture.md）分层依赖规则的**静态佐证**（同样需人工确认，非唯一门禁），与域纯度测试互补。
 - **版本一致性**：当前仅全局安装（`3.33.1`，未入 `package.json`）。若需 CI/本地同版本，应固定为 devDependency 并在 `package.json` 写精确版本；在此之前，本工具为**推荐**而非强制门禁。
 - **退出码约定**：`0` 干净/仅告警，`1` 发现新增问题（正常门禁结果），`2` 输入或运行错误——脚本化时不得用 `|| true` 掩盖 `2`。
 
 ### 4.8 本地 CI（Local CI）
 - **定位**：本项目**不走远程 CI 做门禁**（GitHub Actions 仅部署 Swagger Pages）。质量门禁在**本地**由 `scripts/ci.ts` 一键执行，等价替代远程 CI。
-- **命令**：`bun run ci`（full，默认）—— 依序跑 `check` → `build:nest` → `test` 三道**硬门禁**（快速失败），随后 `bunx fallow architecture` 作**佐证**（非阻断）；`bun run ci:quick` 仅跑 `check` + `test`（跳过 build 与 fallow，供快速回归）。pre-push 固定走 full。
-- **自动触发**：`.husky/pre-push` 在 push 前执行 `bun run ci`；未全绿则阻断 push。禁止 `--no-verify` 绕过（§3）。
+- **命令**：`pnpm run ci`（full，默认）—— 依序跑 `check` → `build`（`build:libs`→`build:nest`）→ `test` 三道**硬门禁**（快速失败），随后 `pnpm dlx fallow architecture` 作**佐证**（非阻断）；`pnpm run ci:quick` 仅跑 `check` + `test`（跳过 build 与 fallow，供快速回归）。pre-push 固定走 full。另提供 `pnpm run verify:prod-boot`：构建后真起服命中 `/api/v1/health` 200 的**prod 回归防线**（R-δ：CI 绿≠prod 可跑，需真起服实证）。
+- **自动触发**：`.husky/pre-push` 在 push 前执行 `pnpm run ci`；未全绿则阻断 push。禁止 `--no-verify` 绕过（§3）。
 - **失败语义**：任一硬门禁非零退出 → 整体 `exit 1`；fallow 步骤即便有发现项或工具缺失也仅告警、不使流水线失败（遵循 §4.7「结论须二次人工核验」）。
-- **可复现性**：编排仅用 Bun Shell（`import { $ } from 'bun'`），不引入 bash/Make 等其他编排工具，遵守 §1「运行时统一 Bun」。
+- **可复现性**：编排仅用 `node:child_process`（`spawnSync('pnpm', …)`），不引入 bash/Make 等其他编排工具，遵守 §1「运行时统一 Node」。
 
 ### 4.9 横切设施落位纪律
 - **新横切能力 = 独立目录**（对齐 config/logger/i18n/mailer/database 既有惯例）：实现落 `apps/api/src/<facility>/`；若领域/跨模块需要其抽象，契约落 `libs/core/src/shared-kernel/<concept>/`（如 `context/` 装 ALS 请求上下文、`domain/` 装分页契约），禁止业务模块 import 实现细节。
@@ -136,10 +138,10 @@
 
 ## 5. Biome 规范
 
-- 命令：`bun run check`（校验）、`check:fix`/`lint:fix`/`format`（写回）。pre-commit 触发 `lint:fix`。
+- 命令：`pnpm run check`（校验）、`check:fix`/`lint:fix`/`format`（写回）。pre-commit 触发 `lint:fix`。
 - **必须保留的豁免**：`overrides` 中对 `**/*.controller.ts`（及按 §4.3 含 DI 的 provider/handler 路径）关闭 `style/useImportType`，避免把值导入擦成 `import type`。
 - `files.includes` 保留 `!drizzle/**`、`!.claude/**` 等生成/工具目录排除。
-- 提交前 `bun run check` 须 **0 errors**。
+- 提交前 `pnpm run check` 须 **0 errors**。
 
 ## 6. Git 与提交规范
 
@@ -147,26 +149,27 @@
   `git -c user.name='FDE Team' -c user.email='fde.team@example.com' commit ...`
 - **类型**：遵循 Conventional Commits —— `feat` / `fix` / `refactor` / `docs` / `test` / `chore` / `perf` / `build` / `ci`。
 - **格式**：header ≤100；body 每行 ≤100（受 commitlint `body-max-line-length` 约束）；长行手动换行。
-- **钩子链**：pre-commit → `bun run lint:fix`；commit-msg → commitlint。禁止 `--no-verify`。
+- **钩子链**：pre-commit → `pnpm run lint:fix`；commit-msg → commitlint。禁止 `--no-verify`。
 
 ## 7. 命令速查
 
 | 场景 | 命令 |
 |------|------|
-| 安装依赖 | `bun install` |
-| 启动/热更/调试 | `bun run start` / `start:dev` / `start:debug` |
-| 构建 | `bun run build:nest` |
-| 校验/修复 | `bun run check` / `check:fix` |
-| 测试/监听/覆盖 | `bun run test` / `test:watch` / `test:cov` |
+| 安装依赖 | `pnpm install` |
+| 启动/热更/调试 | `pnpm run start` / `start:dev` / `start:debug` |
+| 构建 | `pnpm run build`（= `build:libs` → `build:nest`） |
+| 校验/修复 | `pnpm run check` / `check:fix` |
+| 测试/监听/覆盖 | `pnpm run test` / `test:watch` / `test:cov` |
 | 迁移生成/执行/同步/Studio | `drizzle:generate` / `drizzle:migrate` / `drizzle:push` / `drizzle:studio` |
 | 数据 seed/reset/setup | `db:seed` / `db:reset` / `db:setup` |
-| OpenAPI 导出 | `bun run openapi:export` |
-| 代码库健康/审计（fallow） | `bunx fallow` / `bunx fallow audit` / `bunx fallow dead-code` |
-| 本地 CI（全量门禁，pre-push 自动触发） | `bun run ci` |
-| 本地 CI（快速：仅 check+test） | `bun run ci:quick` |
+| OpenAPI 导出 | `pnpm run openapi:export` |
+| 代码库健康/审计（fallow） | `pnpm dlx fallow` / `pnpm dlx fallow audit` / `pnpm dlx fallow dead-code` |
+| 本地 CI（全量门禁，pre-push 自动触发） | `pnpm run ci` |
+| 本地 CI（快速：仅 check+test） | `pnpm run ci:quick` |
+| prod 启动回归防线（真起服验 /health） | `pnpm run verify:prod-boot` |
 
 ## 8. 升级策略
 
-- 升级走单一 PR/提交，附带 `bun run ci`（= check + build:nest + test 三关全绿）+ 启动冒烟全绿。
+- 升级走单一 PR/提交，附带 `pnpm run ci`（= check + build + test 三关全绿）+ 启动冒烟全绿。
 - 优先最新稳定版；`@types/*` 与实际运行时主版本对齐。
 - 任何"同类工具替换"（如换 Lint、换测试运行器）须先修订本规范 §2/§3 并评审后再动。

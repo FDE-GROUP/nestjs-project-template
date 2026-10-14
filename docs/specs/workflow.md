@@ -3,7 +3,7 @@
 > 状态: **已确认**（人裁决定稿 · P7；§9 六点全部裁决）| 版本: 0.1.0 | 日期: 2026-10-13
 > 归属: `docs/specs/`（项目宪法层 · 人/团队平面）| 性质: **重写型**（正文整体重写 + 变更戳 + 演变单列）
 > 关联: [vision.md](./vision.md)（愿景·宪法顶层，本文以其为纲）· [tooling-standards.md](./tooling-standards.md)（工具选型与命令 SSOT，本文**只引用不复制**）· [architecture.md](./architecture.md)（结构 SSOT）
-> 来源: 提炼自 `oh-my-env/spec/engineering-spec.md` §2–§5 + `experience/` 经验（E-001 授权粒度 / E-003 四区 / E-004 重写型），适配本 NestJS+Bun+Drizzle+CQRS 模板
+> 来源: 提炼自 `oh-my-env/spec/engineering-spec.md` §2–§5 + `experience/` 经验（E-001 授权粒度 / E-003 四区 / E-004 重写型），适配本 NestJS+Node+Drizzle+CQRS 模板
 > 受众: **人 + Agent**（`读者: Agent`——本文约束 agent 协作与门禁行为，须遵循）
 
 规范用语：**须**=强制 · **应**=强烈建议 · **宜**=建议 · **不得**=禁止。
@@ -38,7 +38,7 @@
 
 - 本文只定义**流程与文档落点**；具体工具选型/命令一律指针回 [tooling-standards.md](./tooling-standards.md)，防双 SSOT 漂移。
 - 面向**有经验开发者**；能固化成**门禁/守卫**的纪律不靠纯文本约定（结构即引导）。
-- 本项目**质量门禁走本地 CI**（`bun run ci`），不走远程 CI（GitHub Actions 仅部署 Swagger Pages）——详见 tooling-standards §3/§4.8。
+- 本项目**质量门禁走本地 CI**（`pnpm run ci`），不走远程 CI（GitHub Actions 仅部署 Swagger Pages）——详见 tooling-standards §3/§4.8。
 - 现阶段**单文档平面**（`docs/`）；AI 平面（`.ai/`）解耦**暂缓**，见 §8。
 
 ## 1. 主流程（一个任务 / 特性）
@@ -88,12 +88,12 @@
 
 | 层 | 角色 | 本项目落点 | 判据地位 |
 |----|------|-----------|---------|
-| **L1 裁决门禁** | 合并与否唯一裁决 | 本地 CI（`bun run ci` = check→build→test）+ `.husky/pre-push` + commitlint | **硬门**，任何工具不越此层 |
-| **L2 前置发现** | 产出候选供人二判 | `bunx fallow`（dead-code / dupes / architecture） | 参考，**永不裁决**，须二次人工核验 |
+| **L1 裁决门禁** | 合并与否唯一裁决 | 本地 CI（`pnpm run ci` = check→build→test）+ `.husky/pre-push` + commitlint | **硬门**，任何工具不越此层 |
+| **L2 前置发现** | 产出候选供人二判 | `pnpm dlx fallow`（dead-code / dupes / architecture） | 参考，**永不裁决**，须二次人工核验 |
 | **L3 AI 情报** | 只读取证 / 检索 / 导航 | 暂缓（后续章）；结论须**可引注到源** | 证据可引注 |
 | **L4 驾驶舱** | AI 编码工具与配置 | [`AGENTS.md`](../../AGENTS.md)（**统一入口 · §9.5 已引入**）+ `.claude/settings.local.json` | 消费者，**非裁判** |
 
-- **该跑什么**：局部可逆改动 → `bun run ci:quick`（check+test）；提交前 / push → `bun run ci`（full，含类型检查与 fallow 佐证）；涉清理/去重 → 先 fallow 候选 → 人工二判 → 回归。
+- **该跑什么**：局部可逆改动 → `pnpm run ci:quick`（check+test）；提交前 / push → `pnpm run ci`（full，含类型检查与 fallow 佐证）；涉清理/去重 → 先 fallow 候选 → 人工二判 → 回归。
 - **新工具纳入**：先定层、再登记（提案 → 试跑评估 → 定层 → 回写 tooling-standards 矩阵）。
 
 ## 5. 授权与决策（模板级轻量约定）
@@ -107,13 +107,13 @@
 
 - 判据分两步：**clarity**（能否分辨 done，模糊会诱发 premature completion）+ **demand**（要求多高，驱动 legwork）；最强判据既**可核验**又**穷尽**（「每项都核过」>「产出清单」）。
 - 示例：
-  - 「迁移完成」= generate 的 SQL 已人工审 **+** migrate 实机成功 **+** `bun run ci` 全绿，而非「跑过命令」；
+  - 「迁移完成」= generate 的 SQL 已人工审 **+** migrate 实机成功 **+** `pnpm run ci` 全绿，而非「跑过命令」；
   - 「fallow 清理完成」= 每条候选已二判（真实修 / 假阳性加 `fallow-ignore` / 存疑留痕）**+** check/test/build/启动冒烟回归全绿（tooling-standards §4.7 步骤）。
 - **调试**：先造一个能对确切症状变红的**紧反馈环**（red-capable / 确定性 / 快 / agent 可跑）；**无红环不进入假设**（§5.1 工程纪律）。
 
 ## 7. 演进与能力漂移
 
-- 写纪律**须标注环境假设**（本模板当前基线：Bun ≥1.3 / Nest 12 / Fastify 5 / TS 5.9 / Drizzle 0.44，见 tooling-standards §2）。
+- 写纪律**须标注环境假设**（本模板当前基线：Node ≥22 + pnpm 11 / Nest 12 / Fastify 5 / TS 5.9 / Drizzle 0.44，见 tooling-standards §2）。
 - 区分**补偿**（随模型/工具能力提升会「溶解」）与**纪律**（任何能力档位都约束行为：人机分工、反馈环、证据链、契约、审计门）。
 - 本文本身为重写型：随复盘整体重写受影响章节，不整体重排。
 
