@@ -125,8 +125,10 @@ export const consent = pgTable(
 // S2 · 数据隔离强制 (FR-5/NFR-2): tenant-owned business rows carry `organizationId`
 // (== tenant id, Tenant = organization) with a composite index for tenant-scoped reads.
 // S3 · workspace 二级边界 (D2/§8-6): rows may further belong to a `workspaceId`; reads
-// default to the compound `(organizationId, workspaceId)` scope. Both id columns are
-// NULLABLE to keep migrations purely additive; NOT-NULL tightening is a later signed call.
+// default to the compound `(organizationId, workspaceId)` scope.
+// NOT-NULL tightened (S2/S3 收尾): `organizationId` is mandatory (every row MUST belong
+// to a tenant; the repository's requireTenantId() enforces this at the write layer).
+// `workspaceId` remains NULLABLE (optional selector per S3 design).
 export const post = pgTable(
   'post',
   {
@@ -134,9 +136,11 @@ export const post = pgTable(
     title: text('title').notNull(),
     content: text('content'),
     published: boolean('published').notNull().default(false),
-    organizationId: text('organizationId').references(() => organization.id, {
-      onDelete: 'cascade',
-    }),
+    organizationId: text('organizationId')
+      .notNull()
+      .references(() => organization.id, {
+        onDelete: 'cascade',
+      }),
     workspaceId: text('workspaceId').references(() => workspace.id, {
       onDelete: 'set null',
     }),

@@ -22,7 +22,7 @@ export interface PostRecord {
   title: string;
   content: string | null;
   published: boolean;
-  organizationId: string | null;
+  organizationId: string;
   workspaceId: string | null;
   createdAt: Date;
   updatedAt: Date;

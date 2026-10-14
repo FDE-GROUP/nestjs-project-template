@@ -7,10 +7,10 @@ import * as bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { post, Role, user } from './schema';
+import { organization, post, Role, user } from './schema';
 
 const client = postgres(process.env.DATABASE_URL as string);
-const db = drizzle(client, { schema: { user, post } });
+const db = drizzle(client, { schema: { user, post, organization } });
 
 interface SeedOptions {
   includeTestData?: boolean;
@@ -135,11 +135,21 @@ async function createUsers(options: SeedOptions) {
 
 async function createPosts(options: SeedOptions) {
   if (!options.includeTestData) {
-    console.log('⏭  Skipping posts creation (test data disabled)');
+    console.log('⚙  Skipping posts creation (test data disabled)');
     return;
   }
 
-  console.log('📝 Creating sample posts...');
+  // NOT NULL tightened: every post must belong to a tenant.
+  // Find an existing organization to own the seeded posts; skip if none.
+  const [org] = await db.select({ id: organization.id }).from(organization).limit(1);
+  if (!org) {
+    console.log('⚠  No organization found – skipping post seeding (create an org first)');
+    return;
+  }
+
+  console.log(`📝 Creating sample posts (org=${org.id})...`);
+
+  const orgId = org.id;
 
   const samplePosts: PostData[] = [
     {
@@ -173,7 +183,9 @@ async function createPosts(options: SeedOptions) {
 
   if (postsToCreate.length > 0) {
     try {
-      await db.insert(post).values(postsToCreate.map((p) => ({ id: randomUUID(), ...p })));
+      await db
+        .insert(post)
+        .values(postsToCreate.map((p) => ({ id: randomUUID(), organizationId: orgId, ...p })));
       console.log(`✅ Created ${postsToCreate.length} posts`);
       for (const p of postsToCreate) console.log(`   - ${p.title}`);
     } catch (error) {

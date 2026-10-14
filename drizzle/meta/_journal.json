@@ -57,6 +57,13 @@
       "when": 1791908946049,
       "tag": "0007_thankful_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791946670032,
+      "tag": "0008_redundant_rafael_vega",
+      "breakpoints": true
     }
   ]
 }
