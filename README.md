@@ -154,7 +154,7 @@ bun run ci:quick    # 轻量门禁：check + test
 <p align="center">
   <img src="./abel-weichat.jpg" alt="WeChat 联系" width="240" />
   &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="./chat_Odoo%20ERP.png" alt="微信群：Odoo ERP 实施 · FDE拓展（群码 7 天有效·至 10/21，过期请联系上方微信重进）" width="240" />
+  <img src="./chat_Odoo%20ERP.jpg" alt="微信群：Odoo ERP 实施 · FDE拓展（群码 7 天有效·至 10/21，过期请联系上方微信拉入）" width="240" />
 </p>
 
 <p align="center">左：个人微信 · 右：「Odoo ERP 实施：FDE拓展」群聊（群码有时效，过期可加个人微信拉入）</p>
