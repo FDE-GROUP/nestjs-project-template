@@ -165,55 +165,6 @@ paths:
       summary: Liveness probe (ping-only, no dependency checks)
       tags:
         - Health
-  /api/v1/better-auth/token:
-    get:
-      operationId: AuthController_getOrVerifyToken_v1
-      parameters:
-        - name: token
-          required: true
-          in: query
-          schema:
-            type: string
-        - name: id
-          required: true
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ''
-      tags: &ref_3
-        - Auth
-    post:
-      operationId: AuthController_generateToken_v1
-      parameters: []
-      responses:
-        '201':
-          description: ''
-      tags: *ref_3
-    delete:
-      operationId: AuthController_deleteToken_v1
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags: *ref_3
-  /api/v1/better-auth/session:
-    get:
-      operationId: AuthController_getSession_v1
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags: *ref_3
-  /api/v1/better-auth/providers:
-    get:
-      operationId: AuthController_getProviders_v1
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags: *ref_3
   /api/v1/users/me/data-export:
     get:
       operationId: UsersController_exportMe_v1
@@ -224,7 +175,7 @@ paths:
         '401':
           description: Missing or invalid session.
       summary: 'PIPL right-to-access: export current user personal data (C1 · FR-7)'
-      tags: &ref_4
+      tags: &ref_3
         - users
   /api/v1/users/me:
     delete:
@@ -236,7 +187,7 @@ paths:
         '401':
           description: Missing or invalid session.
       summary: 'PIPL right-to-erase: hard-delete current user (C1 · FR-7)'
-      tags: *ref_4
+      tags: *ref_3
   /api/v1/posts:
     get:
       operationId: PostsController_list_v1
@@ -263,7 +214,7 @@ paths:
         '403':
           description: No active tenant context.
       summary: List posts in the active tenant
-      tags: &ref_5
+      tags: &ref_4
         - posts
     post:
       operationId: PostsController_create_v1
@@ -280,7 +231,7 @@ paths:
         '403':
           description: No active tenant context.
       summary: Create a post in the active tenant
-      tags: *ref_5
+      tags: *ref_4
   /api/v1/workspaces:
     get:
       operationId: WorkspacesController_list_v1
@@ -307,7 +258,7 @@ paths:
         '403':
           description: No active tenant, or missing workspace:read.
       summary: List workspaces in the active tenant
-      tags: &ref_6
+      tags: &ref_5
         - workspaces
     post:
       operationId: WorkspacesController_create_v1
@@ -324,7 +275,7 @@ paths:
         '403':
           description: Missing workspace:create (members are rejected).
       summary: Create a workspace (owner/admin)
-      tags: *ref_6
+      tags: *ref_5
   /api/v1/workspaces/{id}:
     patch:
       operationId: WorkspacesController_update_v1
@@ -346,7 +297,7 @@ paths:
         '404':
           description: Workspace not found in the active tenant.
       summary: Update a workspace (owner/admin)
-      tags: *ref_6
+      tags: *ref_5
     delete:
       operationId: WorkspacesController_remove_v1
       parameters:
@@ -361,7 +312,7 @@ paths:
         '404':
           description: Workspace not found in the active tenant.
       summary: Delete a workspace (owner/admin)
-      tags: *ref_6
+      tags: *ref_5
   /api/v1/tenants/applications:
     post:
       operationId: TenantsController_apply_v1
@@ -378,7 +329,7 @@ paths:
         '401':
           description: Missing or invalid session.
       summary: Apply to create a tenant (user-level · lands pending_approval)
-      tags: &ref_7
+      tags: &ref_6
         - tenants
   /api/v1/tenants/applications/{id}/approve:
     post:
@@ -397,7 +348,7 @@ paths:
         '404':
           description: Tenant not found.
       summary: Approve a pending tenant (platform operator · pending → active)
-      tags: *ref_7
+      tags: *ref_6
   /api/v1/tenants/applications/{id}/reject:
     post:
       operationId: TenantsController_reject_v1
@@ -415,7 +366,7 @@ paths:
         '404':
           description: Tenant not found.
       summary: Reject a pending tenant (platform operator · hard-delete)
-      tags: *ref_7
+      tags: *ref_6
   /api/v1/platform/tenants:
     get:
       operationId: PlatformTenantsController_list_v1
@@ -448,7 +399,7 @@ paths:
         '403':
           description: Not the platform operator.
       summary: List all tenants across the platform (operator only)
-      tags: &ref_8
+      tags: &ref_7
         - platform
   /api/v1/platform/tenants/{id}:
     get:
@@ -465,7 +416,7 @@ paths:
         '404':
           description: Tenant not found.
       summary: Get one tenant (operator only)
-      tags: *ref_8
+      tags: *ref_7
     delete:
       operationId: PlatformTenantsController_remove_v1
       parameters:
@@ -482,7 +433,7 @@ paths:
         '409':
           description: Already deleted (illegal transition).
       summary: Soft-delete a tenant (→ deleted terminal · row kept for export)
-      tags: *ref_8
+      tags: *ref_7
   /api/v1/platform/tenants/{id}/diagnostics:
     get:
       operationId: PlatformTenantsController_diagnostics_v1
@@ -498,7 +449,7 @@ paths:
         '404':
           description: Tenant not found.
       summary: 'Per-tenant diagnostics: member/invitation/workspace/post counts'
-      tags: *ref_8
+      tags: *ref_7
   /api/v1/platform/tenants/{id}/export:
     get:
       operationId: PlatformTenantsController_exportData_v1
@@ -514,7 +465,7 @@ paths:
         '404':
           description: Tenant not found.
       summary: Export all tenant-owned data as a single JSON payload (NFR-6)
-      tags: *ref_8
+      tags: *ref_7
   /api/v1/platform/tenants/{id}/suspend:
     patch:
       operationId: PlatformTenantsController_suspend_v1
@@ -532,7 +483,7 @@ paths:
         '409':
           description: Illegal transition for the current status.
       summary: Suspend an active tenant (active → suspended · fail-closed失能)
-      tags: *ref_8
+      tags: *ref_7
   /api/v1/platform/tenants/{id}/resume:
     patch:
       operationId: PlatformTenantsController_resume_v1
@@ -550,7 +501,7 @@ paths:
         '409':
           description: Illegal transition for the current status.
       summary: Resume a suspended tenant (suspended → active)
-      tags: *ref_8
+      tags: *ref_7
   /api/v1/platform/tenants/{id}/permanent:
     delete:
       operationId: PlatformTenantsController_permanentRemove_v1
@@ -570,7 +521,7 @@ paths:
       summary: >-
         Hard-delete a deleted-terminal tenant (irreversible · FK cascade + event
         purge · NFR-6)
-      tags: *ref_8
+      tags: *ref_7
   /api/v1/platform/users:
     get:
       operationId: PlatformUsersController_list_v1
@@ -603,7 +554,7 @@ paths:
         '403':
           description: Not the platform operator.
       summary: List all platform users with lifecycle status (operator only)
-      tags: &ref_9
+      tags: &ref_8
         - platform
   /api/v1/platform/users/{id}/suspend:
     patch:
@@ -630,7 +581,7 @@ paths:
       summary: >-
         Suspend a platform user (active → suspended · sessions invalidated ·
         fail-closed失能)
-      tags: *ref_9
+      tags: *ref_8
   /api/v1/platform/users/{id}/resume:
     patch:
       operationId: PlatformUsersController_resume_v1
@@ -648,7 +599,7 @@ paths:
         '409':
           description: Illegal transition for the current status.
       summary: Resume a suspended platform user (suspended → active)
-      tags: *ref_9
+      tags: *ref_8
   /api/v1/subscriptions/current:
     get:
       operationId: SubscriptionsController_getCurrent_v1
@@ -659,7 +610,7 @@ paths:
         '403':
           description: No active tenant context.
       summary: 'Current tenant subscription: plan, seat quota, usage, customer mapping'
-      tags: &ref_10
+      tags: &ref_9
         - subscriptions
   /api/v1/subscriptions:
     post:
@@ -681,7 +632,7 @@ paths:
       summary: >-
         Provision/upgrade the tenant subscription (creates the provider
         customer)
-      tags: *ref_10
+      tags: *ref_9
   /api/v1/storage/upload:
     post:
       operationId: StorageController_uploadFile_v1
@@ -701,7 +652,7 @@ paths:
         '201':
           description: ''
       summary: Upload a single file
-      tags: &ref_11
+      tags: &ref_10
         - storage
   /api/v1/storage/{key}:
     delete:
@@ -717,7 +668,7 @@ paths:
         '200':
           description: ''
       summary: Delete a file
-      tags: *ref_11
+      tags: *ref_10
   /api/v1/storage/{key}/url:
     get:
       operationId: StorageController_getFileUrl_v1
@@ -738,7 +689,7 @@ paths:
         '200':
           description: ''
       summary: Get a signed URL for a file
-      tags: *ref_11
+      tags: *ref_10
   /api/v1/payment/test:
     get:
       operationId: PaymentController_test_v1
@@ -747,7 +698,7 @@ paths:
         '200':
           description: Current provider selection and available channels
       summary: Payment integration status
-      tags: &ref_12
+      tags: &ref_11
         - payment
   /api/v1/payment/customers:
     post:
@@ -763,7 +714,7 @@ paths:
         '201':
           description: Customer created successfully
       summary: Create a payment customer
-      tags: *ref_12
+      tags: *ref_11
   /api/v1/payment/checkouts:
     post:
       operationId: PaymentController_createCheckout_v1
@@ -780,7 +731,7 @@ paths:
         '400':
           description: Bad request
       summary: Create a checkout (payment intent)
-      tags: *ref_12
+      tags: *ref_11
   /api/v1/payment/checkouts/{id}:
     get:
       operationId: PaymentController_retrieveCheckout_v1
@@ -797,7 +748,7 @@ paths:
         '404':
           description: Checkout not found
       summary: Retrieve a checkout
-      tags: *ref_12
+      tags: *ref_11
   /api/v1/payment/refunds:
     post:
       operationId: PaymentController_refund_v1
@@ -814,7 +765,7 @@ paths:
         '400':
           description: Bad request
       summary: Refund a checkout
-      tags: *ref_12
+      tags: *ref_11
   /api/v1/payment/webhooks:
     post:
       operationId: PaymentController_handleWebhook_v1
@@ -831,7 +782,7 @@ paths:
         '400':
           description: Invalid webhook signature
       summary: Handle payment webhook events
-      tags: *ref_12
+      tags: *ref_11
 info:
   title: NestJS SaaS Start API
   description: NestJS SaaS Start API documentation
