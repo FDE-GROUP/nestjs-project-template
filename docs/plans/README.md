@@ -15,7 +15,8 @@
 | [module-tenancy-es-lifecycle-events](./module-tenancy-es-lifecycle-events.md) | 租户生命周期事件接入 event store + PIPL 硬删级联补删 + v0.18.12 dead-code 挂账顺路 | **已审计**（人授权·Agent 自裁·§6） | **已验收·结项**（commit `8e3e422`·无新迁移不触高危#1·gated 真库 4/4·CI 267/9·§10 挂账顺路处置见 global-tenancy） | module-users-es-append（已结项）· global-tenancy §10 挂账/§6-④ · event-sourcing-roadmap Phase B |
 | [module-tenancy-es-user-status-events](./module-tenancy-es-user-status-events.md) | 用户级 suspend/resume 事件接入 event store（第三切片·与 user.registered 同流） | **已审计**（人直批·§6 无开放项） | **已验收·结项**（commit `3b6f0b1`·无新迁移·gated 真库 5/5 同流 [1,2]·CI 271/10） | module-tenancy-es-lifecycle-events（已结项）· event-sourcing-roadmap Phase B |
 | [module-tenancy-es-tenant-rejected-event](./module-tenancy-es-tenant-rejected-event.md) | reject 驳回事件接入 event store（第四切片·治理事件面收口·含 §6-① 误判修正） | **已审计**（人直批·§6 无开放项） | **已验收·结项**（commit `a3fe6e7`·无新迁移·CI 273/10·治理事件面收口） | module-tenancy-es-lifecycle-events §6-① · event-sourcing-roadmap Phase B |
-| [microservice-readiness](./microservice-readiness.md) | 微服务就绪度路线（触发器判据 + 三阶段迁移 + 就绪机制排序） | 待审计 | 未开工（**盘点已交付**·本阶段仅判据不动码；§2.3 首切片建议：表所有权纪律 + codegen 导出模块） | `research/nestjs-fastify-nx-review.md` · event-sourcing-roadmap Phase B · global-tenancy §9.5 |
+| [microservice-readiness](./microservice-readiness.md) | 微服务就绪度路线（触发器判据 + 三阶段迁移 + 就绪机制排序） | **已审计**（人签核 2026-10-14·未决 ①–④ 逐裁见 §4·v0.2.0） | 盘点已交付·执行入口=首切片（不预授权实现） | `research/nestjs-fastify-nx-review.md` · event-sourcing-roadmap Phase B · global-tenancy §9.5 |
+| [global-readiness-initial-slice](./global-readiness-initial-slice.md) | 就绪首切片：表所有权纪律成文 + codegen 导出模块（触高危#5 附录·#4 workflow 待签） | 待审计（§6 甲乙丙三项附建议） | 未开工 | microservice-readiness §4-① |
 
 **列取值**
 - **审计**：`待审计` / `已审计`（无已审方案不写码——`workflow.md` §3）
