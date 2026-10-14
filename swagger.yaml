@@ -198,16 +198,12 @@ paths:
           description: Page size (1-100)
           schema:
             example: 20
-            allOf:
-              - $ref: '#/components/schemas/Object'
         - name: offset
           required: false
           in: query
           description: Offset (rows to skip)
           schema:
             example: 0
-            allOf:
-              - $ref: '#/components/schemas/Object'
       responses:
         '200':
           description: Posts owned by the active tenant.
@@ -242,16 +238,12 @@ paths:
           description: Page size (1-100)
           schema:
             example: 20
-            allOf:
-              - $ref: '#/components/schemas/Object'
         - name: offset
           required: false
           in: query
           description: Offset (rows to skip)
           schema:
             example: 0
-            allOf:
-              - $ref: '#/components/schemas/Object'
       responses:
         '200':
           description: Workspaces owned by the active tenant.
@@ -377,16 +369,12 @@ paths:
           description: Page size (1-100)
           schema:
             example: 20
-            allOf:
-              - $ref: '#/components/schemas/Object'
         - name: offset
           required: false
           in: query
           description: Offset (rows to skip)
           schema:
             example: 0
-            allOf:
-              - $ref: '#/components/schemas/Object'
         - name: search
           required: false
           in: query
@@ -532,16 +520,12 @@ paths:
           description: Page size (1-100)
           schema:
             example: 20
-            allOf:
-              - $ref: '#/components/schemas/Object'
         - name: offset
           required: false
           in: query
           description: Offset (rows to skip)
           schema:
             example: 0
-            allOf:
-              - $ref: '#/components/schemas/Object'
         - name: search
           required: false
           in: query
@@ -797,9 +781,6 @@ components:
       bearerFormat: JWT
       type: http
   schemas:
-    Object:
-      type: object
-      properties: {}
     CreatePostDto:
       type: object
       properties:
