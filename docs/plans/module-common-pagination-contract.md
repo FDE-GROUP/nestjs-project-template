@@ -1,6 +1,6 @@
 # 技术方案 · 分页契约泛化 `Page<T>`（softkit 借鉴正向项 #2）
 
-> 状态: **已实现·待验收**（人批准 2026-10-14·甲乙丙丁照建议·CI **304/13** 新基线）| 读者: **Agent**（开发依据）
+> 状态: **已验收·结项**（人批准 2026-10-14·甲乙丙丁照建议·commit `8d85e5b`·CI **304/13** 新基线）| 读者: **Agent**（开发依据）
 > blast radius: **跨面小片**（`packages/core` shared-kernel 加纯类型契约 + apps/api 两个 platform 侧 page 形状/两个 DTO 换源·**零行为变更零 schema**·不动任何响应 JSON 形状）
 > 缘起: 评价 softkit-nestjs-boilerplate 借鉴清单 **#2**（nestjs-paginate 之"思路"——分页契约统一，借思路不借库）。
 
@@ -91,3 +91,4 @@ shared-kernel 加纯类型 = core 公共面增量，无端口倒置冲突（core
 - 2026-10-14 v0.1: 依人裁「1」立项起草。勘察坐实：两 page 形状同构重复、两 DTO 逐字段重复、业务面全量返回现状、shared-kernel 落点（纯 TS barrel 已出口）、users.findAll 非本次范围。§6 甲乙丙丁待裁。
 - 2026-10-14 v0.2: 人「同意」过门——甲乙丙丁照建议（业务面分页留后续；旧名留别名；createPage 工厂要；sort 不做）。
 - 2026-10-14 v0.3: 实现完成。契约落 `shared-kernel/domain/pagination.ts`（PageRequest/Page<T>/createPage·barrel 导出）；两 domain 旧名改 `Page<XxxRow>` 别名（port 签名复用 PageRequest）；两 adapter 尾行换 createPage；`ListPageDto` 基类落 `apps/api/src/common/dto/`。实现期小注：`validateSync` 无 `transform` 选项（转换属 plainToInstance 层，测内剔除后语义不变）。既有 adapter 单测零改断言全绿=同形铁证；§7 class-validator 继承雷实跑未踩中。
+- 2026-10-14 v0.4: 人「同意」验收→**结项**。零行为变更承诺经同形铁证坐实；业务面分页 / sort 参数化 / cursor 均为甲丁缓行项（未入本批）。softkit 借鉴线三项（#1 探针、#2 分页、#3+核仓观察项）至此全部收口。
