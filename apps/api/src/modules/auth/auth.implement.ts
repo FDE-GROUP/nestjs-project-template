@@ -1,3 +1,4 @@
+import type { QuotaService } from '@core/tenancy/quota/quota.service';
 import {
   BetterAuthError,
   type BetterAuthOptions,
@@ -12,6 +13,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { ConfigService } from '../../config/config.service';
 import type { DrizzleService } from '../../database/drizzle.service';
 import * as schema from '../../database/schema';
+import { createSeatsQuotaPlugin } from './seats-quota.hook';
 import { tenantAccessControl, tenantRoles } from './tenancy-access-control';
 
 export type AuthRequest = FastifyRequest & { originalUrl?: string; url?: string };
@@ -36,6 +38,11 @@ export interface CreateAuthResult {
       signUpEmail: (params: any) => Promise<any>;
       signInEmail: (params: any) => Promise<any>;
       setActiveOrganization: (params: any) => Promise<any>;
+      // S7 收尾 · 成员入组双端点透传（服务端编排面·e2e 驱动用）：dispatch.mjs 坐实
+      // auth.api.* 与 router 走同一 hooks pipeline，seats 配额 hook 同样生效。
+      // 邀请发出端点：server key 为 createInvitation（HTTP path 才是 /organization/invite-member）。
+      createInvitation: (params: any) => Promise<any>;
+      acceptInvitation: (params: any) => Promise<any>;
     };
   };
 }
@@ -45,6 +52,7 @@ export function CreateAuth(
   genericConfigs: GenericOAuthConfig[],
   drizzleService: DrizzleService,
   configService: ConfigService,
+  quota: Pick<QuotaService, 'checkSeats'>,
 ): CreateAuthResult {
   const appConfig = configService.getAppConfig();
   const authConfig = configService.getAuthConfig();
@@ -148,6 +156,9 @@ export function CreateAuth(
         roles: tenantRoles,
         allowUserToCreateOrganization: false,
       }),
+      // S7 收尾（vision §7 阶段 2 商业闭环）：成员增量端点（accept-invitation 为现网唯一真实
+      // HTTP 通道）经插件级 before-hook 走 seats 配额前置校验，超限 402（详 seats-quota.hook.ts）。
+      createSeatsQuotaPlugin({ quota, db: drizzleService.db }),
     ],
     account: {
       accountLinking: {
@@ -163,7 +174,7 @@ export function CreateAuth(
       autoSignIn: true,
       minPasswordLength: 8,
     },
-    appName: appConfig.name || 'nestjs-project-template',
+    appName: appConfig.name || 'NestJS SaaS Start',
     secret: authConfig.jwt.secret,
     user: {
       additionalFields: {
@@ -260,6 +271,14 @@ export function CreateAuth(
         },
         setActiveOrganization(params: any) {
           return (auth.api as any).setActiveOrganization(params);
+        },
+        // S7 收尾 · 邀请发出/接受（member 行落行时点）：服务端透传同样经 dispatch 的 hooks
+        // pipeline（seats 配额 hook 不区分 HTTP/服务端通道），e2e 以此驱动真实入组流程。
+        createInvitation(params: any) {
+          return (auth.api as any).createInvitation(params);
+        },
+        acceptInvitation(params: any) {
+          return (auth.api as any).acceptInvitation(params);
         },
       },
     },

@@ -1,5 +1,7 @@
 import { ConfigService } from '@app/config/config.service';
 import { DrizzleService } from '@app/database/drizzle.service';
+// S9 铁律：构造函数注入的类必须值导入（勿 import type），否则 design:paramtypes 退化 DI 静默失败
+import { QuotaService } from '@core/tenancy/quota/quota.service';
 import type { NestMiddleware, OnModuleInit } from '@nestjs/common';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { BetterAuthOptions } from 'better-auth';
@@ -21,6 +23,7 @@ export class AuthMiddleware implements NestMiddleware, OnModuleInit {
   constructor(
     @Inject(ConfigService) private readonly configService: ConfigService,
     @Inject(DrizzleService) private readonly drizzleService: DrizzleService,
+    @Inject(QuotaService) private readonly quotaService: QuotaService,
     @Inject(AuthInstanceInjectKey)
     private readonly authInstance: InjectAuthInstance,
   ) {}
@@ -67,6 +70,7 @@ export class AuthMiddleware implements NestMiddleware, OnModuleInit {
         genericConfigs,
         this.drizzleService,
         this.configService,
+        this.quotaService,
       );
       this.authHandler = handler;
       this.authInstance.set(auth);

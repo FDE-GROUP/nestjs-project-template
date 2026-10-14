@@ -19,6 +19,7 @@
 | [global-readiness-initial-slice](./global-readiness-initial-slice.md) | 就绪首切片：表所有权纪律成文 + codegen 导出模块（高危#5/#4 随审计门签核） | **已审计**（人批准 2026-10-14·甲乙丙照建议自裁） | **已验收·结项**（commit `0e0ad02`·守卫测绿基线·codegen 字节级一致·CI 276/10·Pages 观察项已闭环见 v0.5：历史故障修复+站点启用） | microservice-readiness §4-① |
 | [global-rename-apps-api](./global-rename-apps-api.md) | apps/reference 更名 apps/api：目录名归行业惯例，“参考实现”语义归文档（高危#5 vision 补注随签） | **已审计**（人裁「1、2」2026-10-14） | **已验收·结项**（commit `cf5ceda`·零残留·CI 276/10 基线不动） | 讨论源起更名 api-server 咨询 → 取证：reference 非行业通名 |
 | [global-rename-repo](./global-rename-repo.md) | GitHub 仓库更名 nestjs-project-template → **nestjs-saas-start**（gh rename + 仓内展示名 13 处同步） | 人直令·执行即授权 | **已验收·结项**（零残留·CI 276/10·附DATABASE_URL修复+Pages站点启用实测200） | 人指令 2026-10-14 |
+| [module-tenancy-quota-member-wiring](./module-tenancy-quota-member-wiring.md) | S7 收尾：BA 成员增量端点配额 hook 接线（商业闭环合龙）+ 附片 §10 挂账清欠（高危#2） | **已审计**（人批准 2026-10-14·甲乙丙照建议·高危#2/#5 随批） | **已实现·待验收**（hook+单测 7+gated e2e 真库绿·CI 283/11·path 实证完成·附片三笔落定含挂账陈旧重报销账） | global-tenancy §10 S7 挂账 · vision §7 阶段 2 |
 
 **列取值**
 - **审计**：`待审计` / `已审计`（无已审方案不写码——`workflow.md` §3）
