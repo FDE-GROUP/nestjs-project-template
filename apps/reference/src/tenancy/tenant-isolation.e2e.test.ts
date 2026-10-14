@@ -1,7 +1,8 @@
 import 'reflect-metadata';
 import { DrizzleService } from '@app/database/drizzle.service';
-import { organization, post } from '@app/database/schema';
+import { account, member, organization, post, session, user } from '@app/database/schema';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
+import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { inArray } from 'drizzle-orm';
@@ -9,115 +10,135 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module';
 
 /**
- * S9 补遗 · 全栈 e2e 分层之第二层：**真 HTTP 端到端打穿租户隔离路由**（NFR-7 / FR-5）。
+ * S9 补遗 · 全栈 e2e 第二层的**真·Better Auth 登录编排**形态（v0.18.10·「全栈 CI 拼 PG」专项）。
  *
- * 与 `app-boot.smoke.test.ts`（DB-free、只验 DI 图装配）互补——本测把**整条真实链路**跑起来：
- * Fastify 收请求 → `TenantMiddleware` 经 `getSession` 解析 `activeOrganizationId` 绑进 ALS →
- * `TenantScopeGuard` fail-closed → `PostsController` → CQRS → **真实 Drizzle 查询注入
- * `organizationId` 谓词** → `TransformInterceptor` 包装响应。断言**跨租户互不可见**：org_a 只
- * 见自己的帖子、org_b 只见自己的，无 cookie 直接 403。**并补越界负向路径**（FR-5/NFR-1 红线）：
- * 伪造 body `organizationId` 写→仍被强制盖可信租户、对端租户绝不可见；伪造 `x-workspace-id`
- * 选择器读→复合作用域恒 0 行、无法括宽/泄漏。
+ * 与旧版差异：**去掉 `AuthInstanceInjectKey` 的 `getSession` 打桩**——本测把 Better Auth 的
+ * **真实登录链路整条跑起来**（服务端 API·`asResponse:true` 令 BA 自签含 HMAC 的真实 session cookie）：
+ *   `signUpEmail` 建真实用户 → `signInEmail` 取真实会话 cookie → 服务端系统动作 `createOrganization`
+ *   （绕 `allowUserToCreateOrganization:false`·申请人成首名 owner member）→ `setActiveOrganization`
+ *   把 `activeOrganizationId` 落进真实 session 行。此后带**真 cookie** 打 `/posts`，`TenantMiddleware`
+ *   经真实 `RequestSessionReader`→`auth.api.getSession` 解析会话绑进 ALS、全局 `SessionGuard`（会话墙）
+ *   与全局 `TenantScopeGuard`（租户墙）逐级 fail-closed、CQRS/仓储注入 `organizationId` 谓词——
+ *   **全程无认证桩**，真实 user/session/organization/member 行，证真「邮箱+密码 → 会话 → 租户上下文 →
+ *   跨租户隔离」这条编排端到端成立。
  *
- * **刻意只在认证令牌边界打桩**（override `AuthInstanceInjectKey` 让 `getSession` 依 cookie
- * 返回固定 session），其余（守卫/中间件/CQRS/仓储/Fastify/Drizzle）全是真实件——真实 Better Auth
- * email/password 登录 + session cookie 编排留给「全栈 CI 拼 PG」专项，不在本片范围。
+ * 走服务端 API 而非 HTTP：Test harness 不复现 `main.ts` 的全局前缀/版本化装配（BA HTTP 端点在测试里
+ * 无匹配 Nest 路由 → 中间件不触发 → 404），故经 auth 网关透传的原生 `api.*`（`createOrganization` 同款
+ * 「服务端编排网关」范式）驱动真实流程——同样是真 BA、真会话、真隔离，仅绕开测试未装配的 HTTP 中间件层。
  *
- * **默认跳过**：需一个已 migrate 的真实 Postgres。仅当 `E2E_DATABASE_URL` 存在时运行（它作开关），
- * 真正的连接串取 `DATABASE_URL`（两者应指向同一个库），故不破默认 CI 的 DB-free 不变量。本地执行：
- *   `E2E_DATABASE_URL=<url> DATABASE_URL=<url> bunx vitest run src/tenancy/tenant-isolation.e2e.test.ts`
+ * 断言含 S11 双层全局墙的**语义分层**：无 session → **401**（会话墙先于租户墙）；有 session 但未
+ * set-active（无 `activeOrganizationId`）→ **403**（租户墙 fail-closed）；跨租户互不可见 + 越界写
+ * 强制盖可信租户 + 伪造 `x-workspace-id` 选择器读恒 0 行（FR-5/NFR-1 红线）。
+ *
+ * **默认跳过**：需一个已建好 schema 的真实 Postgres。仅当 `E2E_DATABASE_URL` 存在时运行（作开关），
+ * 真正连接串取 `DATABASE_URL`（两者应指向同一个库），故不破默认 CI 的 DB-free 不变量。本地执行见
+ * 文件末「本地跑法」注释（专用 `nestjs_e2e` 库·不污染 dev 数据）。夹具（用户/组织/帖子）在 afterAll
+ * 显式清净，运行幂等（每次用时间戳后缀的唯一 email/slug）。
  */
 const E2E_DB = process.env.E2E_DATABASE_URL;
-
-const ORG_A = 'e2e_org_a';
-const ORG_B = 'e2e_org_b';
-const POST_A = 'e2e_post_a';
-const POST_B = 'e2e_post_b';
-const COOKIE_A = 'e2e_session=org_a';
-const COOKIE_B = 'e2e_session=org_b';
-
-/** cookie → Better Auth session 形状（仅供 TenantMiddleware 解析）。 */
-const SESSIONS: Record<
-  string,
-  { user: { id: string }; session: { activeOrganizationId: string } }
-> = {
-  [COOKIE_A]: { user: { id: 'e2e_user_a' }, session: { activeOrganizationId: ORG_A } },
-  [COOKIE_B]: { user: { id: 'e2e_user_b' }, session: { activeOrganizationId: ORG_B } },
-};
-
 const gated = E2E_DB ? describe : describe.skip;
 
-gated('租户隔离全栈 e2e（真实 HTTP · 真守卫/中间件/仓储 · env-gated）', () => {
+const PASSWORD = 'E2e-Pa55w0rd!';
+
+/** 从 better-auth `asResponse` 的 Response 头提取可回放的 `Cookie` 请求头（保 name=value 对）。 */
+function toCookieHeader(res: Response): string {
+  const h = res.headers as Headers & { getSetCookie?: () => string[] };
+  const list = typeof h.getSetCookie === 'function' ? h.getSetCookie() : [h.get('set-cookie')];
+  return list
+    .filter((c): c is string => Boolean(c))
+    .map((c) => c.split(';')[0])
+    .join('; ');
+}
+
+interface Actor {
+  readonly email: string;
+  readonly userId: string;
+  readonly cookie: string;
+  orgId?: string;
+}
+
+gated('租户隔离全栈 e2e（真·Better Auth 登录编排 · 无认证桩 · env-gated）', () => {
   let app: NestFastifyApplication;
+  let db: DrizzleService['db'];
+
+  const stamp = Date.now();
+  const createdUserIds: string[] = [];
+  const createdOrgIds: string[] = [];
+
+  const authApi = () => app.get<InjectAuthInstance>(AuthInstanceInjectKey).get().api;
 
   beforeAll(async () => {
-    // 真实 DrizzleService 连的是 shell 传入的 `DATABASE_URL`（vitest.config 现尊重外部值）；
-    // `E2E_DATABASE_URL` 仅作本测的运行开关（gate），指向同一个已 migrate 的库。
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(AuthInstanceInjectKey)
-      .useValue({
-        get: () => ({
-          api: {
-            getSession: async ({ headers }: { headers?: Record<string, string> }) =>
-              SESSIONS[headers?.cookie ?? ''] ?? null,
-          },
-        }),
-        set: () => {},
-      })
-      .compile();
-
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
-
-    // 夹具：两个 organization + 各挂一篇带 organizationId 的 post（真实 INSERT，验证仓储谓词）。
-    const db = app.get(DrizzleService).db;
-    const now = new Date();
-    await db
-      .insert(organization)
-      .values([
-        { id: ORG_A, name: 'E2E Org A', slug: 'e2e-org-a' },
-        { id: ORG_B, name: 'E2E Org B', slug: 'e2e-org-b' },
-      ])
-      .onConflictDoNothing();
-    await db
-      .insert(post)
-      .values([
-        {
-          id: POST_A,
-          title: 'E2E-POST-ALPHA',
-          published: true,
-          organizationId: ORG_A,
-          updatedAt: now,
-        },
-        {
-          id: POST_B,
-          title: 'E2E-POST-BRAVO',
-          published: true,
-          organizationId: ORG_B,
-          updatedAt: now,
-        },
-      ])
-      .onConflictDoNothing();
-  }, 60000);
+    db = app.get(DrizzleService).db;
+  }, 120000);
 
   afterAll(async () => {
-    if (app) {
-      const db = app.get(DrizzleService).db;
-      // post.organizationId FK cascade → 删 org 连带删其 post 夹具。
-      await db.delete(organization).where(inArray(organization.id, [ORG_A, ORG_B]));
-      await app.close();
+    if (!app) return;
+    if (createdOrgIds.length) {
+      await db.delete(post).where(inArray(post.organizationId, createdOrgIds));
+      await db.delete(member).where(inArray(member.organizationId, createdOrgIds));
+      await db.delete(organization).where(inArray(organization.id, createdOrgIds));
     }
+    if (createdUserIds.length) {
+      await db.delete(session).where(inArray(session.userId, createdUserIds));
+      await db.delete(account).where(inArray(account.userId, createdUserIds));
+      await db.delete(user).where(inArray(user.id, createdUserIds));
+    }
+    await app.close();
   });
 
-  const list = (cookie?: string, extraHeaders?: Record<string, string>) =>
+  /** 真实注册 → 真实登录（服务端 API·取 BA 自签 session cookie）。userId 入清理名单。 */
+  async function signUpThenSignIn(tag: string): Promise<Actor> {
+    const email = `e2e-auth-${tag}-${stamp}@example.com`;
+    const up = await authApi().signUpEmail({
+      body: { name: `E2E ${tag}`, email, password: PASSWORD },
+      asResponse: true,
+    });
+    if (up.status >= 400) throw new Error(`signUpEmail(${tag}) ${up.status}: ${await up.text()}`);
+    const userId = String((await up.json()).user.id);
+    createdUserIds.push(userId);
+
+    const inRes = await authApi().signInEmail({
+      body: { email, password: PASSWORD },
+      asResponse: true,
+    });
+    if (inRes.status >= 400)
+      throw new Error(`signInEmail(${tag}) ${inRes.status}: ${await inRes.text()}`);
+    const cookie = toCookieHeader(inRes);
+    if (!cookie) throw new Error(`signInEmail(${tag}) 未回 session cookie`);
+    return { email, userId, cookie };
+  }
+
+  /** 服务端系统动作建租户（申请人成 owner member）→ set-active 落真实 session 的 activeOrganizationId。 */
+  async function createOrgAndActivate(actor: Actor, tag: string): Promise<string> {
+    const created = await authApi().createOrganization({
+      body: { name: `E2E Org ${tag}`, slug: `e2e-org-${tag}-${stamp}`, userId: actor.userId },
+    });
+    const orgId = String((created as { id?: unknown }).id);
+    if (!orgId || orgId === 'undefined') throw new Error(`createOrganization(${tag}) 无 id`);
+    createdOrgIds.push(orgId);
+    actor.orgId = orgId;
+
+    const act = await authApi().setActiveOrganization({
+      body: { organizationId: orgId },
+      headers: { cookie: actor.cookie },
+      asResponse: true,
+    });
+    if (act.status >= 400)
+      throw new Error(`setActiveOrganization(${tag}) ${act.status}: ${await act.text()}`);
+    return orgId;
+  }
+
+  const listPosts = (cookie?: string, extra?: Record<string, string>) =>
     app.inject({
       method: 'GET',
       url: '/posts',
-      headers: { ...(cookie ? { cookie } : {}), ...(extraHeaders ?? {}) },
+      headers: { ...(cookie ? { cookie } : {}), ...(extra ?? {}) },
     });
 
-  /** POST 创建（body 允许携带伪造的 organizationId/workspaceId·验证被忽略/强制回可信 ctx）。 */
-  const create = (cookie: string, body: Record<string, unknown>) =>
+  const createPost = (cookie: string, body: Record<string, unknown>) =>
     app.inject({
       method: 'POST',
       url: '/posts',
@@ -125,50 +146,83 @@ gated('租户隔离全栈 e2e（真实 HTTP · 真守卫/中间件/仓储 · env
       payload: JSON.stringify(body),
     });
 
-  it('无 session cookie → TenantMiddleware 不绑租户 → TenantScopeGuard fail-closed 403', async () => {
-    const res = await list();
+  it('无 session cookie → 全局会话墙 fail-closed 401（先于租户墙）', async () => {
+    const res = await listPosts();
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('真实注册+登录→但未 set-active（无 activeOrganizationId）→ 全局租户墙 fail-closed 403', async () => {
+    const lonely = await signUpThenSignIn('lonely');
+    const res = await listPosts(lonely.cookie);
     expect(res.statusCode).toBe(403);
   });
 
-  it('org_a cookie → 只见 ALPHA、绝不含 BRAVO（跨租户互不可见）', async () => {
-    const res = await list(COOKIE_A);
-    expect(res.statusCode).toBe(200);
-    const body = res.body;
-    expect(body).toContain('E2E-POST-ALPHA');
-    expect(body).not.toContain('E2E-POST-BRAVO');
+  it('两租户各经真登录编排 → 真 cookie 打 /posts 跨租户互不可见', async () => {
+    const a = await signUpThenSignIn('a');
+    await createOrgAndActivate(a, 'a');
+    const b = await signUpThenSignIn('b');
+    await createOrgAndActivate(b, 'b');
+
+    const pa = await createPost(a.cookie, { title: 'E2E-REAL-ALPHA', published: true });
+    expect(pa.statusCode).toBe(201);
+    const pb = await createPost(b.cookie, { title: 'E2E-REAL-BRAVO', published: true });
+    expect(pb.statusCode).toBe(201);
+
+    const la = await listPosts(a.cookie);
+    expect(la.statusCode).toBe(200);
+    expect(la.body).toContain('E2E-REAL-ALPHA');
+    expect(la.body).not.toContain('E2E-REAL-BRAVO');
+
+    const lb = await listPosts(b.cookie);
+    expect(lb.statusCode).toBe(200);
+    expect(lb.body).toContain('E2E-REAL-BRAVO');
+    expect(lb.body).not.toContain('E2E-REAL-ALPHA');
   });
 
-  it('org_b cookie → 只见 BRAVO、绝不含 ALPHA（隔离对称）', async () => {
-    const res = await list(COOKIE_B);
-    expect(res.statusCode).toBe(200);
-    const body = res.body;
-    expect(body).toContain('E2E-POST-BRAVO');
-    expect(body).not.toContain('E2E-POST-ALPHA');
-  });
+  it('负向·越界写：真会话携伪造 body organizationId/workspaceId → 仍盖可信租户，对端绝不可见', async () => {
+    const a = await signUpThenSignIn('w');
+    await createOrgAndActivate(a, 'w');
+    const victim = await signUpThenSignIn('victim');
+    await createOrgAndActivate(victim, 'victim');
 
-  it('负向·越界写：org_a 伪造 body organizationId=ORG_B 创建 → 仍盖 ORG_A，org_b 绝不可见', async () => {
-    const res = await create(COOKIE_A, {
-      title: 'E2E-WRITE-A',
+    const res = await createPost(a.cookie, {
+      title: 'E2E-REAL-WRITE-A',
       published: true,
-      // 以下均为越界伪造尝试：控制器只读 title/content/published，organizationId 由可信 ctx 强制。
-      organizationId: ORG_B,
+      organizationId: victim.orgId,
       workspaceId: 'ws_forged',
     });
     expect(res.statusCode).toBe(201);
 
-    // org_a 可见自己刚创建的帖子。
-    const a = await list(COOKIE_A);
-    expect(a.body).toContain('E2E-WRITE-A');
-    // 关键：org_b **绝不应**看到这条试图伪造归属到它的帖子（跨租写重定向失效）。
-    const b = await list(COOKIE_B);
-    expect(b.body).not.toContain('E2E-WRITE-A');
+    // org(a) 归属由可信 ctx 强制：a 可见自己刚创建的帖子。
+    const la = await listPosts(a.cookie);
+    expect(la.body).toContain('E2E-REAL-WRITE-A');
+    // 关键：victim 租户**绝不应**看到这条试图伪造归属到它的帖子（跨租写重定向失效）。
+    const lv = await listPosts(victim.cookie);
+    expect(lv.body).not.toContain('E2E-REAL-WRITE-A');
   });
 
-  it('负向·越界读：org_a 伪造 x-workspace-id 选择器不能括宽/泄漏（复合作用域 → 0 行）', async () => {
-    // ALPHA 属于 ORG_A 且 workspaceId=null；携任意 foreign ws 选择器后 (ORG_A ∧ ws=foreign) 恒 0 行，
-    // 证明 organizationId 谓词恒取可信 ctx、外部选择器至多匹配 0 行、无法跨租读取。
-    const res = await list(COOKIE_A, { 'x-workspace-id': 'ws_of_other_tenant' });
-    expect(res.statusCode).toBe(200);
-    expect(res.body).not.toContain('E2E-POST-ALPHA');
+  it('负向·越界读：真会话携伪造 x-workspace-id 选择器不能括宽/泄漏（复合作用域 → 0 行）', async () => {
+    const a = await signUpThenSignIn('r');
+    await createOrgAndActivate(a, 'r');
+    await createPost(a.cookie, { title: 'E2E-REAL-READ-A', published: true });
+
+    const ok = await listPosts(a.cookie);
+    expect(ok.statusCode).toBe(200);
+    expect(ok.body).toContain('E2E-REAL-READ-A');
+
+    // 携任意 foreign ws 选择器后 (tenantA ∧ ws=foreign) 恒 0 行，证 organizationId 谓词恒取可信 ctx。
+    const narrow = await listPosts(a.cookie, { 'x-workspace-id': 'ws_of_other_tenant' });
+    expect(narrow.statusCode).toBe(200);
+    expect(narrow.body).not.toContain('E2E-REAL-READ-A');
   });
 });
+
+/*
+ * 本地跑法（专用 nestjs_e2e 库·不污染 dev 数据）：
+ *   docker exec nestjs-pg-dev psql -U postgres -c "CREATE DATABASE nestjs_e2e;"            # 若不存在
+ *   DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e bun run drizzle:push -- --force
+ *   E2E_DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
+ *     DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
+ *     bunx vitest run apps/reference/src/tenancy/tenant-isolation.e2e.test.ts
+ *   docker exec nestjs-pg-dev psql -U postgres -c "DROP DATABASE nestjs_e2e;"              # 用完清理（可选）
+ */
