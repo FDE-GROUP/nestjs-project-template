@@ -6,7 +6,8 @@
 - **领域驱动设计（DDD）**：业务逻辑封装在零框架依赖的聚合根中，配合值对象、领域事件与仓储端口（port）；infrastructure 层提供端口的适配器（Drizzle）。
 - **CQRS**：写操作走 `Command → CommandHandler`，读操作走 `Query → QueryHandler`，经由 `@nestjs/cqrs` 的总线分发。Controller 绝不直接调用 service。
 - **垂直切片（Vertical Slice）**：按功能而非技术分层组织（`src/modules/<context>`）。上下文之间只能通过领域事件耦合，禁止 import 另一个上下文的 `domain/` 或 `infrastructure/`。
-- **Event Sourcing（缓行但必达）**：当前阶段领域事件仅进程内派发；Command→Handler 写路径、聚合的 `recordEvent/pullDomainEvents` 钩子与事件信封字段均已按 ES 形态预留。详见 [event-sourcing-roadmap.md](../plans/event-sourcing-roadmap.md)。
+- **Event Sourcing（确定采纳·分期递进）**：人澄清 2026-10-14——ES 为确定的架构目标，不再以「某上下文真需要才做」为前提；分期节奏与审计/迁移门禁维持。当前阶段（Phase A）领域事件仅进程内派发；Command→Handler 写路径、聚合的 `recordEvent/pullDomainEvents` 钩子与事件信封字段均已按 ES 形态预留。详见 [event-sourcing-roadmap.md](../plans/event-sourcing-roadmap.md)。
+- **EDA（事件驱动架构·确定采纳）**：领域事件是上下文间**唯一**集成机制；演进路径 = 进程内派发（已落地）→ 同事务 outbox 耐久发布（Phase B）→ 跨进程 broker 订阅（仅微服务触发器成立后，见 [microservice-readiness.md](../plans/microservice-readiness.md)）。
 
 ## 目录结构
 
