@@ -135,6 +135,23 @@
 **高危登记（workflow §3）**：✅ 改构建链（双全局）✅ 句柄 codemod 跨 75+20 文件✅ `libs/core` exports 公共契约变更✅ `docs/specs` 宪法（S5）——均需人签核。
 **新风险**：**R-ε** Node ESM 严格下 exports pattern 能否把无扩展深子路径 `@core/saas-kit/shared-kernel/…` 正确映射到 `dist/*.js`（需实机验）·**R-ζ** 跳包 DI：app 注 core service 时 `design:paramtypes` 跨包边界是否仍解析（§4.3 坑延伸至 core 内部·`di-context.integration` 须锁）。
 
+## 4.8 S0–S4 落地实证结果（**S1–S4 全绿·prod 两运行时起服 200**·2026-10-15）
+
+> 承接 §4.7 放行，S0→S4 已实现并逐片实证。R-δ **根治**，R-ε/R-ζ **证伪（成立）**，并拓出新边界 **R-η**（直接改判 S5 的量级·见下）。
+
+- **S1 ✅**：`libs/core` 内 20 处 `@core/*` 自引用→包内相对路径（手改 13 prod 文件·逐处核相对深度）；prod 真实裸句柄归零（`index.ts` 余 1 处系注释）。
+- **S2 ✅**：apps/api `@core/x`→`@core/saas-kit/x`（75 prod + 相关测）；root/apps tsconfig paths 键 `@core/*`→`@core/saas-kit/*`。**过程教训**：bash 双引号包裹的 perl codemod 中 `@core` 被当 Perl 数组插值→模式塌成 `quote+/`→误伤 `'/probe'` 等字符串路由（3 测红·343→322/18+3fail）；`git checkout` 全量回退后改用**单引号 perl**（`\x27`/`\@core`·仅命中 quote+`@core/`）重做·343 复绿。提交绿检查点 `1b41d88`。
+- **S3 ✅（含 R-ε 证伪）**：`libs/core` 走**同一 nest/swc 管线**独立构建（`cd libs/core && nest build --builder swc`）产 `dist/**.js` 55 文件——**SWC 给相对 import 补 `.js` 扩展**→Node 严格 ESM 可解析（这是不走 tsc builder 的关键理由：tsc 不给相对 import 加扩展名）；`tsc --emitDeclarationOnly` 产 `.d.ts`；`package.json` `exports`/`typesVersions` 指 dist；root deps `@core/saas-kit: workspace:*`→`bun install` 建链 `node_modules/@core/saas-kit→../../libs/core`。**R-ε 证伪**：仓内探针（repo 目录跑·非 `/tmp`）证 `import '@core/saas-kit/shared-kernel/context/request-context'`（无扩展深子路径）经 exports `./*`→`./dist/*.js`，**node 与 bun 双解析成功**。
+- **S3d ✅（裸句柄不重写）**：`tsconfig.build.json` 覆写 `paths` **仅去** `@core/saas-kit/*`（留 app 内别名）+ `exclude` 加 `libs` → 编译期 SWC **不重写**、产物落 `@core/saas-kit/…` 裸句柄；typecheck 经 `node_modules/@core/saas-kit` typesVersions→dist `.d.ts` 解析（moduleResolution `node` 吃 typesVersions）。实证：`dist/apps/api/src` 裸句柄 121 处·**0** 处 `libs/core/src` 重写残留·typeCheck 0 issues。`tsconfig.json`（vitest/IDE 用）**保留** `@core/saas-kit/*`→src 源，测试环不依赖 dist。
+- **S4 ✅（验收命门）**：`build:libs`（先编 core）→`build:nest`（再编 app）编排入 root scripts；清树 `bun run build`（rimraf→libs 55→app 149·TSC 0×2）后，**编译产物 `dist/apps/api/src/main.js` 在 node 与 bun 两运行时均真起服 → `/api/v1/health` 200**（`{"status":"ok"}`·DB 连·requestIdHook 生效）。**R-δ 根治**。343 零掉·Biome 净。
+- **R-ζ 证伪（成立）**：跨包 DI 无恙——两运行时 prod 起服完整构建 DI 图 + `app.module`/DI 回归测（343）全绿。
+- **⚠️ R-η（新发现·Bun 掩盖的 Node ESM 源不兼容集群·与路径别名正交·直接改判 S5 量级）**：令 **node** 侧 prod 起服（S4 判据之一）时，逐层暴露 Bun 静默兜底而 Node 报错的**多类**源级不兼容（**均已在 boot 路径修复·两运行时验**）：
+  1. **CJS interop**：`import * as Joi from 'joi'` 在 Node 下 `Joi.string` undefined（joi 的 `module.exports=require(...)` 再导出 cjs-module-lexer 不可识别·仅 `.default`；Bun 直暴 `module.exports` 属性故掩盖）→改默认 import。（实测 `dotenv`/`js-yaml`/`nodemailer`/`bcryptjs` 命名导出可被 lexer 识别·`import * as` 在 Node 亦可用·不动；`cos-nodejs-sdk-v5` 需 `.default` 但为懒加载 provider、不在 boot/health 路径）。
+  2. **`__dirname` 在 Node ESM 未定义**（Bun 注入）→ `i18n.module.ts`（boot 期求值·曾崩）+ `mailer.service.ts` 改 `path.dirname(fileURLToPath(import.meta.url))`（与 CJS `__dirname` 同值·跨运行时一致）。
+  3. **dotenv 装载时序**：`config/envs/*.ts` 为顶层对象字面量、**被 import 时**即读 `process.env`；Node ESM 静态 import 全提升先于 `main.ts` 主体 `dotenv.config()`→envs 求值时环境未注入→全走默认（`STORAGE_PROVIDER` 落回 `'alioss'`→eager 构 ali-oss client 抛缺凭证）。Bun 预载 `.env` 掩盖。修：抽 `load-env.ts` 副作用模块置入口**首个 import**（按依赖顺序先注入再评 config 链·node/bun 一致）。
+  - **残留（非 boot 路径·归 S5 全表面处理）**：`cos` provider 实例化时 `new COS` 需 `.default`（未由 /health 触发）；`seed.ts`/`openapi-codegen.ts` 亦持 `import * as dotenv`+`dotenv.config()` 同一时序隐患；未走到的懒加载面/邮件发送面（mjml 模板 prod 资产是否随 `i18n/**` assets 拷贝亦待验）。**⇒ 结论：S5「运行时切换」绝非换 flag，实为一次 Node-ESM 源兼容清扫·量级上修·须在 S5 单独签核时重定范围。**
+- **回归防线（S0 语义补全）**：`load-env` 必须保持入口**第一个 import**（Biome `organizeImports` 当前不重排副作用 import·实证保留首位，但属脆弱不变量·S5 宜加门禁测锁）。`verify:prod-boot`（build 后真起服验 /health 200）可作永久防线入 scripts（本轮以手工两运行时 200 存照代）。
+
 ## 5. 完成判据（过审计门后·可核验 + 穷尽）
 
 - [ ] 切片 A：`pnpm install` 成功 + 布局解析方案定档（isolated 或 hoist 兜底）写进 tooling
@@ -156,8 +173,9 @@
 | 2026-10-15 | 0.4.0 | 人裁 **B**（多包构建重设计并入案）+ 实机复测发现 **R-δ 非 Node 专属（Bun prod 产物同坏）** | §3 R-δ 定性纠正：编译产物 prod 在 Bun/Node **都跑不通**·先于本迁移的潜伏债·“A 维持 Bun 零风险”作废；新增 §4.6 待审设计（现状实锤：nest build 只编 apps、dist 无 libs、75 生产文件走 @core/* 路径别名）+ 设计一（同编两树）/设计二（libs/core 独立成包+exports 指 dist·**推荐**）；状态转**待新一轮审计门·高危签核** |
 | 2026-10-15 | 0.5.0 | 人择 **设计二**（libs/core 独立成包）·要求先出可审详案 | 新增 §4.7 设计二 v0.5 决策完备详案：额外实锤（core 内 20 处 `@core/*` 自引用）+ 切片 S0（回归防线·基线即红）→S1（core 独立构建·exports 指 dist）→S2（app 75 文件句柄切包子路径）→S3（构建编排）→S4（两运行时 prod 起服实证）→S5（回工具链主线）；高危四项 + 新风险 R-ε/R-ζ；**待最终审计门放行** |
 | 2026-10-15 | 0.6.0 | 人「照建议自裁」过最终审计门 | §4.7 落档放行：**开工 S0→S4**（多包构建重设计·分步实证）·R-ε/R-ζ 实现期据实自裁·**S5 到那步再单独签**；状态转**进行中·S0–S4 实现** |
+| 2026-10-15 | 0.7.0 | S1–S4 实现完成·两运行时 prod 起服 200 | 新增 §4.8 实证结果：**R-δ 根治**（libs/core 独立 swc 构建→dist·裸句柄不重写·node+bun 均 /health 200）·**R-ε 证伪**（无扩展深子路径经 exports→dist 双理解析）·**R-ζ 证伪**（跨包 DI 健在）；拓出 **R-η**（Bun 掩盖的 Node-ESM 源不兼容集群：joi CJS interop / `__dirname` / dotenv 时序·boot 路径已修·余留归 S5）；**关键结论：S5 非 flag 切换而是 Node-ESM 源兼容清扫·量级上修·待 S5 签核重定范围**；状态转 **S1–S4 完成·待 S5 签核** |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.6.0 变更，以当前正文内容为准。
+正文已于 2026-10-15 / v0.7.0 变更，以当前正文内容为准。
