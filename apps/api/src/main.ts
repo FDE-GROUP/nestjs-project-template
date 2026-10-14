@@ -1,6 +1,4 @@
-import * as dotenv from 'dotenv';
-
-dotenv.config();
+import './load-env';
 
 import compression from '@fastify/compress';
 import fastifyCors from '@fastify/cors';

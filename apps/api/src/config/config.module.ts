@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
-import * as Joi from 'joi';
+import Joi from 'joi';
 import { ConfigService } from './config.service';
 import defaultConfig from './envs/default';
 import developmentConfig from './envs/development';

@@ -1,5 +1,8 @@
 import type { EventStore } from '@core/saas-kit/shared-kernel/domain/event-store.port';
-import { TENANT_STATUS, type TenantStatus } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+import {
+  TENANT_STATUS,
+  type TenantStatus,
+} from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import type { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';

@@ -1,7 +1,7 @@
-import { QuotaService } from '../../../../../tenancy/quota/quota.service';
-import { TenantContextService } from '../../../../../tenancy/tenant-context.service';
 import { Inject } from '@nestjs/common';
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import { QuotaService } from '../../../../../tenancy/quota/quota.service';
+import { TenantContextService } from '../../../../../tenancy/tenant-context.service';
 import type { TenantSubscriptionView } from '../../read-models/subscription.read-model';
 import { GetSubscriptionQuery } from '../get-current-subscription.query';
 

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
@@ -5,6 +6,9 @@ import mjml from 'mjml';
 import { I18nService } from 'nestjs-i18n';
 import * as nodemailer from 'nodemailer';
 import * as path from 'path';
+
+// Node ESM 无 `__dirname`（Bun 静默注入，Node 不），以 `import.meta.url` 等价推导，跨运行时一致。
+const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Body translation keys per email template (matches src/i18n/<lang>/emails.json structure).
 const EMAIL_BODY_KEYS = ['title', 'greeting', 'message', 'button', 'footer'] as const;
@@ -38,7 +42,7 @@ export class MailerService {
   ): Promise<string> {
     try {
       // Read MJML template
-      const templatePath = path.join(__dirname, '..', 'i18n', 'emails', `${templateName}.mjml`);
+      const templatePath = path.join(dirname, '..', 'i18n', 'emails', `${templateName}.mjml`);
       let mjmlTemplate = await fs.readFile(templatePath, 'utf8');
 
       // Replace template variables with translations

@@ -6,7 +6,11 @@ import type {
   WorkspaceRecord,
   WorkspaceRepository,
 } from '@core/saas-kit/modules/workspaces/domain/repositories/workspace.repository';
-import { createPage, type Page, type PageRequest } from '@core/saas-kit/shared-kernel/domain/pagination';
+import {
+  createPage,
+  type Page,
+  type PageRequest,
+} from '@core/saas-kit/shared-kernel/domain/pagination';
 import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, eq, sql } from 'drizzle-orm';

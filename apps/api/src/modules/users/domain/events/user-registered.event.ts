@@ -1,4 +1,7 @@
-import { DomainEvent, type DomainEventProps } from '@core/saas-kit/shared-kernel/domain/domain-event';
+import {
+  DomainEvent,
+  type DomainEventProps,
+} from '@core/saas-kit/shared-kernel/domain/domain-event';
 import { DOMAIN_EVENTS } from '@core/saas-kit/shared-kernel/domain/domain-event-names';
 
 export interface UserRegisteredPayload {

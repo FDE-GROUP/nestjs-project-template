@@ -1,6 +1,9 @@
 import type { DrizzleService } from '@app/database/drizzle.service';
 import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
-import { USER_STATUS, type UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
+import {
+  USER_STATUS,
+  type UserStatusService,
+} from '@core/saas-kit/tenancy/lifecycle/user-status.service';
 import type { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';

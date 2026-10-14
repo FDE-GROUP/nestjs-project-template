@@ -1,16 +1,3 @@
-import { UserStatusService } from '../lifecycle/user-status.service';
-import {
-  PLATFORM_SETTINGS,
-  type PlatformSettings,
-} from './platform-config.port';
-import {
-  PLATFORM_IDENTITY_LOOKUP,
-  type PlatformIdentityLookup,
-} from './platform-identity.port';
-import {
-  type RequestSessionReader,
-  SESSION_READER,
-} from '../session/request-session.port';
 import {
   type CanActivate,
   type ExecutionContext,
@@ -19,6 +6,10 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { UserStatusService } from '../lifecycle/user-status.service';
+import { type RequestSessionReader, SESSION_READER } from '../session/request-session.port';
+import { PLATFORM_SETTINGS, type PlatformSettings } from './platform-config.port';
+import { PLATFORM_IDENTITY_LOOKUP, type PlatformIdentityLookup } from './platform-identity.port';
 
 /**
  * 平台级权限守卫（FR-11 三层之顶层 · FR-13 · S5 正式判据）。

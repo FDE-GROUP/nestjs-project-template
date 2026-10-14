@@ -10,7 +10,9 @@
   ],
   "scripts": {
     "prebuild": "rimraf dist",
+    "build:libs": "cd libs/core && nest build --builder swc && cd ../.. && tsc --project libs/core/tsconfig.build.json --emitDeclarationOnly",
     "build:nest": "nest build --builder swc",
+    "build": "bun run build:libs && bun run build:nest",
     "format": "biome format --write .",
     "start": "bun run apps/api/src/main.ts",
     "start:dev": "bun --watch run apps/api/src/main.ts",
@@ -49,6 +51,7 @@
     "@aws-sdk/client-s3": "^3.1150.0",
     "@aws-sdk/lib-storage": "^3.1150.0",
     "@aws-sdk/s3-request-presigner": "^3.1150.0",
+    "@core/saas-kit": "workspace:*",
     "@fastify/compress": "^9.2.1",
     "@fastify/cors": "^11.3.1",
     "@fastify/helmet": "^13.1.2",

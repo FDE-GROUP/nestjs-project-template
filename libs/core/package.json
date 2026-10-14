@@ -4,10 +4,24 @@
   "description": "多租户 SaaS 能力核心库（框架无关·禁反向 import 参考应用·§9.5.4①B/③）",
   "type": "module",
   "private": true,
-  "main": "src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./*": "./src/*"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*"
+      ]
+    }
   },
   "peerDependencies": {
     "@nestjs/common": "^12.1.3",

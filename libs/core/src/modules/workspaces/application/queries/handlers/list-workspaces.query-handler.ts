@@ -1,6 +1,6 @@
-import type { Page } from '../../../../../shared-kernel/domain/pagination';
 import { Inject } from '@nestjs/common';
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import type { Page } from '../../../../../shared-kernel/domain/pagination';
 import {
   WORKSPACE_REPOSITORY,
   type WorkspaceRepository,

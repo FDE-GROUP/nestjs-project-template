@@ -1,4 +1,13 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "coverage", "**/*.spec.ts", "**/*.test.ts"]
+  "compilerOptions": {
+    "paths": {
+      "@app/*": ["apps/api/src/*"],
+      "@modules/*": ["apps/api/src/modules/*"],
+      "@config/*": ["apps/api/src/config/*"],
+      "@common/*": ["apps/api/src/common/*"],
+      "@shared/*": ["apps/api/src/shared/*"]
+    }
+  },
+  "exclude": ["node_modules", "test", "dist", "coverage", "libs", "**/*.spec.ts", "**/*.test.ts"]
 }

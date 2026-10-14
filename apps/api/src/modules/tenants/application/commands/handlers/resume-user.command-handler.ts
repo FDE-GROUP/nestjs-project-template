@@ -1,4 +1,7 @@
-import { USER_STATUS, UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
+import {
+  USER_STATUS,
+  UserStatusService,
+} from '@core/saas-kit/tenancy/lifecycle/user-status.service';
 import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
