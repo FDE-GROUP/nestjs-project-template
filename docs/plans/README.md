@@ -16,7 +16,7 @@
 | [module-tenancy-es-user-status-events](./module-tenancy-es-user-status-events.md) | 用户级 suspend/resume 事件接入 event store（第三切片·与 user.registered 同流） | **已审计**（人直批·§6 无开放项） | **已验收·结项**（commit `3b6f0b1`·无新迁移·gated 真库 5/5 同流 [1,2]·CI 271/10） | module-tenancy-es-lifecycle-events（已结项）· event-sourcing-roadmap Phase B |
 | [module-tenancy-es-tenant-rejected-event](./module-tenancy-es-tenant-rejected-event.md) | reject 驳回事件接入 event store（第四切片·治理事件面收口·含 §6-① 误判修正） | **已审计**（人直批·§6 无开放项） | **已验收·结项**（commit `a3fe6e7`·无新迁移·CI 273/10·治理事件面收口） | module-tenancy-es-lifecycle-events §6-① · event-sourcing-roadmap Phase B |
 | [microservice-readiness](./microservice-readiness.md) | 微服务就绪度路线（触发器判据 + 三阶段迁移 + 就绪机制排序） | **已审计**（人签核 2026-10-14·未决 ①–④ 逐裁见 §4·v0.2.0） | 盘点已交付·执行入口=首切片（不预授权实现） | `research/nestjs-fastify-nx-review.md` · event-sourcing-roadmap Phase B · global-tenancy §9.5 |
-| [global-readiness-initial-slice](./global-readiness-initial-slice.md) | 就绪首切片：表所有权纪律成文 + codegen 导出模块（高危#5/#4 随审计门签核） | **已审计**（人批准 2026-10-14·甲乙丙照建议自裁） | 已实现·待验收（守卫测绿基线·codegen 字节级一致·CI 276/10） | microservice-readiness §4-① |
+| [global-readiness-initial-slice](./global-readiness-initial-slice.md) | 就绪首切片：表所有权纪律成文 + codegen 导出模块（高危#5/#4 随审计门签核） | **已审计**（人批准 2026-10-14·甲乙丙照建议自裁） | **已验收·结项**（commit `0e0ad02`·守卫测绿基线·codegen 字节级一致·CI 276/10·遗留 Pages 首跑观察项） | microservice-readiness §4-① |
 
 **列取值**
 - **审计**：`待审计` / `已审计`（无已审方案不写码——`workflow.md` §3）
