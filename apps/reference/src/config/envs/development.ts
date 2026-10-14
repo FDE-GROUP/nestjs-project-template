@@ -58,4 +58,8 @@ export default {
   payment: {
     provider: process.env.PAYMENT_PROVIDER || 'stripe',
   },
+  // ES 首切片：dev 默认启用影子追加（前提：本地库已 migrate 0009；显式置 false 可关）。
+  eventStore: {
+    enabled: (process.env.EVENT_STORE_ENABLED ?? 'true') === 'true',
+  },
 };

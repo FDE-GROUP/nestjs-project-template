@@ -23,7 +23,8 @@ const persistedState = (over: Partial<UserState> = {}): UserState => ({
 
 describe('CreateUserCommandHandler', () => {
   const publishAll = vi.fn();
-  const eventBus = { publishAll } as never;
+  // ES 首切片：handler 改注 DOMAIN_EVENT_PUBLISHER 端口（同 publishAll 契约·双模派发）。
+  const publisher = { publishAll } as never;
 
   let repo: UserRepository & {
     findByEmail: ReturnType<typeof vi.fn>;
@@ -54,7 +55,7 @@ describe('CreateUserCommandHandler', () => {
 
   it('rejects when a user with the email already exists', async () => {
     repo.findByEmail.mockResolvedValueOnce(User.rehydrate(persistedState()));
-    const handler = new CreateUserCommandHandler(repo as unknown as UserRepository, eventBus);
+    const handler = new CreateUserCommandHandler(repo as unknown as UserRepository, publisher);
 
     await expect(
       handler.execute(new CreateUserCommand('new@example.com', 'password123')),
@@ -64,7 +65,7 @@ describe('CreateUserCommandHandler', () => {
   });
 
   it('persists, dispatches user.registered, and returns the public projection', async () => {
-    const handler = new CreateUserCommandHandler(repo as unknown as UserRepository, eventBus);
+    const handler = new CreateUserCommandHandler(repo as unknown as UserRepository, publisher);
 
     const result = await handler.execute(
       new CreateUserCommand('new@example.com', 'password123', 'Ada', 'Lovelace'),
@@ -87,7 +88,7 @@ describe('CreateUserCommandHandler', () => {
   });
 
   it('defaults optional names to null', async () => {
-    const handler = new CreateUserCommandHandler(repo as unknown as UserRepository, eventBus);
+    const handler = new CreateUserCommandHandler(repo as unknown as UserRepository, publisher);
     const result = await handler.execute(new CreateUserCommand('solo@example.com', 'password123'));
     expect(result.firstName).toBeNull();
     expect(result.lastName).toBeNull();

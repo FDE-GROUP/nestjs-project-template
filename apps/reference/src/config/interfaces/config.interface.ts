@@ -103,4 +103,10 @@ export interface Config {
   payment: PaymentConfig;
   platform: PlatformConfig;
   oauth: OAuthConfig;
+  eventStore: EventStoreConfig;
+}
+
+/** ES 首切片（module-users-es-append §2.5）：event store 影子追加双模开关。 */
+export interface EventStoreConfig {
+  enabled: boolean;
 }

@@ -61,6 +61,11 @@ export default {
   payment: {
     provider: process.env.PAYMENT_PROVIDER || 'stripe',
   },
+  // ES 首切片（module-users-es-append §2.5）：event store 影子追加双模开关，默认关；
+  // 目标库已 apply 0009 event 表后方可开（误开 = append fail-loud）。
+  eventStore: {
+    enabled: process.env.EVENT_STORE_ENABLED === 'true',
+  },
   // 平台经营者（FR-13 · S5）：全局唯一 operator 由开发者经配置设定，seed 保障其行存在；
   // 平台级动作判据 = 会话用户 email 命中此配置（泛 ADMIN 不再持有平台权）。
   platform: {

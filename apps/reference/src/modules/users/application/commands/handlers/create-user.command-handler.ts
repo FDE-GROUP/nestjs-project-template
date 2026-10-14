@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
+import {
+  DOMAIN_EVENT_PUBLISHER,
+  type DomainEventPublisher,
+} from '@core/shared-kernel/domain/event-publisher.port';
 import { ConflictException, Inject, Logger } from '@nestjs/common';
-import { CommandHandler, EventBus, type ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import * as bcrypt from 'bcryptjs';
 import { type PublicUser, User } from '../../../domain/entities/user.aggregate';
 import { USER_REPOSITORY, type UserRepository } from '../../../domain/repositories/user.repository';
@@ -12,7 +16,7 @@ export class CreateUserCommandHandler implements ICommandHandler<CreateUserComma
 
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
-    @Inject(EventBus) private readonly eventBus: EventBus,
+    @Inject(DOMAIN_EVENT_PUBLISHER) private readonly events: DomainEventPublisher,
   ) {}
 
   async execute(command: CreateUserCommand): Promise<PublicUser> {
@@ -33,12 +37,9 @@ export class CreateUserCommandHandler implements ICommandHandler<CreateUserComma
 
     const persisted = await this.users.save(user);
 
-    // In-process dispatch only for now. The ES phase swaps this for an append to the
-    // event store; the pull/emit seam stays identical.
-    const events = persisted.pullDomainEvents();
-    if (events.length > 0) {
-      this.eventBus.publishAll(events);
-    }
+    // ES 首切片：派发收口到 DOMAIN_EVENT_PUBLISHER（event store 启用则先耐久 append，
+    // 再进程内 publishAll）；pull/emit 接缝形态不变（roadmap Phase B 写路径切换只动实现）。
+    await this.events.publishAll(persisted.pullDomainEvents());
 
     this.logger.log(`User created successfully with ID: ${persisted.id}`);
     return persisted.toPublicProjection();

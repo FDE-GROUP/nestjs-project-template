@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   account,
   consent,
+  event,
   invitation,
   member,
   organization,
@@ -23,6 +24,7 @@ describe('database schema', () => {
       [
         'account',
         'consent',
+        'event',
         'invitation',
         'member',
         'organization',
@@ -35,6 +37,22 @@ describe('database schema', () => {
         'workspace',
       ].sort(),
     );
+  });
+
+  it('event table exposes the ES envelope columns (ES 首切片 · shadow append)', () => {
+    // 列与 DomainEvent 信封一一对应（含 eventId 保真列·plan §6 审计改动）；
+    // 增删列属契约变更，须过审计门同步 roadmap/适配器。
+    expect(event.id).toBeDefined();
+    expect(event.eventId).toBeDefined();
+    expect(event.aggregateId).toBeDefined();
+    expect(event.aggregateType).toBeDefined();
+    expect(event.version).toBeDefined();
+    expect(event.eventType).toBeDefined();
+    expect(event.eventVersion).toBeDefined();
+    expect(event.payload).toBeDefined();
+    expect(event.metadata).toBeDefined();
+    expect(event.occurredAt).toBeDefined();
+    expect(event.createdAt).toBeDefined();
   });
 
   it('user table exposes the expected columns', () => {

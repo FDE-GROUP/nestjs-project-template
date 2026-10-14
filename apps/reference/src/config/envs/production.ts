@@ -58,4 +58,8 @@ export default {
   payment: {
     provider: process.env.PAYMENT_PROVIDER || 'stripe',
   },
+  // ES 首切片：生产严格默认关（须 0009 经人审 apply 后才显式置 true）。
+  eventStore: {
+    enabled: process.env.EVENT_STORE_ENABLED === 'true',
+  },
 };

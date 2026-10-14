@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm';
 import {
+  bigserial,
   boolean,
   index,
   integer,
@@ -8,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
@@ -285,6 +287,35 @@ export const tenantSubscription = pgTable(
   ],
 );
 
+/**
+ * ES Phase B 首切片（module-users-es-append · shadow append）：append-only 事件流表。
+ * 列与 DomainEvent 信封一一对应（列名 camelCase 从仓库惯例·plan §6-③）；`version` 为
+ * 聚合内序号（适配器 max+1 递增·§6 审计改动），`eventVersion` 是 upcast 用的 schema
+ * 版本；`eventId` 保留信封 uuid 唯一键供幂等/溯源。CRUD 仍是唯一真相源，本表仅作
+ * 耐久留痕，不提供读取/重放语义（Phase B 后半再切）。纯 additive·无 FK（跨上下文流）。
+ */
+export const event = pgTable(
+  'event',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    eventId: text('eventId').notNull(),
+    aggregateId: text('aggregateId').notNull(),
+    aggregateType: text('aggregateType').notNull(),
+    version: integer('version').notNull(),
+    eventType: text('eventType').notNull(),
+    eventVersion: integer('eventVersion').notNull().default(1),
+    payload: jsonb('payload').notNull(),
+    metadata: jsonb('metadata'),
+    occurredAt: timestamp('occurredAt', { mode: 'date' }).notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('event_aggregate_version_key').on(table.aggregateType, table.aggregateId, table.version),
+    unique('event_event_id_key').on(table.eventId),
+    index('event_aggregate_idx').on(table.aggregateType, table.aggregateId),
+  ],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   sessions: many(session),
@@ -339,6 +370,7 @@ export const schema = {
   workspace,
   userStatus,
   tenantSubscription,
+  event,
 };
 
 export type User = typeof user.$inferSelect;

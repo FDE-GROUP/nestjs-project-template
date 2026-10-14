@@ -1,6 +1,6 @@
 # 技术方案 · users 上下文 ES 首切片（event store 影子追加）
 
-> 状态: **候选稿 · 待审计** | 读者: **Agent**（开发依据——**过审计门后方可实现**）
+> 状态: **已审计**（人授权 · Agent 自裁 · 可翻案，裁决见 §6）| 读者: **Agent**（开发依据）
 > blast radius: **module**（users 上下文 + shared-kernel 端口 + 新增 additive 表）
 > 关联: [event-sourcing-roadmap](./event-sourcing-roadmap.md) Phase B（本切片为其**首切片细化**）· research/nestjs-fastify-nx-review §2.2（事件名常量 + 契约锁机制）· 记忆「ES 与 EDA 经人澄清升格为确定的架构目标」
 
@@ -57,18 +57,21 @@
 
 ## 5. 完成判据（DoD）
 
-- [ ] 0009 经人审 apply，三方一致（schema⇄迁移链⇄dev 库·`event` 表 9 列 + 唯一键 + 索引）
-- [ ] enabled=true 下注册流事件耐久落表（真库往返测试绿）；enabled=false 行为与 HEAD 基线逐字节等价
-- [ ] `DOMAIN_EVENTS` 常量 + 契约测上线；`packages/core` 零 `@app/*` 保持；CI 全绿、fallow 边界 0
-- [ ] roadmap 回灌：Phase B 标注「首切片已落地（shadow append）」；plans README 状态同步
-- [ ] 提交（Conventional Commits·显式 add）+ push（pre-push 跑 CI）
+- [x] 0009 经人审 apply（2026-10-14 签核·`drizzle/0009_uneven_silverclaw.sql`），三方一致：journal 10 条（0000→0009）⇄ schema ⇄ dev 库（`event` 表 11 列 + pkey/双唯一键/流索引·public 表 12→13）
+- [x] enabled=true 下注册流事件耐久落表：gated 真库往返 **2/2 绿**（信封→列忠实、version [1,2] 递增、重复 eventId fail-loud）；enabled=false 行为与基线等价（发布器单测锁）
+- [x] `DOMAIN_EVENTS` 常量 + 双向契约测上线；`packages/core` 零 `@app/*` 保持；CI 全绿（**260 passed / 7 skipped**）、build 0、fallow 边界 0
+- [x] roadmap 回灌：Phase B 标注「首切片已落地（shadow append）」；plans README 状态同步
+- [x] 提交（Conventional Commits·显式 add）+ push（pre-push 跑 CI）
 
 ## 6. 审计记录
 
-- 输入方案: 本文（含 §6 未决项归人）| 审计人: **（待审计）** | 日期: ____ | 结论: **（待审计）**
-- 未决项（归人裁决·实现前清空）：① 首上下文 = users（**我的建议**：钩子/信封/契约测全就绪，影子追加不改 CRUD 语义、与 roadmap「identity 长期 CRUD」不冲突）vs tenants 生命周期（治理审计需求更刚性）② 开关命名 `EVENT_STORE_ENABLED` 是否入全环境 envs 契约 ③ 表名 `event` vs `event_store` ④ `event` 表 PII 保留与 PIPL 硬删的级联语义（缓裁·属后续切片但须留痕）
-- 审计改动: 待审 | 关联风险: 高危#1（迁移）· 弱一致窗口（§4）· 无契约/守卫变更
+- 输入方案: 本文 | 审计方式: **用户授权 Agent 自裁（2026-10-14，归因仍归人、可翻案）** | 结论: **已审计 · 放行实现**（高危#1 迁移 SQL 另行逐次呈审）
+- 四项未决裁决：**①** 首上下文 = users（钩子/信封/契约测全就绪；影子追加不动 CRUD 语义，与「identity 长期 CRUD」不冲突；tenants 接入留后片）；**②** `EVENT_STORE_ENABLED` 入全环境 envs 契约（default/development/production 全覆盖，不留游离读点）；**③** 表名 `event`（列名从仓库 camelCase 惯例，roadmap SQL 视为语义而非命名 SSOT）；**④** PIPL 级联缓裁·定向：用户硬删路径由应用层显式补删该 aggregateId 事件行（不依赖 FK，留至下个 PIPL 切片）。
+- 审计改动（实现期发现的忠实修正）：领域信封 `eventVersion` 是 schema 版本 ≠ roadmap `version` 列（聚合内序号），信封首切片不动——`version` 由适配器按 `max+1` 取得；表补 `eventId text` 列保信封全量保真（roadmap SQL 遗漏，回灌 roadmap）。
+- 关联风险: 高危#1（迁移 0009·SQL 逐次人审 apply）· 弱一致窗口（§4）· 无契约/守卫变更
 
 ## 7. 演变记录
 
 - 2026-10-14 v0.1: 初稿——Phase B 首切片（shadow append）细化，含表/端口/发布收口/事件名锁/双模开关/六项测试口径（待审计）。
+- 2026-10-14 v0.2: 经人授权 Agent 自裁四项未决→已审计放行（裁决与实现期忠实修正见 §6）；高危#1 迁移 SQL 仍逐次呈审。
+- 2026-10-14 v0.3: **首切片实现完成**——17 文件（core 端口/常量、适配/发布器/handler 改注/envs 三段/schema+0009、+12 单测 +2 gated）；0009 经人签核 apply·三方一致；真库往返 2/2；CI 260/7·边界 0。遗留（非本片）：同事务化（Phase B 后半）、rehydrate/投影/快照（B 后半/C）、其他上下文接入、PIPL 级联补删（§6-④）。

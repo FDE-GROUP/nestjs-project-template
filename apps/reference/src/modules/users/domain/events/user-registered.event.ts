@@ -1,4 +1,5 @@
 import { DomainEvent, type DomainEventProps } from '@core/shared-kernel/domain/domain-event';
+import { DOMAIN_EVENTS } from '@core/shared-kernel/domain/domain-event-names';
 
 export interface UserRegisteredPayload {
   readonly id: string;
@@ -13,7 +14,7 @@ export interface UserRegisteredPayload {
  * eventType `user.registered`, eventVersion 1 — the version an ES upcaster will key off.
  */
 export class UserRegisteredEvent extends DomainEvent<UserRegisteredPayload> {
-  static readonly EVENT_TYPE = 'user.registered';
+  static readonly EVENT_TYPE = DOMAIN_EVENTS.userRegistered;
   static readonly EVENT_VERSION = 1;
   static readonly AGGREGATE_TYPE = 'user';
 
