@@ -34,7 +34,7 @@ export const TABLE_OWNERSHIP: Record<string, string> = {
  * 新增例外必须过审计门并在 plan 留痕。
  */
 export interface WriteException {
-  /** 相对 `apps/reference/src` 的文件路径。 */
+  /** 相对 `apps/api/src` 的文件路径。 */
   readonly file: string;
   /** 被跨写的表（schema 导出名）。 */
   readonly table: string;

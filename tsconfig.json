@@ -27,12 +27,12 @@
     "verbatimModuleSyntax": false,
     "types": ["bun"],
     "paths": {
-      "@app/*": ["apps/reference/src/*"],
-      "@modules/*": ["apps/reference/src/modules/*"],
+      "@app/*": ["apps/api/src/*"],
+      "@modules/*": ["apps/api/src/modules/*"],
       "@shared-kernel/*": ["packages/core/src/shared-kernel/*"],
-      "@config/*": ["apps/reference/src/config/*"],
-      "@common/*": ["apps/reference/src/common/*"],
-      "@shared/*": ["apps/reference/src/shared/*"],
+      "@config/*": ["apps/api/src/config/*"],
+      "@common/*": ["apps/api/src/common/*"],
+      "@shared/*": ["apps/api/src/shared/*"],
       "@core/*": ["packages/core/src/*"]
     }
   },

@@ -97,7 +97,7 @@ DTOs are imported **by value** in controllers (not `import type`) so SWC preserv
 ## Appendix: Table Ownership Discipline
 
 > Introduced by the microservice-readiness initial slice (2026-10-14). The machine-readable
-> owner list is the single source of truth in `apps/reference/src/database/table-ownership.ts`;
+> owner list is the single source of truth in `apps/api/src/database/table-ownership.ts`;
 > this appendix states the semantics only — never copy the list here.
 
 - **Strict on the write side**: any `insert/update/delete` target table must belong to the

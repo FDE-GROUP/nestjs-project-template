@@ -54,11 +54,11 @@
 
 ## 架构
 
-采用 **Clean Architecture + DDD + CQRS 的垂直切片**与**分阶段 ES + EDA**（范式定义与阶段现状见 §技术栈·架构范式及[事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)：写路径统一 Command/Handler，跨上下文经领域事件通信，当前处 Phase B 影子追加）组织业务，并以 **Bun workspaces** 拆为共享内核与参考应用两包：
+采用 **Clean Architecture + DDD + CQRS 的垂直切片**与**分阶段 ES + EDA**（范式定义与阶段现状见 §技术栈·架构范式及[事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)：写路径统一 Command/Handler，跨上下文经领域事件通信，当前处 Phase B 影子追加）组织业务，并以 **Bun workspaces** 拆为共享内核与参考应用两包（参考应用目录按行业惯例命名 `apps/api`，“参考实现”语义由文档承担）：
 
 ```
 packages/core/src/          # @core 共享内核：领域事件/聚合基类、tenancy 契约、subscriptions/workspaces 领域层
-apps/reference/src/
+apps/api/src/
 ├─ modules/<上下文>/        # 限界上下文（users / auth / tenants / workspaces / payment / storage / subscriptions / posts）
 │  ├─ domain/               # 实体、值对象、领域事件、仓储接口
 │  ├─ application/          # 用例（command/query + handler）、DTO 编排
@@ -116,7 +116,7 @@ apps/reference/src/
 - **存储**：多云统一接口（S3 / OSS / COS），抽象基类去重
 - **邮件**：MJML 模板化发送（多语言 `i18n`）
 - **支付**：Stripe 客户 / 支付意图集成（境内通道规划中·provider 抽象预留）
-- **多语言**：`apps/reference/src/i18n`（中 / 英 / 日）
+- **多语言**：`apps/api/src/i18n`（中 / 英 / 日）
 - **可观测**：Pino 结构化日志
 - **测试**：Vitest 单元与集成测试
 - **代码质量**：Biome lint/format + 本地 CI 门禁（见下）

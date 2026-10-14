@@ -12,9 +12,9 @@
     "prebuild": "rimraf dist",
     "build:nest": "nest build --builder swc",
     "format": "biome format --write .",
-    "start": "bun run apps/reference/src/main.ts",
-    "start:dev": "bun --watch run apps/reference/src/main.ts",
-    "start:debug": "bun --inspect --watch run apps/reference/src/main.ts",
+    "start": "bun run apps/api/src/main.ts",
+    "start:dev": "bun --watch run apps/api/src/main.ts",
+    "start:debug": "bun --inspect --watch run apps/api/src/main.ts",
     "start:prod": "bun dist/main.js",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
@@ -30,10 +30,10 @@
     "drizzle:migrate": "drizzle-kit migrate",
     "drizzle:push": "drizzle-kit push",
     "drizzle:studio": "drizzle-kit studio",
-    "db:seed": "bun apps/reference/src/database/seed.ts",
+    "db:seed": "bun apps/api/src/database/seed.ts",
     "db:reset": "bun run drizzle:push -- --force && bun run db:seed",
     "db:setup": "bun run drizzle:push && bun run db:seed",
-    "openapi:export": "bun apps/reference/src/openapi-codegen.ts"
+    "openapi:export": "bun apps/api/src/openapi-codegen.ts"
   },
   "keywords": [],
   "author": {

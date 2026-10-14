@@ -1,5 +1,5 @@
 {
-  "name": "reference-app",
+  "name": "api-app",
   "version": "0.0.0",
   "description": "多租户 SaaS 参考应用（依赖 @core/saas-kit·运行时依赖 hoist 于 workspace 根·§9.5.4②）",
   "type": "module",

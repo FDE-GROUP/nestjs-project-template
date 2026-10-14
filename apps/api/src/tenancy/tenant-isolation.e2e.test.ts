@@ -223,6 +223,6 @@ gated('租户隔离全栈 e2e（真·Better Auth 登录编排 · 无认证桩 ·
  *   DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e bun run drizzle:push -- --force
  *   E2E_DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
  *     DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
- *     bunx vitest run apps/reference/src/tenancy/tenant-isolation.e2e.test.ts
+ *     bunx vitest run apps/api/src/tenancy/tenant-isolation.e2e.test.ts
  *   docker exec nestjs-pg-dev psql -U postgres -c "DROP DATABASE nestjs_e2e;"              # 用完清理（可选）
  */

@@ -7,7 +7,7 @@ import { TABLE_OWNERSHIP, WRITE_EXCEPTIONS } from './table-ownership';
  * 表所有权纪律守卫测（microservice-readiness 首切片 #1 · 高危防线）。
  *
  * 规则（成文于 `docs/specs/architecture.md` 附录，清单单源在 `table-ownership.ts`）：
- * **写侧严格**——`apps/reference/src/{modules,tenancy}/**` 内任何
+ * **写侧严格**——`apps/api/src/{modules,tenancy}/**` 内任何
  * `insert/update/delete` 的目标表（以 schema 导出名标识）必须属该文件的
  * 本上下文 owned 集，或命中 `WRITE_EXCEPTIONS` 显式例外。
  * 读侧（select/join）不受约束（CQRS read-model 固有跨上下文聚合）。
