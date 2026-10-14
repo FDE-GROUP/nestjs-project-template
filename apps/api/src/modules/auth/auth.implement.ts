@@ -72,7 +72,10 @@ export function CreateAuth(
   const appConfig = configService.getAppConfig();
   const authConfig = configService.getAuthConfig();
   const corsConfig = configService.getCorsConfig();
-  const basePath = `/${appConfig.apiPrefix}/${appConfig.version}/auth`;
+  // URI 版本段与 main.ts `enableVersioning({ defaultVersion: '1' })` 同源（对外前缀 /api/v1）。
+  // 曾误用 appConfig.version（API_VERSION='1.0'·接口语义是文档版本）拼 basePath——BA HTTP 面
+  // 整面 404 的第二层缺陷（实机 mount 到 /api/1.0 坐实），module-auth-http-surface v0.3 订正。
+  const basePath = `/${appConfig.apiPrefix}/v1/auth`;
 
   // 乙1·生产缺配显性化：反代部署未配 trustedProxies 时限流落共享桶——启动日志一响，
   // 不拦启动（直连部署未必有反代，无 PIPL 级法定依据不做 fail-closed）。
@@ -238,10 +241,10 @@ export function CreateAuth(
         throw new Error('Request URL is missing');
       }
 
-      // Use the original request directly instead of cloning to prevent property loss
-      // Set only the necessary properties that need to be modified
-      req.url = url;
-      req.originalUrl = url; // Ensure originalUrl is set for better-auth
+      // 订正（module-auth-http-surface·实机坐实）：Fastify 的 `req.url`/`req.originalUrl` 均为
+      // 原型只读 getter，Express 时代的回写赋值抛 `Attempted to assign to readonly property`
+      //（整面 500）。实例级接线递来的 raw.url 即完整路径，BA 自剥 basePath 匹配，无需任何
+      // 改写；旧「保形 Express 兼容层」整段退役。
 
       // Only modify socket encryption if needed, don't replace the entire socket
       if (req.raw && req.raw.socket) {

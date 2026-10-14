@@ -14,6 +14,6 @@ export const IS_PUBLIC_KEY = Symbol('isPublic');
  * 取会话=鸡生蛋死锁）、以及靠**签名**而非会话校验的入站回调（如 Stripe `payment/webhooks`）。
  * 漏标=公共端点被锁死（生产中断）；滥用=安全缺口。故每一处 `@Public()` 都是需审计的显式决定。
  *
- * @example 类级：`@Public()` 于 `AuthController`；方法级：`@Public()` 于 webhook handler。
+ * @example 类级：`@Public()` 于 `HealthController`；方法级：`@Public()` 于 webhook handler。
  */
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);

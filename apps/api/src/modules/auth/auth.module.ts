@@ -1,22 +1,15 @@
 import { ConfigModule } from '@app/config/config.module';
 import { DatabaseModule } from '@app/database/database.module';
-import {
-  type DynamicModule,
-  type MiddlewareConsumer,
-  Module,
-  type NestModule,
-  type Provider,
-} from '@nestjs/common';
+import { type DynamicModule, Module, type Provider } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { AuthBootstrapService } from './auth.bootstrap';
 import { AuthInstanceInjectKey } from './auth.constant';
-import { AuthController } from './auth.controller';
 import type { AuthInstance } from './auth.interface';
-import { AuthMiddleware } from './auth.middleware';
 import { AuthService } from './auth.service';
 import { SessionGuard } from './guards/session.guard';
 
 @Module({})
-export class AuthModule implements NestModule {
+export class AuthModule {
   static forRoot(): DynamicModule {
     const authProvider: Provider = {
       provide: AuthInstanceInjectKey,
@@ -40,29 +33,17 @@ export class AuthModule implements NestModule {
         AuthService,
         SessionGuard,
         authProvider,
+        // BA HTTP 面接线（module-auth-http-surface·甲1/丙）：装配 BA handler 并以 Fastify
+        // 实例级通配路由暴露 /api/v1/auth/*；原 AuthMiddleware（forRoutes 无路由可绑·整面 404）
+        // 与 AuthController stub 死面已清算删除。
+        AuthBootstrapService,
         // S11 · 高危#4 收口：全局会话墙（deny-by-default）。SessionGuard 已在本模块 provide，
         // 其依赖（AuthInstanceInjectKey 本地 · UserStatusService 经 @Global TenancyModule）均可解析；
         // useExisting 复用同一实例。@Public() 路由经 Reflector 旁路。
         { provide: APP_GUARD, useExisting: SessionGuard },
       ],
-      controllers: [AuthController],
       exports: [AuthService, SessionGuard, authProvider],
       global: true,
     };
-  }
-
-  configure(consumer: MiddlewareConsumer) {
-    // Configure routes to match all possible auth path patterns
-    consumer
-      .apply(AuthMiddleware)
-      .forRoutes(
-        '*prefix/auth/*path',
-        'auth/*path',
-        'api/*prefix/auth/*path',
-        '*prefix/*module/auth/*path',
-        'api/*prefix/auth',
-      );
-
-    consumer.apply(AuthMiddleware).exclude();
   }
 }

@@ -1,6 +1,6 @@
 # 技术方案 · BA HTTP 面接线（better-auth 原生端点整面 404 核验与修复）
 
-> 状态: **待审计**（blast radius: auth 模块装配面 + 可能的 main.ts 接线·高危#5 边角随批）| 读者: **人**（审计用）
+> 状态: **已实现待验收**（实现见 §4 v0.3·甲1+乙1+丙+丁 gated+戊照裁）| 读者: **人**（审计/验收用）
 > 缘起: module-auth-ip-trust（e46d2c7）实机副产观察·人裁"同意"顺带立项（2026-10-14）。
 > blast radius: `auth.controller.ts`（stub 面处置）・`auth.middleware.ts`/`auth.module.ts` 或 `main.ts`（接线一处）・零 schema・零业务模块
 
@@ -50,3 +50,15 @@
 ## 4. 演变记录
 
 - v0.1（2026-10-14）：初稿待审计。自纠一处：ip-trust 验收呈报中"session 200=装配健康"系误判（stub 空路由），本片 §1-2 已钉正——教训留痕：**判"装配健康"须以业务语义端点响应形态为准，非状态码孤证**。裁决点：甲1 Fastify 实例级接线（推荐）/ 乙1 维持 /api/v1/auth basePath（推荐）/ 丙 stub 全删 + 中间件清算 / 丁 gated e2e 起步（待裁）/ 戊缓界三条。
+- v0.2：人审通过（"同意"·2026-10-14），甲1 + 乙1 + 丙 + 丁（gated 起步照建议）+ 戊 全照建议。
+- **v0.3（实现登记·四处实机钉穿的方案期认知偏差 + 一处基准订正）**：
+  1. **spike 实锤·通配语法**：本仓 find-my-way 9.10.0 仅支持**裸尾 `*`**（`/{prefix}/v1/auth/*`），`{*name}` 语法启动即崩 `Wildcard must be the last character`（/tmp 最小复现钉死）。接线形态落地为 `AuthBootstrapService`（onApplicationBootstrap 经 `HttpAdapterHost` 对 Fastify 实例 `app.all(pattern)`），非 main.ts——属甲1 括注许可的第二形态，装配逻辑（social providers/generic configs/CreateAuth/authInstance.set）自原 AuthMiddleware 整体迁入。
+  2. **乙1 基准订正（如实登记，非静默修正）**：§1-5/乙1 声称 "CreateAuth 现值 `/api/v1/auth` 零改动" **读错**——现值实为 `/${apiPrefix}/${appConfig.version}/auth` = `/api/1.0/auth`（文档版本 '1.0' 误入路径，与 main.ts `enableVersioning({defaultVersion:'1'})` 不同源），系整面 404 的第二层先存缺陷（即使中间件能唤起也挂错址）。订正为 `/${apiPrefix}/v1/auth`——乙1 的目标路径不变，但"零改动"不成立，实为**改值订正**。
+  3. **Express 兼容层退役（实机 500 钉穿）**：`auth.implement.ts` handler 内 `req.url = ...`/`req.originalUrl = ...` 回写在 Fastify 下抛 `Attempted to assign to readonly property`（两者均原型只读 getter）→ 整段删除，仅留 url 缺失 fail-loud；实例级接线递来的 raw.url 即完整路径，BA 自剥 basePath。旧日志 `res.header is not a function` 噪音佐证该兼容层在中间件时代本已半死。
+  4. **body 挂回桥（better-call 库源码取证）**：Fastify 预解析消费 raw 流后 better-call node 适配器走 `maybeConsumedReq.body !== void 0` 兼容分支（`dist/adapters/node/request.mjs` L102-112 序列化回放）→ 桥内 `raw.raw.body = raw.body` 挂回即通（初测 `[body] expected object, received undefined` 钉出）。
+  5. **BA 语义两条实机钉明**：①cookie 写操作（sign-out 等）CSRF 要求 `Origin` 头，否则 403（带 origin 复测 200）；②注销后 `get-session` 返 **200 + body null**（非 401）——psql 查 session 行判明失效真实生效，e2e 断言按真语义写 `toBeNull()`。
+  6. 丙落地：`auth.controller.ts`（五 stub）与 `auth.middleware.ts` 整删；`AUTH_ALLOWED_METHODS` 删、`AUTH_BYPASS_PATHS` 删三 `/better-auth/*` 死项（存 health/apidoc/openapi·唯一真消费方 AuthSessionReader 不可整删）；`public.decorator.ts` 例示与 `session.guard.ts` 注释随之清算。
+  7. 丁落地：`auth.bootstrap.test.ts` ×2（pattern 裸尾 `*` 锁 + 兜底 500 行为契约；初版第三测不成立删除——CreateAuth 内部 catch 吞错不外抛）；`auth-http-surface.e2e.test.ts` ×3（`E2E_DATABASE_URL` gated·`app.inject` 对齐先例·真库 nestjs_e2e 跑 3/3 绿·文件末本地跑法注）；实机三态全存照：接线前 404（§1-1）→ 接线后 sign-up/in/get-session/sign-out 全 200 真 DB 行 → 非法 BA 子路径 404（Content-Length 0 真 404 非 500）+ stub 面 404（e2e 锁）+ health 200。
+  8. **Biome autofix 复刻 S9 坑**：`biome check --write` 把仅类型位的构造依赖（ConfigService/DrizzleService/QuotaService/HttpAdapterHost）擦成 `import type` → DI 运行时 UnknownDependenciesException（app-boot.smoke 红）→ 五依赖全改显式 `@Inject(X)` 值用法修复，复跑 "No fixes applied" 稳住。
+  9. **CI 327 passed | 16 skipped (343 总)·Local CI PASSED**（基线 328 + 单测 2 + gated e2e 3[默认 skip·16=13+3]）；ip-trust 片遗留观察（其 §4 v0.3-3）由本片闭环，已回记该 plan。
+  10. 实现期订正三处（e2e 文件）：import 路径深度 `'../'→'../../'`；`getHttpServer().inject` → `app.inject`（NestFastifyApplication 先例形态）；cookie 正则按真名 `/better-auth\.session_token/i`。

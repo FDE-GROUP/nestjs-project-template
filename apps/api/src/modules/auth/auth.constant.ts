@@ -20,17 +20,12 @@ export enum OAuthProviderType {
   VK = 'vk',
 }
 
-// Auth middleware configuration
-// Paths relative to the basePath that should bypass authentication
+// 会话旁路路径表（module-auth-http-surface·丙清算）：原 AuthMiddleware 消费面已随接线退役，
+// 现唯一消费方 = AuthSessionReader 廉价旁路（免无意义会话查询）。
 export const AUTH_BYPASS_PATHS = [
-  '/better-auth/token',
-  '/better-auth/session',
-  '/better-auth/providers',
   // 存活探针（module-common-health-probe）：与 Dockerfile HEALTHCHECK 的 /api/v1/health 口径对齐
-  //（旧死字样 '/healthcheck' 无任何实现，已清）；auth middleware 与会话读取器共用此表。
   '/health',
   '/apidoc',
   '/openapi.yaml',
   '/openapi.json',
 ];
-export const AUTH_ALLOWED_METHODS = ['GET', 'POST', 'OPTIONS'];
