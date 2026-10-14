@@ -23,6 +23,7 @@
 | [module-tenancy-data-export](./module-tenancy-data-export.md) | 租户级数据导出（NFR-6）：六表聚合 JSON·平台侧类级 guard·vision 阶段 3 开段首切片（高危#5 随审） | **已审计**（人批准 2026-10-14·甲乙丙丁照建议·高危#5 随批） | **已验收·结项**（commit `110b884`·CI 287/11 新基线·红线序列化断言坐实·S5 取证闭环合龙；自助导出/ZIP 异步留后续登记（硬删已由后续片兑现）） | global-tenancy NFR-6/S5 挂账 · vision §7 阶段 3 |
 | [module-tenancy-hard-delete](./module-tenancy-hard-delete.md) | 按租户硬删执行面（NFR-6 另一半）：deleted 前置闸·FK cascade·事件先补删后主删·阶段 3 第二切片 | **已审计**（人批准 2026-10-14·甲乙丙丁照建议） | **已验收·结项**（commit `f56cae3`·单测 +7·gated e2e 真库 2/2 cascade/补删/幸存坐实·CI **294/13** 新基线·NFR-6 两面全兑现） | global-tenancy NFR-6/S5 · 导出片遗留登记 |
 | [module-common-health-probe](./module-common-health-probe.md) | 存活探针端点：修 Docker HEALTHCHECK 断头路（/api/v1/health 声明有实无）+ @nestjs/terminus + 旁路表口径对齐·softkit 借鉴正向项 #1 | **已审计**（人批准 2026-10-14·甲乙丙丁照建议） | **已验收·结项**（commit `e958add`·单测 +3·实机 curl 200 佐证·CI **297/13** 新基线·实现期订正 terminus 12 移除 PingHealthIndicator→check([]) 等价·readiness 丁裁缓行留登记） | research/nestjs-fastify-nx-review 「health probe 分层」挂账 · Dockerfile L35 · docs/docker-deployment.md |
+| [module-common-pagination-contract](./module-common-pagination-contract.md) | 分页契约泛化 Page<T>：shared-kernel 纯类型契约 + 两处同构 page/DTO 换源·零行为变更·softkit 借鉴正向项 #2（借思路不借库） | **已审计**（人批准 2026-10-14·甲乙丙丁照建议） | **已实现·待验收**（单测 +7·既有 adapter 单测零改断言全绿=同形铁证·class-validator 继承雷实跑未踩中·CI **304/13** 新基线·业务面补分页留后续甲裁） | 借鉴清单 #2 · PlatformTenantPage/PlatformUserPage 双重复现状 |
 
 **列取值**
 - **审计**：`待审计` / `已审计`（无已审方案不写码——`workflow.md` §3）

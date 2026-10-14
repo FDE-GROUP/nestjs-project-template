@@ -1,3 +1,4 @@
+import type { Page, PageRequest } from '@core/shared-kernel/domain/pagination';
 import type { UserStatus } from '@core/tenancy/lifecycle/user-status.service';
 
 /**
@@ -21,14 +22,10 @@ export interface PlatformUserRow {
   createdAt: Date;
 }
 
-export interface PlatformUserPage {
-  items: PlatformUserRow[];
-  total: number;
-  limit: number;
-  offset: number;
-}
+/** 分页形状收敛到 shared-kernel 泛型契约（乙裁：旧名留作别名，消费方不动）。 */
+export type PlatformUserPage = Page<PlatformUserRow>;
 
 export interface UserGovernanceRepository {
   /** 跨平台用户列表（name/email 模糊过滤·createdAt 倒序·limit/offset 分页）。 */
-  list(opts: { limit: number; offset: number; search?: string }): Promise<PlatformUserPage>;
+  list(opts: PageRequest & { search?: string }): Promise<PlatformUserPage>;
 }

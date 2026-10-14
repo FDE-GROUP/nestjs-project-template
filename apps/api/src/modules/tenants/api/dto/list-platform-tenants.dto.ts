@@ -1,24 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
+import { ListPageDto } from '../../../../common/dto/list-page.dto';
 
-/** 跨租户列表查询参数（FR-6·平台级）：limit/offset 分页 + name/slug 模糊搜索。 */
-export class ListPlatformTenantsDto {
-  @ApiPropertyOptional({ description: 'Page size (1-100)', example: 20 })
-  @IsOptional()
-  @Transform(({ value }) => Number(value))
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  readonly limit = 20;
-
-  @ApiPropertyOptional({ description: 'Offset (rows to skip)', example: 0 })
-  @IsOptional()
-  @Transform(({ value }) => Number(value))
-  @IsInt()
-  @Min(0)
-  readonly offset = 0;
-
+/** 跨租户列表查询参数（FR-6·平台级）：分页面继承 ListPageDto，只留 name/slug 模糊搜索。 */
+export class ListPlatformTenantsDto extends ListPageDto {
   @ApiPropertyOptional({ description: 'Match against tenant name or slug (substring)' })
   @IsOptional()
   @IsString()

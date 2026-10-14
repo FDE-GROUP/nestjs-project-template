@@ -8,6 +8,7 @@ import {
   user,
   workspace,
 } from '@app/database/schema';
+import { createPage } from '@core/shared-kernel/domain/pagination';
 import {
   readTenantStatus,
   TENANT_STATUS,
@@ -77,7 +78,7 @@ export class DrizzleTenantGovernanceRepository implements TenantGovernanceReposi
       status: effectiveStatus(r.metadata),
       createdAt: r.createdAt,
     }));
-    return { items, total: count, limit: opts.limit, offset: opts.offset };
+    return createPage(items, count, opts);
   }
 
   async findById(organizationId: string): Promise<PlatformTenantRow | null> {

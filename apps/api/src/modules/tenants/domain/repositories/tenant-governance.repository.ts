@@ -1,3 +1,4 @@
+import type { Page, PageRequest } from '@core/shared-kernel/domain/pagination';
 import type { TenantStatus } from '@core/tenancy/lifecycle/tenant-lifecycle';
 
 /**
@@ -21,12 +22,11 @@ export interface PlatformTenantRow {
   createdAt: Date;
 }
 
-export interface PlatformTenantPage {
-  items: PlatformTenantRow[];
-  total: number;
-  limit: number;
-  offset: number;
-}
+/**
+ * 分页形状收敛到 shared-kernel 泛型契约（module-common-pagination-contract · 乙裁：
+ * 旧名留作别名，消费方 import 面不动，随重构自然淘汰）。
+ */
+export type PlatformTenantPage = Page<PlatformTenantRow>;
 
 /** 按租户诊断（FR-6）：租户行 + 关联数据量，供经营者一眼判断租户实况。 */
 export interface TenantDiagnostics {
@@ -116,7 +116,7 @@ export interface TenantDataExport {
 
 export interface TenantGovernanceRepository {
   /** 跨租户列表（name/slug 模糊过滤·createdAt 倒序·limit/offset 分页）。 */
-  list(opts: { limit: number; offset: number; search?: string }): Promise<PlatformTenantPage>;
+  list(opts: PageRequest & { search?: string }): Promise<PlatformTenantPage>;
   /** 租户详情；不存在 → null（调用方转 404）。 */
   findById(organizationId: string): Promise<PlatformTenantRow | null>;
   /** 按租户诊断（成员/邀请/workspace/帖子计数）；不存在 → null。 */
