@@ -4,7 +4,7 @@
   <a href="https://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-<p align="center">一个采用最佳实践的现代 NestJS 工程骨架：Fastify + Drizzle + PostgreSQL + Bun，<br/>并正演进为<strong>多租户 SaaS 框架</strong>。</p>
+<p align="center">一个采用最佳实践的现代 NestJS 工程骨架：Fastify + Drizzle + PostgreSQL + Bun，<br/>多租户 SaaS 核心能力已就位（租户→工作区两级、全局用户 + membership、三层权限）。</p>
 
 <p align="center">
   <a href="https://github.com/nestjs/nest" target="_blank"><img src="https://img.shields.io/github/license/nestjs/nest.svg" alt="Package License" /></a>
@@ -26,8 +26,8 @@
 
 ## 项目定位
 
-**现状**：一个结构良好的 NestJS 模板——分层清晰、认证/存储/支付/邮件开箱可用。
-**方向**：演进为**多租户 SaaS 框架**（租户 → 工作区两级、全局用户 + membership、三层权限、订阅+配额）。
+**现状**：多租户 SaaS 核心能力已落地——审批制租户生命周期、两级边界（租户→工作区）、三层权限与行级隔离、平台治理（驳回/暂停/恢复/删除 + 审计）、事件溯源 Phase B 影子追加（开关缺省关）。
+**方向**：订阅计费闭环与境内支付通道接入、ES Phase B 后半（同事务化/投影，待重状态上下文立项）持续推进。
 **地域**：面向**中国大陆**用户——技术栈与第三方选型优先**境内可访问 / 合规可用**的方案（依赖镜像、支付、登录、监控等，详见工具标准）。
 
 > 愿景是宪法顶层：详见 [项目愿景 `docs/specs/vision.md`](./docs/specs/vision.md)；多租户需求详见 [`docs/plans/global-tenancy.md`](./docs/plans/global-tenancy.md)。
@@ -44,7 +44,7 @@
 - **测试**：[Vitest](https://vitest.dev/)
 - **规范**：[Biome](https://biomejs.dev/)（lint + format）
 - **日志**：[Pino](https://getpino.io/) 结构化日志
-- **支付**：**多通道并存**——[Stripe](https://stripe.com/)（海外）+ 微信支付 + 支付宝（大陆），统一 provider 抽象（周期扣款随通道能力，方案层细化）
+- **支付**：[Stripe](https://stripe.com/)（海外·已落地）+ 微信支付 / 支付宝（大陆·**规划中**，统一 provider 抽象已预留接入面；周期扣款随通道能力，方案层细化）
 - **对象存储**：多云统一接口（[AWS S3](https://aws.amazon.com/s3/) / [阿里云 OSS](https://www.alibabacloud.com/product/object-storage-service) / [腾讯云 COS](https://www.tencentcloud.com/products/cos)）
 - **邮件**：[Nodemailer](https://nodemailer.com/) + [MJML](https://mjml.io/) 模板
 - **文档**：[Swagger / OpenAPI](https://swagger.io/)（`@nestjs/swagger`）
@@ -53,21 +53,22 @@
 
 ## 架构
 
-采用 **Clean Architecture + DDD + CQRS 的垂直切片**组织业务：
+采用 **Clean Architecture + DDD + CQRS 的垂直切片**组织业务，并以 **Bun workspaces** 拆为共享内核与参考应用两包：
 
 ```
-src/
-├─ modules/<上下文>/        # 限界上下文（users / auth / storage / stripe …）
+packages/core/src/          # @core 共享内核：领域事件/聚合基类、tenancy 契约、subscriptions/workspaces 领域层
+apps/reference/src/
+├─ modules/<上下文>/        # 限界上下文（users / auth / tenants / workspaces / payment / storage / subscriptions / posts）
 │  ├─ domain/               # 实体、值对象、领域事件、仓储接口
 │  ├─ application/          # 用例（command/query + handler）、DTO 编排
 │  ├─ infrastructure/       # 仓储实现、外部集成（Drizzle 等）
 │  └─ api/                  # controller / HTTP 边界
-├─ shared-kernel/           # 跨上下文通用领域构件
+├─ tenancy/                 # 租户边界：生命周期 / RBAC / 配额 / 会话 / 平台治理 / 隔离
 ├─ common/ config/ database/ i18n/ logger/ mailer/   # 技术基础设施
 └─ main.ts / app.module.ts
 ```
 
-> `users` 上下文已按此重构；`auth` / `storage` / `stripe` 逐步迁移中。结构规则以 [`docs/specs/architecture.md`](./docs/specs/architecture.md) 为准。
+> 八个上下文均已按垂直切片就位（S 系列重构已收口）；结构规则以 [`docs/specs/architecture.md`](./docs/specs/architecture.md) 为准。
 
 ## 文档
 
@@ -82,7 +83,7 @@ src/
 
 - [方案索引](./docs/plans/README.md) · [方案模板](./docs/plans/_template.md)
 - [多租户能力需求](./docs/plans/global-tenancy.md)
-- [中国大陆地域适配需求](./docs/plans/global-cn-adaptation.md)
+- [中国大陆地域适配](./docs/plans/global-cn-adaptation.md)（技术方案）
 - [事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)
 
 **调研**（`docs/research/` — 参考，非开发依据）
@@ -107,11 +108,14 @@ src/
 - **配置管理**：`@nestjs/config` + [Joi](https://joi.dev/) 校验，分环境（`config/envs`）
 - **异常与响应**：全局异常过滤 + 响应转换拦截器 + 日志拦截器
 - **数据库**：Drizzle + PostgreSQL，含迁移（`drizzle:generate/migrate/push/studio`）与种子
-- **认证**：Better Auth——邮箱登录/注册 + 多社交登录（Google、GitHub 等）、会话与 CSRF
+- **认证**：Better Auth——邮箱登录/注册 + 社交登录（Google、GitHub + 境内企微/钉钉/飞书 genericOAuth 通道）、会话与 CSRF；全局会话墙（deny-by-default + `@Public` 旁路）
+- **多租户**：审批制租户生命周期（状态机单点裁决）、租户→工作区两级边界、三层权限（平台/租户/Workspace RBAC）、仓储层行级隔离（ALS 卡点）、deny-list 即时失权
+- **平台治理与合规**：驳回/暂停/恢复/删除治理端点 + 结构化审计（FR-6）；PIPL 硬删级联清除（含事件流补删）
+- **事件溯源（Phase B 影子追加）**：领域事件耐久落 `event` 表（注册流 + 两级治理动作 + 驳回，治理事件面收口）；`EVENT_STORE_ENABLED` 缺省关，CRUD 仍为唯一真相源
 - **存储**：多云统一接口（S3 / OSS / COS），抽象基类去重
 - **邮件**：MJML 模板化发送（多语言 `i18n`）
-- **支付**：Stripe 客户 / 支付意图集成
-- **多语言**：`src/i18n`（中 / 英 / 日）
+- **支付**：Stripe 客户 / 支付意图集成（境内通道规划中·provider 抽象预留）
+- **多语言**：`apps/reference/src/i18n`（中 / 英 / 日）
 - **可观测**：Pino 结构化日志
 - **测试**：Vitest 单元与集成测试
 - **代码质量**：Biome lint/format + 本地 CI 门禁（见下）

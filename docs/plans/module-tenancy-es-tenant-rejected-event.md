@@ -1,6 +1,6 @@
 # 技术方案 · reject 驳回事件接入 event store（第四切片 · 治理事件面收口）
 
-> 状态: **已审计**（人批准 2026-10-14·§6 无开放项）| 读者: **Agent**（开发依据）
+> 状态: **已验收·结项**（审计：人直批·§6 零未决；实现 commit `a3fe6e7`；验收 2026-10-14）| 读者: **Agent**（历史执行记录）
 > blast radius: **module**（tenants reject 单 handler + core 一个事件类）
 > 关联: [module-tenancy-es-lifecycle-events §6-①](./module-tenancy-es-lifecycle-events.md)（本切片关闭其留口·并修正其裁决理由）· [event-sourcing-roadmap](./event-sourcing-roadmap.md) Phase B
 
@@ -43,3 +43,4 @@
 
 - 2026-10-14 v0.1: 初稿（待审计·含 §6-① 误判修正声明）。
 - 2026-10-14 v0.2: 实现完成——core（常量+事件类）+ handler 发布点；测 +2（fail-loud/契约同流）；CI **273/10**·边界 0·无新迁移。零未决；起草期已坐实命令无 reason 字段并修正 §3（非实现期新发现）。
+- 2026-10-14 v0.3: 经人「同意，继续」指令视同**验收通过·结项**（commit `a3fe6e7` 已在远端）。治理事件面就此收口；Phase B 后半（同事务化/rehydrate）待人择向后开专项方案。

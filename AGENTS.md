@@ -38,7 +38,7 @@ bun run drizzle:generate / drizzle:migrate / db:setup   # 迁移/数据
   `git -c user.name='FDE Team' -c user.email='fde.team@example.com' commit ...`；header/body 每行 ≤100。
 
 ## 5. 目录地图
-`src/modules/<上下文>/{domain,application,infrastructure,api}` + `src/shared-kernel` + `src/{common,config,database,i18n,logger,mailer}`；文档四区 `docs/{specs,plans,research,recycle}`（`recycle/` 只进不出）。
+Bun workspaces 双包：`packages/core/src`（@core 共享内核：`shared-kernel` + `tenancy` 契约 + `modules/{subscriptions,workspaces}` 领域层）与 `apps/reference/src`（参考应用：`modules/<上下文>/{domain,application,infrastructure,api}`（users/auth/tenants/workspaces/payment/storage/subscriptions/posts）+ `tenancy/` 边界层 + `{common,config,database,i18n,logger,mailer}`）；文档四区 `docs/{specs,plans,research,recycle}`（`recycle/` 只进不出）。
 
 ## 6. 地域与语言
 面向**中国大陆**用户：依赖镜像 `npmmirror` / Docker 国内源；第三方选型见 [global-cn-adaptation](./docs/plans/global-cn-adaptation.md)；**文档 / 注释中文优先**。
