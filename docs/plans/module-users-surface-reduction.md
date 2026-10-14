@@ -1,7 +1,7 @@
 # 技术方案 · users 冗余暴露面收紧（删面兑现）
 
-> 状态: **已实现·待验收**（人裁 2026-10-14：选项甲·删面·本 plan 过门即高危#2 删码签核·CI **323/13**）| 读者: **Agent**（开发依据）
-> 修订: v0.2 实现登记——删文件 ×11（含本会话前片新写的 get-users.query-handler.test 3 张与 metadata.test，信封测由 workspaces/posts 两面保留）；controller 保留面原文措辞不改历史（初稿误改 PIPL 注释已订正回 C1·FR-7 原样）。两处悬挂引用连带修正（未在清单内、如实补登）：`app.module.test.ts` 编译序断言换 delete-user handler；`validation-i18n.e2e.test.ts` 寄居的 CreateUserDto 换为本地 ProbeDto（显式 validate.* 键即被测面本身，不再依赖生产 DTO）。
+> 状态: **已验收·结项**（人验收 2026-10-14·commit `92c4e66`·CI **323/13** 新基线）| 读者: **Agent**（历史开发依据·已归档）
+> 修订: **v0.3 验收结项**；v0.2 实现登记——删文件 ×11（含本会话前片新写的 get-users.query-handler.test 3 张与 metadata.test，信封测由 workspaces/posts 两面保留）；controller 保留面原文措辞不改历史（初稿误改 PIPL 注释已订正回 C1·FR-7 原样）。两处悬挂引用连带修正（未在清单内、如实补登）：`app.module.test.ts` 编译序断言换 delete-user handler；`validation-i18n.e2e.test.ts` 寄居的 CreateUserDto 换为本地 ProbeDto（显式 validate.* 键即被测面本身，不再依赖生产 DTO）。
 > blast radius: **单模块收缩片**（users 模块 3 路由删除 + 13 文件连带删・零 schema・domain/infrastructure 契约面全保留）
 > 缘起: 业务面补分页片 §2.3 登记的独立议题——`GET /users` 暴露面收紧；人裁立项（选项 2）。
 
@@ -46,3 +46,4 @@ port `UserRepository`（list/findByEmail 消费方暂零）、adapter、`User` �
 
 - v0.1（2026-10-14）：呈裁（甲删面/乙 operator 墙/丙只删读面）→ 人裁甲，微调两处照登记。
 - v0.2（2026-10-14）：实现完成待验收。证据：**实机三态**——删前 GET/POST/`:id` 均 401（会话墙拦），删后 GET・POST 均 404（路由消失），me/data-export 仍 401（墙在面活）；CI **323/13**（337→323：净减 14 张与删测账吻合）；fallow 无新增违例（port list/findByEmail 暂孤儿属 §2.2 容忍面）；tooling §4.1 举例行订正为 workspaces。
+- v0.3（2026-10-14）：人验收结项（commit `92c4e66`·−535/+81 纯收缩）。遗留观察：port 孤儿方法（list/findByEmail）与 UserReadModel 的类型面依 §2.2 保留，若后续确无消费方回热可随下一次 users 域立项一并收；用户创建正道已收口 better-auth sign-up（§2.3）。
