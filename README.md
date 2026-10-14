@@ -36,7 +36,7 @@
 
 - **运行时**：[Bun](https://bun.sh/)（ESM，`"type": "module"`；开发直接运行 TS 源码）
 - **框架**：[NestJS 12](https://nestjs.com/) + [Fastify 5](https://www.fastify.io/)
-- **架构范式**：Clean Architecture + DDD + CQRS（[`@nestjs/cqrs`](https://docs.nestjs.com/recipes/cqrs)）垂直切片
+- **架构范式**：Clean Architecture + DDD + CQRS（[`@nestjs/cqrs`](https://docs.nestjs.com/recipes/cqrs)）垂直切片，叠加分阶段 **ES + EDA**（Phase A 进程内事件派发 · Phase B event store 影子追加（缺省关）· Phase C 投影/saga 待排，路线见[事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)）
 - **数据库**：[PostgreSQL](https://www.postgresql.org/) + [Drizzle ORM](https://orm.drizzle.team/)（迁移与种子）
 - **认证**：[Better Auth](https://github.com/better-auth/better-auth)（邮箱 + OAuth、会话/CSRF）——保留海外 OAuth（Google/GitHub）；**新增境内登录：微信、企业微信、钉钉、飞书**（自定义 provider；不做手机验证码登录）
 - **校验**：[class-validator](https://github.com/typestack/class-validator) + class-transformer（DTO）
