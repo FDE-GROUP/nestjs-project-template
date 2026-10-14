@@ -30,6 +30,12 @@ export interface CreateAuthResult {
       hasPermission: (params: any) => Promise<any>;
       // 建租户唯一通道（S4 · FR-1）：透传 organization 插件 createOrganization（服务端系统动作）。
       createOrganization: (params: any) => Promise<any>;
+      // 服务端登录编排面（S9 补遗 · 真·BA 登录 e2e 及系统侧用户开通复用）：透传 better-auth 原生
+      // signUpEmail / signInEmail / organization set-active，配合 `asResponse:true` 由 BA 自身签发
+      // 真实 session cookie（含签名）——与 createOrganization 同一「服务端编排网关」范式，加法式暴露。
+      signUpEmail: (params: any) => Promise<any>;
+      signInEmail: (params: any) => Promise<any>;
+      setActiveOrganization: (params: any) => Promise<any>;
     };
   };
 }
@@ -149,6 +155,14 @@ export function CreateAuth(
         trustedProviders: ['google', 'github'],
       },
     },
+    // 邮箱+密码登录面（S9 补遗 · 真·BA 登录编排 e2e 依赖）：**仅在非生产环境启用**
+    // （`NODE_ENV!=='production'`）——生产安全面零改动（仍关），test/dev 开启以驱动真实
+    // signUp/signIn 编排。补齐「邮箱为体」CN 登录面进生产属独立产品决策（D8 排序/验证/策略），不在此预置。
+    emailAndPassword: {
+      enabled: process.env.NODE_ENV !== 'production',
+      autoSignIn: true,
+      minPasswordLength: 8,
+    },
     appName: appConfig.name || 'nestjs-project-template',
     secret: authConfig.jwt.secret,
     user: {
@@ -235,6 +249,17 @@ export function CreateAuth(
         // 绕过 HTTP 层 `allowUserToCreateOrganization:false` 封禁，由 tenants 申请端点独享。
         createOrganization(params: Parameters<typeof auth.api.createOrganization>[0]) {
           return auth.api.createOrganization(params);
+        },
+        // S9 补遗 · 真·BA 登录编排：透传 better-auth 原生邮箱注册/登录 + 组织切换（服务端系统侧）。
+        // e2e/系统开通以 `{ body, asResponse: true }` 调用即得 BA 自签的真实 session cookie，供后续请求回放。
+        signUpEmail(params: Parameters<typeof auth.api.signUpEmail>[0]) {
+          return auth.api.signUpEmail(params);
+        },
+        signInEmail(params: Parameters<typeof auth.api.signInEmail>[0]) {
+          return auth.api.signInEmail(params);
+        },
+        setActiveOrganization(params: any) {
+          return (auth.api as any).setActiveOrganization(params);
         },
       },
     },
