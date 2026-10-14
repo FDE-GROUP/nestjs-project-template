@@ -130,6 +130,10 @@
 - **失败语义**：任一硬门禁非零退出 → 整体 `exit 1`；fallow 步骤即便有发现项或工具缺失也仅告警、不使流水线失败（遵循 §4.7「结论须二次人工核验」）。
 - **可复现性**：编排仅用 Bun Shell（`import { $ } from 'bun'`），不引入 bash/Make 等其他编排工具，遵守 §1「运行时统一 Bun」。
 
+### 4.9 横切设施落位纪律
+- **新横切能力 = 独立目录**（对齐 config/logger/i18n/mailer/database 既有惯例）：实现落 `apps/api/src/<facility>/`；若领域/跨模块需要其抽象，契约落 `libs/core/src/shared-kernel/<concept>/`（如 `context/` 装 ALS 请求上下文、`domain/` 装分页契约），禁止业务模块 import 实现细节。
+- **单文件不开目录；第二个同类文件出现时归拢**（YAGNI，不为假想需求预建空目录）；缓存类设施将来立项时按本条落位。
+
 ## 5. Biome 规范
 
 - 命令：`bun run check`（校验）、`check:fix`/`lint:fix`/`format`（写回）。pre-commit 触发 `lint:fix`。

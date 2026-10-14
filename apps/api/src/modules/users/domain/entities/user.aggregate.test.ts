@@ -1,4 +1,4 @@
-import { requestStorage } from '@core/shared-kernel/request-context';
+import { requestStorage } from '@core/shared-kernel/context/request-context';
 import { describe, expect, it } from 'vitest';
 import { User } from './user.aggregate';
 

@@ -1,5 +1,5 @@
 import type { LoggerService } from '@app/logger/logger.service';
-import { requestStorage } from '@core/shared-kernel/request-context';
+import { requestStorage } from '@core/shared-kernel/context/request-context';
 import type { ExecutionContext } from '@nestjs/common';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';

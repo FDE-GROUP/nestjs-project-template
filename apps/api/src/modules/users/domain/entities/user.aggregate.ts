@@ -1,5 +1,5 @@
+import { currentRequestId } from '@core/shared-kernel/context/request-context';
 import { AggregateRoot } from '@core/shared-kernel/domain/aggregate-root';
-import { currentRequestId } from '@core/shared-kernel/request-context';
 import { UserRegisteredEvent } from '../events/user-registered.event';
 import { Email } from '../value-objects/email';
 

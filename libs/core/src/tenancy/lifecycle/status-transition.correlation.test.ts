@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { requestStorage } from '../../shared-kernel/context/request-context';
 import type { DomainEventPublisher } from '../../shared-kernel/domain/event-publisher.port';
-import { requestStorage } from '../../shared-kernel/request-context';
 import { TENANT_STATUS, withTenantStatus } from './tenant-lifecycle';
 import { TenantStatusService } from './tenant-status.service';
 import type { TenantStatusStore } from './tenant-status.store';

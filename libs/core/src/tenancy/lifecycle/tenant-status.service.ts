@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { currentRequestId } from '../../shared-kernel/context/request-context';
 import {
   DOMAIN_EVENT_PUBLISHER,
   type DomainEventPublisher,
 } from '../../shared-kernel/domain/event-publisher.port';
-import { currentRequestId } from '../../shared-kernel/request-context';
 import { TenantStatusTransitionedEvent } from './events/tenant-status-transitioned.event';
 import {
   canTransition,

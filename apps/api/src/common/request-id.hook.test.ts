@@ -1,4 +1,4 @@
-import { currentRequestId } from '@core/shared-kernel/request-context';
+import { currentRequestId } from '@core/shared-kernel/context/request-context';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 import { requestIdHook } from './request-id.hook';
