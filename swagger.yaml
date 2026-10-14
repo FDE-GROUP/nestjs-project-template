@@ -346,6 +346,22 @@ paths:
           description: Tenant not found.
       summary: 'Per-tenant diagnostics: member/invitation/workspace/post counts'
       tags: *ref_5
+  /api/v1/platform/tenants/{id}/export:
+    get:
+      operationId: PlatformTenantsController_exportData_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Six-section tenant data export (credentials excluded).
+        '404':
+          description: Tenant not found.
+      summary: Export all tenant-owned data as a single JSON payload (NFR-6)
+      tags: *ref_5
   /api/v1/platform/tenants/{id}/suspend:
     patch:
       operationId: PlatformTenantsController_suspend_v1
