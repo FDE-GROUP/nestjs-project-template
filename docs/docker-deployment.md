@@ -71,7 +71,19 @@ docker compose -f docker-compose.dev.yml down -v
 ```bash
 # Build the Docker image
 docker build -t nestjs-app .
+
+# Outside mainland China, use the official base image instead of the DaoCloud mirror:
+# docker build --build-arg NODE_IMAGE=node:22-slim -t nestjs-app .
 ```
+
+The image is a Node 22 (`node:22-slim`) multi-stage build: Corepack provides `pnpm` pinned by the
+`packageManager` field, `pnpm install --frozen-lockfile` resolves dependencies from the npmmirror
+registry (`.npmrc`, and `COREPACK_NPM_REGISTRY` for the pnpm tarball itself — Corepack does **not**
+read `.npmrc`), and `pnpm run build` compiles `libs/core` before the app. The runtime stage keeps
+`node_modules`, `dist`, `libs/core/dist` and the root/package `package.json` files (plus
+`pnpm-workspace.yaml`) so that the `@core/saas-kit/…` bare handles still resolve through the workspace
+link + `exports` map. It deliberately carries **no pnpm and no `drizzle.config.ts`** — that config points
+at TS sources absent from the runtime stage, so migrations run outside the image (ops machine / CI).
 
 ### Running with Docker Compose
 
@@ -100,6 +112,11 @@ DATABASE_URL=postgres://postgres:postgres@postgres:5432/nestjs_practice
 Other environment variables can be set in `.env` file or configured in the `docker-compose.yml` file.
 
 **Reverse proxy (rate-limit trust chain):** when the app runs behind a reverse proxy (nginx, SLB, …), set `AUTH_TRUSTED_PROXIES` to the comma-separated CIDR list of the proxy network segment (e.g. `172.16.0.0/12,127.0.0.1`). Without it, Better Auth cannot resolve a trusted client IP in production and all users share a single rate-limit bucket, causing site-wide false lockouts on sign-in (see `docs/plans/module-auth-ip-trust.md`).
+
+**Prerequisite — data residency guard (fail-closed):** `docker-compose.yml` sets `NODE_ENV=production`, which activates the strict data-residency check: boot is **refused** when `DATABASE_URL`/storage region fall outside the mainland allowlist. The placeholder `.env` shipped with the template (`STORAGE_PROVIDER=s3`, `STORAGE_REGION=us-east-1`, `s3.us-east-1.amazonaws.com`) therefore makes `docker compose up -d` exit with
+`Data residency violation, refusing to boot`. This is intended behaviour, not a broken image. Before deploying, either point storage/DB at mainland-resident endpoints, or — for a local/verification run only — set `DATA_RESIDENCY_ENFORCE=false`.
+
+**Health check:** the image `HEALTHCHECK` probes `GET /api/v1/health` with Node's built-in `fetch` — `node:*-slim` ships **neither `wget` nor `curl`**, so a shell-probe style check would keep the container permanently `unhealthy`.
 
 ### Accessing the Application
 

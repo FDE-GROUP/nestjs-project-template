@@ -163,14 +163,28 @@
 - **宪法成文（高危·签核·重写型）**：`tooling-standards.md` §1 三重约束（Bun→Node）·§2 工具矩阵（运行时 Node + 包管理 pnpm 拆两行·ci.ts node:child_process·fallow 经 pnpm dlx）·§2.1 镜像行·§3 红线①（禁 bun/npm/yarn·统一 pnpm）·§4.1 新增「Node-ESM 源兼容纪律」·§4.7/§4.8/§5/§6/§7/§8 命令 bun→pnpm 且新增 `verify:prod-boot` 行；`AGENTS.md` §2/§3/§4/§5；`architecture(.zh)`/`workflow`/根 `README`/`install&run`/`docker-deployment`/`drizzle-migration-guide` 现行 Bun 口径同步归零（**仅保留历史演变记录**与 §4.1「Bun 静默兜底」对比说明·及 §3「禁 `bun test`」红线）。
 - **回归防线成文（S0 语义补全）**：新建 `scripts/verify-prod-boot.ts`——构建后 `node` 真起服、轮询 `/api/v1/health` 命中 200 否则 exit 1（`pnpm run verify:prod-boot`）；**继承调用方环境**（不强制 `NODE_ENV`），使本防线聚焦 R-δ「Node 能否加载装配编译产物」、与数据驻留 strict 守卫（仅随 `NODE_ENV=production` 生效·需境内存储凭证）正交、不误判为起服失败。
 - **实证**：`rm -rf node_modules && pnpm install` **EXIT=0**（`allowBuilds` 定档后构建脚本跑成）→ `pnpm run ci` **Local CI PASSED**（check 净·build libs+app·test **343（327 passed/16 skipped）** 零掉·fallow advisory 因 `@fallow-cli/linux-x64-gnu` 缺→非阻断·合 §4.7 三态）→ `pnpm run verify:prod-boot` **`/health 200 {"status":"ok"}`**（node 编译产物·DI 全图装配成）。
-- **残留观察（非阻断·留后续）**：prod i18n 资产落 `dist/i18n/**` 与 `i18n.module` 期望路径的历史失配（boot 非关键·未回归触发）；`docker build`/`docker compose` 健康检查与 Actions dry-run 未在本容器实跑（判据 §5-D 标「待实机」）。
+- **残留观察（非阻断·留后续）**：prod i18n 资产落 `dist/i18n/**` 与 `i18n.module` 期望路径的历史失配（boot 非关键·未回归触发）。
+
+## 4.9.1 切片 D 实机补验（**docker build + compose 健康检查 + Actions 真实运行全绿·拓出三个真缺陷**·2026-10-15）
+
+> 承接 §4.9「docker/Actions 待实机」挂账，本轮在本机实跑并翻绿。过程中拓出**三个与运行时切换无关但同属 prod 面的真缺陷**，均已修（Dockerfile 单文件·属 S5 已签核的「Dockerfile 切 Node/pnpm」同一改动面）。
+
+- **⚠️→✅ R-θ `HEALTHCHECK` 探针二进制脱节（真缺陷·已修）**：`node:22-slim` **既无 `wget` 也无 `curl`**（容器内实核：两者 `MISSING`），而 S5 重写沿用了 Bun 时代的 `wget --spider` 探针 → 容器**永远 `unhealthy`**（与 `terminus 无 PingHealthIndicator + Dockerfile 路径拼错` 同型的「声明有、实现无」双坑复现）。改镜像内必有的 node 内置 `fetch`（零额外 apt 层）→ 实核 `healthy`·`FailingStreak: 0`。
+- **⚠️→✅ R-ι corepack 不吃 `.npmrc`（真缺陷·已修）**：corepack 拉 `pnpm` tarball 只认 `COREPACK_NPM_REGISTRY`，首跑即卡 `registry.npmjs.org` 解析失败 → 补 `ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com`（base 段·与依赖 registry 同源），正是 tooling §6「依赖镜像境内化」纪律的补全。
+- **`docker build` 实跑 ✅**：`pnpm install --frozen-lockfile`（store cache mount）→ `pnpm run build`（core→app）→ runner 组装，**EXIT=0**；镜像内产物齐备（`node_modules` workspace 链 + `dist` + `libs/core/dist`）。
+- **容器真起服 ✅**：以产物镜像 `node dist/apps/api/src/main.js` 起（挂 `.env`·`HOST=0.0.0.0`）→ `GET /api/v1/health` **200** `{"status":"ok"}`，R-δ 根治在**容器**面复验成立。
+- **compose 全图 ✅**：`postgres` healthy → `app` 依赖启动 → `Up (healthy)` → 宿主 `curl :7009/api/v1/health` **200**（验证用临时覆盖文件只改两处：复用已建镜像·`DATA_RESIDENCY_ENFORCE=false`；主 compose 文件与 fail-closed 默认**未动**，脚手架已删）。（此步跑在 R-κ 瘦身**前**的镜像；瘦身后另经 `docker run` 复验，compose 接线面不受镜像内容变更影响）
+- **⚠️→✅ R-κ runner 不可用死面（真缺陷·已删净）**：runner 层带 `corepack enable` + `drizzle.config.ts`，而 `drizzle.config.ts` 的 `schema` 指 `./apps/api/src/database/schema.ts`（TS 源）**不在产物镜像内**→容器内 `pnpm drizzle:migrate` 本就跑不通，留着只误导“镜像里能跑迁移”（`docs/docker-deployment.md` 也未承诺此能力）。按「死配置删净」纪律删除（corepack/PNPM_HOME/COREPACK_NPM_REGISTRY + drizzle.config COPY），并重验：`docker build` **EXIT=0** · 容器 `/health` **200** · `healthy` · 容器内实核 `pnpm absent (expected)`。
+- **实机拓出的部署前提（非缺陷·已入文档）**：runner `ENV NODE_ENV=production` + compose 挂载模板占位 `.env`（`s3/us-east-1`）→ 数据驻留 strict **拒起服**（`Data residency violation, refusing to boot`·全模块 DI 已装配成功后才判，与 R-δ 正交）。此为设计正确的 fail-closed，但意味着 `docs/docker-deployment.md` 的 `docker compose up -d` 快速路径在用户未配境内存储时**必卡** → 已在该文档「Environment Variables」节补「Prerequisite — data residency guard」与 healthcheck/corepack 说明。
+- **Actions 面 ✅（真实运行存照·非 dry-run）**：`deploy-swagger.yml` 在 push `0c73ef7` 上被 `apps/**` 路径触发，run `38619434210` **success**（57s），日志坐实 `pnpm/action-setup@v4` + `actions/setup-node@v4`（`node-version: 22`·`cache: pnpm`·`cache_dependency_path: pnpm-lock.yaml`）→ `pnpm install --frozen-lockfile` → `pnpm run openapi:export` → Pages 发布全链跑通。
+- **本机环境噪声（非模板问题·如实区分）**：Docker Desktop VM 对 `registry.npmmirror.com` **DNS 不可解析**（临时把 WSL `/etc/resolv.conf` 改公共 DNS 后容器 `--dns` 实测 HTTP 200 可达），且 buildkit `--network=host` 走的是 VM 而非 WSL 网络 → 为完成实跑，临时起 `moby/buildkit` 容器（`--dns 223.5.5.5`）挂为 remote builder 执行构建，验毕已 `buildx rm` + 删容器 + 删镜像，无残留。**结论口径：模板构建链本身无障碍，卡点纯属开发机网络环境。**
 
 ## 5. 完成判据（过审计门后·可核验 + 穷尽）
 
 - [x] 切片 A：`pnpm install` 成功 + 布局解析方案定档（**isolated 无需 hoist**·唯一配置=`allowBuilds` 放行 @swc/core+esbuild）已写进 tooling §2/§4
 - [x] 切片 B：`node` 起编译产物 prod `start:prod` + `/api/v1/health` 200 实机存照（`verify:prod-boot`；dev `nest start --watch` 同源 SWC）
 - [x] 切片 C：`pnpm run ci` full/quick 与旧 `scripts/ci.ts` 逐步等价（`node:child_process`·含 fallow advisory 不阻断语义）
-- [~] 切片 D：`Dockerfile`/`deploy-swagger.yml`/husky 已切 node/pnpm（配置就位）；**`docker build` 健康检查 + Actions dry-run 待实机**（本容器未跑）
+- [x] 切片 D：`Dockerfile`/`deploy-swagger.yml`/husky 已切 node/pnpm，**并已实机核验**（`docker build` EXIT=0 · 容器 `/health` 200 · compose 全图 `Up (healthy)` · Actions run `38619434210` success）；期间拓修 R-θ（slim 无 wget/curl→node fetch 探针）与 R-ι（`COREPACK_NPM_REGISTRY` 注入）——见 §4.9.1
 - [x] 切片 E：`docs/specs` §1/§2/§2.1/§3 + `AGENTS.md` §2/§3 同步·无残留 Bun 现行口径（演变记录与对比说明除外）
 - [x] `bun`→`node/pnpm` 全链 `pnpm run ci` 全绿·**343 测试基线零掉**（gated e2e 16 项无库照 skip·与 Bun 基线一致）
 - [x] DI/元数据回归测（`design:paramtypes`/`app.module.test`/`di-context.integration`/`three-layer-permission.matrix`）全绿（§4.3 未回退·SWC 沿用）
@@ -188,8 +202,9 @@
 | 2026-10-15 | 0.6.0 | 人「照建议自裁」过最终审计门 | §4.7 落档放行：**开工 S0→S4**（多包构建重设计·分步实证）·R-ε/R-ζ 实现期据实自裁·**S5 到那步再单独签**；状态转**进行中·S0–S4 实现** |
 | 2026-10-15 | 0.7.0 | S1–S4 实现完成·两运行时 prod 起服 200 | 新增 §4.8 实证结果：**R-δ 根治**（libs/core 独立 swc 构建→dist·裸句柄不重写·node+bun 均 /health 200）·**R-ε 证伪**（无扩展深子路径经 exports→dist 双理解析）·**R-ζ 证伪**（跨包 DI 健在）；拓出 **R-η**（Bun 掩盖的 Node-ESM 源不兼容集群：joi CJS interop / `__dirname` / dotenv 时序·boot 路径已修·余留归 S5）；**关键结论：S5 非 flag 切换而是 Node-ESM 源兼容清扫·量级上修·待 S5 签核重定范围**；状态转 **S1–S4 完成·待 S5 签核** |
 | 2026-10-15 | 0.8.0 | 人择「现在就执行 S5 全量切换」（高危三项签核）·S5 落地实证全绿 | 新增 §4.9 S5 落地实证：**Node-ESM 源兼容清扫**（openapi-codegen→load-env·cos/seed 保留）+ **工具链切 node/pnpm**（scripts/engines/packageManager·ci.ts→node:child_process·tsconfig types node·删 @types/bun）+ **workspace/制品**（pnpm-workspace `allowBuilds`+.npmrc 转追踪+pnpm-lock·删 bun.lock/bunfig）+ **hooks/Docker/GHA 切 node/pnpm** + **宪法成文**（tooling/AGENTS/architecture/workflow/README/运维文档 Bun 现行口径归零）+ **回归防线成文**（`scripts/verify-prod-boot.ts`·继承 env 与数据驻留正交）；§5 判据诚实勾选（D 片 docker/Actions 待实机）；实证 `pnpm install` EXIT=0·`pnpm run ci` **PASSED 343**·`verify:prod-boot` **/health 200**；状态转 **S0–S5 全落地·迁移完成·待人类验收** |
+| 2026-10-15 | 0.9.0 | 切片 D 挂账实机补验（docker/build/compose/Actions 全跑） | 新增 §4.9.1：**`docker build` EXIT=0·容器 `/health` 200·compose 全图 healthy·Actions run 38619434210 success**；拓并修三真缺陷 **R-θ**（`node:22-slim` 无 wget/curl→HEALTHCHECK 永 unhealthy·改 node 内置 fetch）**R-ι**（corepack 不吃 `.npmrc`→补 `COREPACK_NPM_REGISTRY` 指 npmmirror）**R-κ**（runner 带不可用的 corepack/pnpm 与 `drizzle.config.ts` 死面→删净并重验 EXIT=0/200/healthy）；据实登记部署前提（compose 生产档 + 占位 `.env` 触发数据驻留 fail-closed·属正确行为）入 `docker-deployment.md`；§5 切片 D 由 [~] 翻 [x]；本机 Docker VM DNS 噪声与模板问题明确区分 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.8.0 变更，以当前正文内容为准。
+正文已于 2026-10-15 / v0.9.0 变更，以当前正文内容为准。
