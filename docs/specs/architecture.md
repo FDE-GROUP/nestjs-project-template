@@ -93,3 +93,25 @@ DTOs are imported **by value** in controllers (not `import type`) so SWC preserv
 - **Development**: Bun + Docker PostgreSQL (`docker-compose.dev.yml`)
 - **Production**: Docker Compose (Application + PostgreSQL)
 - **Docs**: Swagger/OpenAPI auto-generation (`/docs`)
+
+## Appendix: Table Ownership Discipline
+
+> Introduced by the microservice-readiness initial slice (2026-10-14). The machine-readable
+> owner list is the single source of truth in `apps/reference/src/database/table-ownership.ts`;
+> this appendix states the semantics only — never copy the list here.
+
+- **Strict on the write side**: any `insert/update/delete` target table must belong to the
+  bounded context owning the file (`modules/<ctx>/**`; `tenancy/**` counts as `tenants`).
+  Enforced in CI by `table-ownership.guard.test.ts` (grep-level scan, no AST toolchain).
+- **Lenient on the read side**: cross-context `select/join` is allowed and is the natural
+  shape of CQRS read-models / governance statistics; it is governed by file placement
+  (read-models) and audit, not by the guard.
+- **Cross-context FKs** may only point at auth-core tables (aligns with the S2 repository
+  chokepoint convention).
+- **Declared exceptions only**: every legitimate write-side crossing must appear in
+  `WRITE_EXCEPTIONS` with a reason and plan attribution; the guard fails on stale
+  (unconsumed) exceptions, so no silent exemptions accrue.
+- **New tables** must be registered in `table-ownership.ts` (owner set) as part of the
+  migration change, reviewed at the audit gate. The `event` table is owned by the
+  `database` infrastructure (ES port exclusive writes); business repositories must never
+  append to it directly.

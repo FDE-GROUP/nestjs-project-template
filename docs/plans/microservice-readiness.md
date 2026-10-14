@@ -55,7 +55,7 @@ S10 已交付「能拆」的编译期接缝（core 框架无关 + 端口倒置 +
 - 结论：**已审计**（盘点阶段交付物·人签核 2026-10-14；本 plan 仍不预授权任何实现，各切片另过各自审计门）
 - 未决项逐裁：① 首切片范围=**全取 #1+#4**（#2 outbox 随 Phase B 后半缓、#3 错误契约缓·命名规范已锁、#5 分页缓、#6 归全栈 CI 专项）；② 错误码命名空间=**冒号分隔**（如 `TENANCY:SEAT_LIMIT_EXCEEDED`；点分与事件名相撞且撞 nestjs-i18n 键语法，code 为机器标识与翻译键解耦）——随 #3 实施时生效；③ outbox 表归属：**缓裁**（随 #2 触发时定）；④ 游标分页本期性：**否**（立标准后另裁）。
 - 审计人 / 日期：人（用户「同意」）/ 2026-10-14
-- 执行入口：首切片已另开 [global-readiness-initial-slice](./global-readiness-initial-slice.md)（待审计）
+- 执行入口：首切片 [global-readiness-initial-slice](./global-readiness-initial-slice.md)（**已实现·待验收** 2026-10-14·CI 276/10）
 
 ## 5. 完成判据（本 plan 的「盘点阶段」交付）
 

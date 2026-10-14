@@ -5,7 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'src/**'
+      - 'apps/**'
+      - 'packages/**'
       - 'openapi/**'
   workflow_dispatch:
 
@@ -81,18 +82,10 @@ jobs:
 
       - name: Generate OpenAPI documentation
         run: |
-          # Start the server in the background
-          bun start:dev &
-          
-          # Wait for server to be ready (adjust sleep time if needed)
-          sleep 15
-          
-          # Generate OpenAPI documentation
+          # DB-free codegen：不启服务直接整树装配导出 spec（就绪首切片 #4，
+          # 替代旧「起服务 + sleep 15 + curl」hack；与运行态导出字节级一致）
           bun openapi:export
-          
-          # Stop the background server process
-          kill $(jobs -p)
-          
+
           # Create directory for static files
           mkdir -p swagger-static
           

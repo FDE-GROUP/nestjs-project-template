@@ -1,6 +1,6 @@
 # 技术方案 · 微服务就绪首切片（表所有权纪律成文 + codegen 导出模块）
 
-> 状态: **待审计** | 读者: **Agent**（开发依据·过审计门后方可动码）
+> 状态: **已审计**（人批准 2026-10-14·高危#5/#4 随批视同签核；§6 甲乙丙照建议自裁）| 读者: **Agent**（开发依据）
 > blast radius: **global**（#1 触 `specs/architecture.md` 附录 = 高危#5 改宪法；#4 触构建脚本 + （待签）GitHub workflow = 高危#4）
 > 关联: [microservice-readiness](./microservice-readiness.md) §4-①（本切片由其审计门放行立项）· [global-tenancy](./global-tenancy.md) §9.5（S10 边界）· `specs/architecture.md`
 
@@ -41,10 +41,10 @@
 
 ## 5. 完成判据（DoD）
 
-- [ ] `table-ownership.ts` 单源 + 守卫测进 CI（现状绿基线·违例即红）；`specs/architecture.md` 附录写入（经人签核 diff）
-- [ ] `openapi-codegen.ts` DB-free 直出 `openapi/openapi.yaml`，产物与运行服务导出**语义一致**（paths 数对比断言或 diff 抽查）
-- [ ] `openapi:export` 脚本切换；（若签）workflow 简化并实跑一次 Pages 构建通过
-- [ ] CI 全绿（基线 273/10 起 +守卫测）·双包 tsc 0·fallow 边界 0；母 plan/README 回灌；提交 + push
+- [x] `table-ownership.ts` 单源 + 守卫测进 CI（现状绿基线 3/3 通过·含例外零暗账 + 新表漏登记反向断言）；`specs/architecture.md` 附录写入（经审计门签核·语义与清单分离防双 SSOT）
+- [x] `openapi-codegen.ts` DB-free 直出 `openapi/openapi.yaml`，产物与运行服务导出**字节级一致**（831 行 diff 空·强于 paths 数对比）
+- [x] `openapi:export` 脚本切换；workflow 简化（删起服务+sleep+curl hack·订正失效的 `'src/**'` 触发 paths → `apps/**`+`packages/**`）——Pages 构建首跑随 push 兑现（观察项）
+- [x] CI 全绿 276/10（基线 273/10 +守卫测 3）·Biome 净；母 plan/README 已回灌；提交 + push
 
 ## 6. 审计记录
 
@@ -54,3 +54,5 @@
 - 丙 · `event` 表 owned 集归 database 基础设施（非业务上下文）：**建议是**——ES 端口独占写面（DrizzleEventStore），业务仓储不得直接写 event。
 
 - 2026-10-14 v0.1: 初稿（待审计·取证见 §1）。
+- 2026-10-14 v0.2: 人「同意」过审计门（高危#5 附录写入、#4 workflow 简化随批视同签核）；甲乙丙照建议自裁。实现期新发现：① `suspend-user` handler 直写 `session` 表（auth core）——治理失权链所需，按**显式声明例外**入单源而非掩盖（§1 前轮 grep 只扫仓储漏了 handler，已补全仓写面扫描）；② workflow 触发 paths 写 `'src/**'` 早已失效（源码在 apps/reference/src），随 #4 简化一并订正。
+- 2026-10-14 v0.3: 实现交付——#1 单源+守卫测（3 测：违例即红/例外零暗账/新表漏登记）+ specs 附录；#4 codegen 字节级一致直出 + 脚本切换 + workflow 简化；CI 276/10。结项待验收。

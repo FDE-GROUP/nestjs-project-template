@@ -33,7 +33,7 @@
     "db:seed": "bun apps/reference/src/database/seed.ts",
     "db:reset": "bun run drizzle:push -- --force && bun run db:seed",
     "db:setup": "bun run drizzle:push && bun run db:seed",
-    "openapi:export": "curl -s http://localhost:7009/openapi.yaml > openapi/openapi.yaml && echo 'OpenAPI documentation exported from running server to openapi/ directory'"
+    "openapi:export": "bun apps/reference/src/openapi-codegen.ts"
   },
   "keywords": [],
   "author": {
