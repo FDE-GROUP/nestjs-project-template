@@ -61,20 +61,42 @@
 - **主风险 R-α：pnpm 严格布局破坏 Nest/SWC/装饰器/工作区解析**（与现 bun hoisted 差异最大处）→ 切片 A 单片先验、失败即采 hoist 兜底并成文；此为本方案**第一强前置实证点**。
 - **主风险 R-β：§4.3 装饰器元数据 `import type` 擦除坑不会因换 Node 消失**——本仓用 SWC builder（`decoratorMetadata:true`），换 Node 后**若仍用 SWC 则坑照旧**；若改 tsc builder，`import type` 擦除问题在 tsc 下同样存在（ESM/TS 语义·非 Bun 专属）。**故本案不得声称"修掉 §4.3"**，DI 回归测（`design:paramtypes`/`app.module.test`/`di-context.integration.test`）须原样锁住。
 - **主风险 R-γ：343 测试基线重验**——任何切片末尾 CI 掉测即红；gated e2e（13 既有 + 3 HTTP 面）真库链路须在 Node 下复跑一致。
-- **收益诚实面**：生态对齐/风险姿态是**长期**收益，非即时功能收益；切换期净成本 = 5 片工具链重写 + 全链重验。npmmirror 境内镜像 pnpm 同样支持，**镜像不构成理由**。
+- **终结性发现 R-δ（本案真边界·2026-10-15 运行时起服实证拓出·R-α/β/γ 皆非拦路石）**：**跨 workspace 的 `@core/*` 裸句柄直引 TS 源，是 Bun 宽松解析器的隐性依赖；换 Node 后 prod 起服即崩。**
+  - 现象：`pnpm run ci` **全绿**（build 148·TSC 0·343 零掉），但 `node dist/apps/api/src/main.js` 真起服报 `ERR_MODULE_NOT_FOUND: dist/libs/core/src/shared-kernel/context/request-context.js`（`/health` curl HTTP 000）。
+  - 根因链：① 源码 `import '@core/shared-kernel/context/request-context'`（裸句柄·无扩展名）→ ② SWC 编译把它重写为相对路径并补 `.js`，指向 `../../../../libs/core/src/…request-context.js`（**指 TS 源码目录**）→ ③ `nest build`（sourceRoot=`apps/api/src`）**只编译 apps、不编译 libs**，`dist/libs/core/` 根本不存在 → ④ Node 严格 ESM 解析落空。**为何测试全绿掩盖**：Vitest 经 `resolve.tsconfigPaths` 把 `@core/*` 即时解析回 `libs/core/src/*` TS 源——**CI 绿 ≠ prod 起服可跑**，唯运行时起服实证戳穿（印证本案门禁"须运行时实证、不采信文档面/CI 面兼容"的纪律价值）。
+  - **性质**：架构级、越出"自裁 5 参数"授权范围——修法=**多包构建重设计**（`libs/core` 独立编译 + `package.json` exports 指向 dist + 句柄规格化；或让 `nest build` 同编 apps+libs 两棵树入 dist），非工具链配置微调可解。
+  - **处置**：按铁律"遇边界即停·归人裁"——已把代码/config 全量回退至绿色 Bun 基线（`git checkout` 九文件 + 删 pnpm 产物 + `bun install` 复原 hoisted·`bun.lock` 未删·未碰 `docs/specs` 宪法与 `AGENTS.md`），**未把 dev/prod 运行时已坏的工具链推上 main**。R-δ 修复待人在 §4.5 三选一裁决后方可启动。
+- **收益诚实面**：生态对齐/风险姿态是**长期**收益，非即时功能收益；切换期净成本 = 5 片工具链重写 + 全链重验 **+ R-δ 多包构建重设计（新发现·原方案未预见）**。npmmirror 境内镜像 pnpm 同样支持，**镜像不构成理由**。
 
-## 4. 审计记录（待审 · 呈人）
+## 4. 审计记录（**已审计** · 人授权自裁）
 
-> 无已审方案不写码。本案全局 + 不可逆 + 命中三项高危 → **人签核**。
+> 无已审方案不写码。本案全局 + 不可逆 + 命中三项高危 → 人签核。**人于 2026-10-15 以「照建议自裁」放行审计门**，未决项交 Agent 按建议自裁。
 
-- **结论**：待审计。技术前提已澄清（换 Node 与 v7 无关·纯工具链），价值主张独立成立但属长期收益，成本已量化（5 片 + 全链重验）。
-- **未决项（须人逐裁·Agent 不自裁）**：
-  1. **Node LTS 版本基线**（22.x 还是 24.x？`engines.node` 精确范围）。
-  2. **pnpm 版本** + `packageManager` 锁定串。
-  3. **构建后端**：沿用 SWC（`nest build --builder swc`·§4.3 坑保留）还是转 tsc（另一轮 builder 迁移·更大半径）？本案默认**沿用 SWC**。
-  4. **包管严格度**：pnpm 默认 isolated vs `node-linker=hoisted`——依切片 A 实测结果定档并写进 tooling。
-  5. **是否顺带采纳 ORM 案**：人本轮**未勾 ORM**，故 ORM 不在本案范围；若未来二者叠加执行，须重估顺序与合并 blast radius。
-- 审计人 / 日期：______ / ______
+- **结论**：**已审计·开工**。切片 A 实测（2026-10-15·pnpm 11.7.0）：**R-α 证伪**——isolated 严格布局下 build 148 文件·TSC 0、**343 基线（327/16）零掉**、DI/装饰器元数据回归全绿、`@core/saas-kit` workspace 链接正常。
+- **未决项裁决（Agent 自裁·据实）**：
+  1. **Node LTS 基线**：`engines.node = >=22.0.0`（匹配实机 v22.23.0·24 LTS 留后续复验，本案不引）。
+  2. **pnpm 版本**：`packageManager = pnpm@11.7.0`（实机验证版）。
+  3. **构建后端**：**沿用 SWC**（`nest build --builder swc`·切片 A 实证 isolated 下编译通过·§4.3 坑面不变已知可控）。
+  4. **包管严格度**：**默认 isolated（严格非扁平）**——切片 A 实证无需 `node-linker=hoisted`；唯一必需配置=`pnpm-workspace.yaml` 的 `allowBuilds` 放行 `@swc/core`+`esbuild`（pnpm 11 默认拦截 postinstall 原生二进制·不放行则 SWC/esbuild 运行时崩·此为本案唯一 pnpm-vs-bun 真实摩擦点）。
+  5. **ORM**：排除本案（人未勾·与运行时正交）。
+- 审计人 / 日期：人（「照建议自裁」） / 2026-10-15
+
+## 4.5 实证进展（切片 A–D）与受阻 R-δ（**进行中·受阻·待裁**）
+
+人以「照建议自裁」放行后，Agent 按 §2 顺序执行，结果如下（代码/config 已全部回退，仅留本记录）：
+
+- **切片 A·包管切 pnpm（实证成立·已回退）**：`pnpm-workspace.yaml`（packages: apps/*,libs/*）+ `.npmrc`（npmmirror）。**R-α 证伪**——isolated 严格布局下 `pnpm run build:nest` 148 文件·TSC 0、`pnpm run test` **343（327/16）零掉**、DI/装饰器回归全绿、`@core/saas-kit` workspace 链接正常。唯一必需配置=`allowBuilds` 放行 `@swc/core`+`esbuild`（pnpm 11 默认拦 postinstall）。另拓 `.gitignore` L38 忽略 `.npmrc` → registry 不可复现（待修）。
+- **切片 B·运行时/脚本切 Node（已回退）**：`package.json` scripts bun→node/tsx、`engines.node>=22`、`packageManager=pnpm@11.7.0`、`main`+`start:prod` 校正至真产物 `dist/apps/api/src/main.js`（原 `dist/main.js` 系先于本迁移的失真）。`pnpm add -Dw tsx`。
+- **切片 C·ci.ts 去 `bun:shell`（已回退）**：`import { $ } from 'bun'` → `node:child_process.spawn(cmd,{shell:true,stdio:'inherit'})`；`Bun.version`→`process.version`；fallow `pnpm dlx fallow@3.33.1` 三态非阻断。`pnpm run ci` → **Local CI PASSED**（343·fallow advisory）。
+- **切片 D·hooks/Docker/GHA（已回退）**：husky 三钩子 `bun run`→`pnpm run`/`pnpm exec`；Dockerfile base `node:22-slim`（DaoCloud 镜像 ARG）+corepack+`pnpm install --frozen-lockfile`+`CMD node dist/apps/api/src/main.js`；deploy-swagger.yml `setup-bun`→`setup-node@v4`。
+- **运行时起服实证→拓出 R-δ（本案终结性发现·见 §3）**：`node dist/apps/api/src/main.js` 崩 `ERR_MODULE_NOT_FOUND dist/libs/core/src/…request-context.js`。CI 绿掩盖不得 prod。**判定为架构级新边界·越出“自裁 5 参数”·按铁律停手、回退、归人裁。**
+
+**请裁三选一（归人）**：
+- **A · 维持 Bun·放弃本案**：R-δ 说明本仓 `@core/*` 直引 TS 源的架构强依赖 Bun 宽松解析；若无硬约束驱走 Node，保持现状零风险。B 案标 `搁置`。
+- **B · 批准多包构建重设计·扩本案范围**：先立项把 `libs/core` 改成独立可编译包（exports 指 dist·句柄规格化·或 nest build 同编两树），跨过 R-δ 后再重推工具链切换。blast radius 升为“工具链 + 构建架构”双全局。需新一轮审计门。
+- **C · 折中**：先单独做“多包构建规范化”（Bun/Node 两运行时均受益·修 prod 假绿债）作为前置独立片，完成后再回评本案是否还需启动。
+
+> **建议：C**——“@core/* 直引 TS 源”是独立于运行时切换的真实技术债（现仅靠 Bun 宽松解析 + Vitest tsconfigPaths 两个“宽松”兼容层支撑 prod 假绿）；无论是否换 Node，规范化多包构建本身有独立价值，且完成后使本案风险面大幅收敛。
 
 ## 5. 完成判据（过审计门后·可核验 + 穷尽）
 
@@ -92,8 +114,10 @@
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
 | 2026-10-15 | 0.1.0 | 人取向"是否换回 Node+pnpm" + AskUserQuestion 裁"运行时修宪（未勾 ORM）·更新勘察文+出 B 案" | 首版·候选稿·待审计门。含 R1 订正澄清（换 Node 与 v7 无关）、5 片 expand–contract 路线、三项高危登记、R-α/β/γ 风险、未决项 1–5 |
+| 2026-10-15 | 0.2.0 | 人以「照建议自裁」过审计门 + 切片 A 开工实证 | 审计翻**已审计·开工**；五未决项据实自裁（Node≥22 / pnpm@11.7.0 / SWC 沿用 / **isolated**无需 hoist / ORM 排除）；**R-α 证伪**（343 零掉）；新增唯一摩擦点=`allowBuilds` 放行 @swc/core+esbuild |
+| 2026-10-15 | 0.3.0 | 切片 B/C/D 落地 + 运行时起服实证拓出 **R-δ**（架构级新边界）→ 按铁律停手回退 | §3 新增 R-δ（终结性发现·@core 裸句柄直引 TS 源·CI 绿≠prod 起服可跑）；新增 §4.5 实证进展（切片 A–D 均落地后回退·仅留记录）与请裁三选一（A 维持 Bun / B 批准多包构建重设计 / **C 折中·建议**）；状态转**进行中·受阻 R-δ·待裁**；代码/config 全量回退至绿色 Bun 基线 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.1.0 变更，以当前正文内容为准。
+正文已于 2026-10-15 / v0.3.0 变更，以当前正文内容为准。
