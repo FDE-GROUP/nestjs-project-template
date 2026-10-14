@@ -1,6 +1,6 @@
 # 技术方案 · BA HTTP 面接线（better-auth 原生端点整面 404 核验与修复）
 
-> 状态: **已实现待验收**（实现见 §4 v0.3·甲1+乙1+丙+丁 gated+戊照裁）| 读者: **人**（审计/验收用）
+> 状态: **已验收·结项**（实现见 §4 v0.3·甲1+乙1+丙+丁 gated+戊照裁·验收登账见 v0.4）| 读者: **人**（审计/验收用）
 > 缘起: module-auth-ip-trust（e46d2c7）实机副产观察·人裁"同意"顺带立项（2026-10-14）。
 > blast radius: `auth.controller.ts`（stub 面处置）・`auth.middleware.ts`/`auth.module.ts` 或 `main.ts`（接线一处）・零 schema・零业务模块
 
@@ -62,3 +62,4 @@
   8. **Biome autofix 复刻 S9 坑**：`biome check --write` 把仅类型位的构造依赖（ConfigService/DrizzleService/QuotaService/HttpAdapterHost）擦成 `import type` → DI 运行时 UnknownDependenciesException（app-boot.smoke 红）→ 五依赖全改显式 `@Inject(X)` 值用法修复，复跑 "No fixes applied" 稳住。
   9. **CI 327 passed | 16 skipped (343 总)·Local CI PASSED**（基线 328 + 单测 2 + gated e2e 3[默认 skip·16=13+3]）；ip-trust 片遗留观察（其 §4 v0.3-3）由本片闭环，已回记该 plan。
   10. 实现期订正三处（e2e 文件）：import 路径深度 `'../'→'../../'`；`getHttpServer().inject` → `app.inject`（NestFastifyApplication 先例形态）；cookie 正则按真名 `/better-auth\.session_token/i`。
+- **v0.4（人验收结项·2026-10-15·commit `eb2bbbf`）**：验收面实机三态全存照（接线前 404→接线后全链 200 真 DB 行→非法 BA 子路径真 404/stub 面 404/health 200）；CI **327 passed / 16 skipped（总 343）** 新基线（提交前+pre-push 双验 PASSED）；ip-trust 片遗留观察闭环（其 v0.3-3 划账）。遗留处置：真库 nestjs_e2e 保留复用（不 DROP·本地 gated e2e 专用设施）；dev 服停；缓账照戊：生产 emailAndPassword 登录面（D8 另片）、genericOAuth 回调 HTTP 可达性（另片）。记忆：新立本片接线决策档 + 六坑陷阱档 + 缺口记录/CI 基线更新（六坑单条重复档已并除）。
