@@ -64,7 +64,13 @@ Add via `drizzle-kit generate` + `drizzle-kit migrate` (explicit migrations, nev
 - The `pullDomainEvents()` output is what gets appended (metadata → `jsonb`). The
   command handler body is otherwise unchanged.
 - Introduce an **outbox** if events must cross a process boundary transactionally with
-  the append (avoid dual-write).
+  the append (avoid dual-write). Design reference (机制级借鉴·非工具链，见
+  [research/nestjs-fastify-nx-review.md](../research/nestjs-fastify-nx-review.md) §2.2 /
+  [plans/microservice-readiness.md](./microservice-readiness.md) §2.3-2)：① 域行与事件行
+  **同事务原子写**；② 事件名集中常量 + 契约测试双向锁定（与 trigger SQL/仓储同锁）；
+  ③ envelope 携 schema 版本，relay **拒收**比自己新的信封而非猜；④ 消费者幂等为硬要求
+  （重投必然发生）；⑤ 发布通道做成**双模开关**（进程内默认 / outbox 耐久），与 Phase A
+  平滑共存。
 
 ### Read side
 
