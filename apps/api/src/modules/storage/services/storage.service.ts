@@ -50,20 +50,6 @@ export class StorageService {
     }
   }
 
-  async uploadFile(file: {
-    buffer: Buffer;
-    originalname: string;
-    mimetype: string;
-    size: number;
-  }): Promise<UploadedFileResult> {
-    // Validate file
-    this.validateFile(file);
-
-    return this.storageProvider.uploadFile(file.buffer, file.originalname, {
-      contentType: file.mimetype,
-    });
-  }
-
   async uploadMultipartFile(file: {
     filename: string;
     mimetype: string;
