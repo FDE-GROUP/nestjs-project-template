@@ -214,50 +214,6 @@ paths:
         '200':
           description: ''
       tags: *ref_3
-  /api/v1/users:
-    post:
-      operationId: UsersController_create_v1
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateUserDto'
-      responses:
-        '201':
-          description: User successfully created
-        '400':
-          description: Bad Request
-        '409':
-          description: User already exists
-      summary: Create a new user
-      tags: &ref_4
-        - users
-    get:
-      operationId: UsersController_findAll_v1
-      parameters:
-        - name: limit
-          required: false
-          in: query
-          description: Page size (1-100)
-          schema:
-            example: 20
-            allOf:
-              - $ref: '#/components/schemas/Object'
-        - name: offset
-          required: false
-          in: query
-          description: Offset (rows to skip)
-          schema:
-            example: 0
-            allOf:
-              - $ref: '#/components/schemas/Object'
-      responses:
-        '200':
-          description: Return all users
-      summary: Get all users
-      tags: *ref_4
   /api/v1/users/me/data-export:
     get:
       operationId: UsersController_exportMe_v1
@@ -268,7 +224,8 @@ paths:
         '401':
           description: Missing or invalid session.
       summary: 'PIPL right-to-access: export current user personal data (C1 · FR-7)'
-      tags: *ref_4
+      tags: &ref_4
+        - users
   /api/v1/users/me:
     delete:
       operationId: UsersController_deleteMe_v1
@@ -279,23 +236,6 @@ paths:
         '401':
           description: Missing or invalid session.
       summary: 'PIPL right-to-erase: hard-delete current user (C1 · FR-7)'
-      tags: *ref_4
-  /api/v1/users/{id}:
-    get:
-      operationId: UsersController_findOne_v1
-      parameters:
-        - name: id
-          required: true
-          in: path
-          description: User ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Return the user
-        '404':
-          description: User not found
-      summary: Get a user by ID
       tags: *ref_4
   /api/v1/posts:
     get:
@@ -906,29 +846,6 @@ components:
       bearerFormat: JWT
       type: http
   schemas:
-    CreateUserDto:
-      type: object
-      properties:
-        email:
-          type: string
-          description: The email of the user
-          example: user@example.com
-        password:
-          type: string
-          description: The password of the user
-          example: Password123!
-          minLength: 8
-        firstName:
-          type: string
-          description: The first name of the user
-          example: John
-        lastName:
-          type: string
-          description: The last name of the user
-          example: Doe
-      required:
-        - email
-        - password
     Object:
       type: object
       properties: {}
