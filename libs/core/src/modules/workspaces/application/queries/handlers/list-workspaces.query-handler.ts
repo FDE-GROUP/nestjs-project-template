@@ -1,3 +1,4 @@
+import type { Page } from '@core/shared-kernel/domain/pagination';
 import { Inject } from '@nestjs/common';
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import {
@@ -16,7 +17,7 @@ export class ListWorkspacesQueryHandler implements IQueryHandler<ListWorkspacesQ
   constructor(@Inject(WORKSPACE_REPOSITORY) private readonly workspaces: WorkspaceRepository) {}
 
   // fallow-ignore-next-line unused-class-member -- contract method invoked by the @nestjs/cqrs QueryBus
-  async execute(): Promise<WorkspaceReadModel[]> {
-    return this.workspaces.list();
+  async execute(query: ListWorkspacesQuery): Promise<Page<WorkspaceReadModel>> {
+    return this.workspaces.list(query.request) as Promise<Page<WorkspaceReadModel>>;
   }
 }

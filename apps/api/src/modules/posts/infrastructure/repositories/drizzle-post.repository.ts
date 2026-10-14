@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { DrizzleService } from '@app/database/drizzle.service';
 import { post } from '@app/database/schema';
+import { createPage, type Page, type PageRequest } from '@core/shared-kernel/domain/pagination';
 import { TenantContextService } from '@core/tenancy/tenant-context.service';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import type {
   PostDraft,
   PostRecord,
@@ -35,15 +36,22 @@ export class DrizzlePostRepository implements PostRepository {
     return { organizationId: this.tenant.requireTenantId(), workspaceId: this.tenant.workspaceId };
   }
 
-  async list(): Promise<PostRecord[]> {
+  async list(request: PageRequest): Promise<Page<PostRecord>> {
     const { organizationId, workspaceId } = this.scope();
     const where = workspaceId
       ? and(eq(post.organizationId, organizationId), eq(post.workspaceId, workspaceId))
       : eq(post.organizationId, organizationId);
-    return this.drizzle.db.query.post.findMany({
+    const rows = (await this.drizzle.db.query.post.findMany({
       where,
       orderBy: desc(post.createdAt),
-    }) as Promise<PostRecord[]>;
+      limit: request.limit,
+      offset: request.offset,
+    })) as PostRecord[];
+    const [{ count }] = await this.drizzle.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(post)
+      .where(where);
+    return createPage(rows, count, request);
   }
 
   async findById(id: string): Promise<PostRecord | null> {

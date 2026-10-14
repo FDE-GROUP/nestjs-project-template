@@ -52,11 +52,11 @@ describe('UsersController (bus-backed)', () => {
     expect(result.email).toBe('new@example.com');
   });
 
-  it('GET /users runs GetUsersQuery', async () => {
-    const users = [projection()] as UserReadModel[];
-    executeQuery.mockResolvedValue(users);
+  it('GET /users runs GetUsersQuery with the page request', async () => {
+    const page = { items: [projection()] as UserReadModel[], total: 1, limit: 20, offset: 0 };
+    executeQuery.mockResolvedValue(page);
 
-    await expect(controller.findAll()).resolves.toEqual(users);
+    await expect(controller.findAll({ limit: 20, offset: 0 })).resolves.toEqual(page);
     expect(executeQuery).toHaveBeenCalledTimes(1);
   });
 

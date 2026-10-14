@@ -15,18 +15,23 @@ function makeRepo(tenantId: string | null, workspaceId?: string) {
 
   const findMany = vi.fn().mockResolvedValue([]);
   const findFirst = vi.fn().mockResolvedValue(null);
+  // count 链：db.select(...).from(table).where(...) → [{ count }]
+  const countWhere = vi.fn((_w: unknown) => Promise.resolve([{ count: 0 }]));
+  const countFrom = vi.fn((_t: unknown) => ({ where: countWhere }));
+  const select = vi.fn((_c: unknown) => ({ from: countFrom }));
   const returning = vi.fn();
   const values = vi.fn((_v: Record<string, unknown>) => ({ returning }));
   const insert = vi.fn((_t: unknown) => ({ values }));
   const db = {
     query: { post: { findMany, findFirst } },
     insert,
+    select,
   } as unknown as DrizzleService['db'];
   const drizzle = { db } as unknown as DrizzleService;
 
   return {
     repo: new DrizzlePostRepository(drizzle, tenant),
-    spies: { requireTenantId, findMany, findFirst, insert, values, returning },
+    spies: { requireTenantId, findMany, findFirst, insert, values, returning, select, countWhere },
   };
 }
 
@@ -35,15 +40,23 @@ describe('DrizzlePostRepository · tenant isolation (S2 · FR-5)', () => {
 
   it('fail-closed: list() refuses and never queries when no tenant is bound', async () => {
     const { repo, spies } = makeRepo(null);
-    await expect(repo.list()).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(repo.list({ limit: 20, offset: 0 })).rejects.toBeInstanceOf(ForbiddenException);
     expect(spies.findMany).not.toHaveBeenCalled();
   });
 
   it('list() ALWAYS filters by the active tenant (red if the where clause is dropped)', async () => {
     const { repo, spies } = makeRepo('orgA');
-    await repo.list();
+    await repo.list({ limit: 10, offset: 5 });
     expect(spies.findMany).toHaveBeenCalledTimes(1);
-    const options = spies.findMany.mock.calls[0][0] as { where: unknown };
+    const options = spies.findMany.mock.calls[0][0] as {
+      where: unknown;
+      limit: number;
+      offset: number;
+    };
+    expect(options.limit).toBe(10);
+    expect(options.offset).toBe(5);
+    // count 第二发同样带租户 where
+    expect(spies.countWhere.mock.calls[0][0]).toEqual(eq(post.organizationId, 'orgA'));
     // Structural equality with the exact predicate the adapter must build: drop `where`
     // (undefined) or filter by the wrong column/value and this goes red.
     expect(options.where).toEqual(eq(post.organizationId, 'orgA'));
@@ -76,7 +89,7 @@ describe('DrizzlePostRepository · compound workspace scope (S3 · D2/§8-6)', (
 
   it('list() with an active workspace adds the workspaceId narrowing to the tenant filter', async () => {
     const { repo, spies } = makeRepo('orgA', 'wsA1');
-    await repo.list();
+    await repo.list({ limit: 20, offset: 0 });
     const options = spies.findMany.mock.calls[0][0] as { where: unknown };
     // Must be the compound predicate: drop the workspace clause and this goes red.
     expect(options.where).toEqual(
@@ -86,9 +99,21 @@ describe('DrizzlePostRepository · compound workspace scope (S3 · D2/§8-6)', (
 
   it('list() without a workspace selector stays tenant-scoped (no workspace clause)', async () => {
     const { repo, spies } = makeRepo('orgA');
-    await repo.list();
+    await repo.list({ limit: 20, offset: 0 });
     const options = spies.findMany.mock.calls[0][0] as { where: unknown };
     expect(options.where).toEqual(eq(post.organizationId, 'orgA'));
+  });
+
+  it('list() returns the Page<T> envelope via createPage (治理面同形)', async () => {
+    const { repo, spies } = makeRepo('orgA');
+    const rows = [{ id: 'p1', title: 'T', organizationId: 'orgA' }];
+    spies.findMany.mockResolvedValueOnce(rows);
+    spies.countWhere.mockResolvedValueOnce([{ count: 7 }]);
+
+    const page = await repo.list({ limit: 3, offset: 6 });
+
+    expect(page).toEqual({ items: rows, total: 7, limit: 3, offset: 6 });
+    expect(page.items).not.toBe(rows);
   });
 
   it('findById() with a workspace scopes by id + tenant + workspace (互不可见)', async () => {

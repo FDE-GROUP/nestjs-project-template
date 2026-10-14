@@ -16,6 +16,11 @@ function makeRepo(tenantId: string | null) {
   const findMany = vi.fn().mockResolvedValue([]);
   const findFirst = vi.fn().mockResolvedValue(null);
 
+  // count 链：db.select(...).from(table).where(...) → [{ count }]
+  const countWhere = vi.fn((_w: unknown) => Promise.resolve([{ count: 0 }]));
+  const countFrom = vi.fn((_t: unknown) => ({ where: countWhere }));
+  const select = vi.fn((_c: unknown) => ({ from: countFrom }));
+
   const insertReturning = vi.fn().mockResolvedValue([{ id: 'w1', organizationId: tenantId }]);
   const values = vi.fn((_v: Record<string, unknown>) => ({ returning: insertReturning }));
   const insert = vi.fn((_t: unknown) => ({ values }));
@@ -34,6 +39,7 @@ function makeRepo(tenantId: string | null) {
     insert,
     update,
     delete: del,
+    select,
   } as unknown as DrizzleService['db'];
   const drizzle = { db } as unknown as DrizzleService;
 
@@ -52,6 +58,9 @@ function makeRepo(tenantId: string | null) {
       del,
       whereDelete,
       deleteReturning,
+      select,
+      countFrom,
+      countWhere,
     },
   };
 }
@@ -61,7 +70,7 @@ describe('DrizzleWorkspaceRepository · tenant isolation (S3 · FR-5 choke-point
 
   it('fail-closed: every method refuses and never queries when no tenant is bound', async () => {
     const { repo, spies } = makeRepo(null);
-    await expect(repo.list()).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(repo.list({ limit: 20, offset: 0 })).rejects.toBeInstanceOf(ForbiddenException);
     await expect(repo.create({ name: 'n', slug: 's' })).rejects.toBeInstanceOf(ForbiddenException);
     await expect(repo.update('w1', { name: 'x' })).rejects.toBeInstanceOf(ForbiddenException);
     await expect(repo.remove('w1')).rejects.toBeInstanceOf(ForbiddenException);
@@ -73,9 +82,36 @@ describe('DrizzleWorkspaceRepository · tenant isolation (S3 · FR-5 choke-point
 
   it('list() ALWAYS filters by the active tenant (red if the where clause is dropped)', async () => {
     const { repo, spies } = makeRepo('orgA');
-    await repo.list();
-    const options = spies.findMany.mock.calls[0][0] as { where: unknown };
+    await repo.list({ limit: 10, offset: 5 });
+    const options = spies.findMany.mock.calls[0][0] as {
+      where: unknown;
+      limit: number;
+      offset: number;
+    };
     expect(options.where).toEqual(eq(workspace.organizationId, 'orgA'));
+    // 分页参数必须下传（丢了就是无界读回归）
+    expect(options.limit).toBe(10);
+    expect(options.offset).toBe(5);
+    // count 第二发同样带租户 where
+    expect(spies.countWhere.mock.calls[0][0]).toEqual(eq(workspace.organizationId, 'orgA'));
+  });
+
+  it('list() returns the Page<T> envelope via createPage (治理面同形)', async () => {
+    const { repo, spies } = makeRepo('orgA');
+    const rows = [{ id: 'w1', name: 'A', organizationId: 'orgA' }];
+    spies.findMany.mockResolvedValueOnce(rows);
+    spies.countWhere.mockResolvedValueOnce([{ count: 42 }]);
+
+    const page = await repo.list({ limit: 10, offset: 5 });
+
+    expect(page).toEqual({
+      items: rows,
+      total: 42,
+      limit: 10,
+      offset: 5,
+    });
+    // items 浅复制：信封不复用 rows 引用
+    expect(page.items).not.toBe(rows);
   });
 
   it('create() stamps the active tenant regardless of the draft', async () => {

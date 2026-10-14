@@ -3,6 +3,7 @@ import { DeleteWorkspaceCommand } from '@core/modules/workspaces/application/com
 import { UpdateWorkspaceCommand } from '@core/modules/workspaces/application/commands/update-workspace.command';
 import { ListWorkspacesQuery } from '@core/modules/workspaces/application/queries/list-workspaces.query';
 import type { WorkspaceReadModel } from '@core/modules/workspaces/application/read-models/workspace.read-model';
+import type { Page } from '@core/shared-kernel/domain/pagination';
 import { RequirePermissions } from '@core/tenancy/rbac/require-permissions.decorator';
 import { TenantPermissionGuard } from '@core/tenancy/rbac/tenant-permission.guard';
 import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
@@ -18,10 +19,12 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ListPageDto } from '../../../common/dto/list-page.dto';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 
@@ -51,9 +54,9 @@ export class WorkspacesController {
   @ApiOperation({ summary: 'List workspaces in the active tenant' })
   @ApiResponse({ status: 200, description: 'Workspaces owned by the active tenant.' })
   @ApiResponse({ status: 403, description: 'No active tenant, or missing workspace:read.' })
-  list(): Promise<WorkspaceReadModel[]> {
-    return this.queryBus.execute<ListWorkspacesQuery, WorkspaceReadModel[]>(
-      new ListWorkspacesQuery(),
+  list(@Query() request: ListPageDto): Promise<Page<WorkspaceReadModel>> {
+    return this.queryBus.execute<ListWorkspacesQuery, Page<WorkspaceReadModel>>(
+      new ListWorkspacesQuery(request),
     );
   }
 

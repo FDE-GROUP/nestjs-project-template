@@ -1,3 +1,5 @@
+import type { Page, PageRequest } from '../../../../shared-kernel/domain/pagination';
+
 /**
  * Workspace repository port (domain-owned, dependency inversion).
  *
@@ -30,8 +32,8 @@ export interface WorkspaceRecord {
 }
 
 export interface WorkspaceRepository {
-  /** Workspaces within the active tenant only. */
-  list(): Promise<WorkspaceRecord[]>;
+  /** Workspaces within the active tenant only（分页信封·Page<T> 契约与治理面同形）。 */
+  list(request: PageRequest): Promise<Page<WorkspaceRecord>>;
   /** Creates a workspace stamped with the active tenant. */
   create(draft: WorkspaceDraft): Promise<WorkspaceRecord>;
   /** Updates a workspace ONLY if it belongs to the active tenant; null otherwise. */

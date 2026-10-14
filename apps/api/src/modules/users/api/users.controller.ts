@@ -1,3 +1,4 @@
+import type { Page } from '@core/shared-kernel/domain/pagination';
 import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
 import {
   Body,
@@ -10,10 +11,12 @@ import {
   Logger,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ListPageDto } from '../../../common/dto/list-page.dto';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { SessionGuard, type SessionUser } from '../../auth/guards/session.guard';
 import { CreateUserCommand } from '../application/commands/create-user.command';
@@ -81,9 +84,9 @@ export class UsersController {
   @Get()
   @ApiOperation({ summary: 'Get all users' })
   @ApiResponse({ status: 200, description: 'Return all users' })
-  findAll(): Promise<UserReadModel[]> {
+  findAll(@Query() request: ListPageDto): Promise<Page<UserReadModel>> {
     this.logger.log('Finding all users');
-    return this.queryBus.execute<GetUsersQuery, UserReadModel[]>(new GetUsersQuery());
+    return this.queryBus.execute<GetUsersQuery, Page<UserReadModel>>(new GetUsersQuery(request));
   }
 
   @Get(':id')

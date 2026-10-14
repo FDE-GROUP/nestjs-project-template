@@ -1,3 +1,4 @@
+import type { Page } from '@core/shared-kernel/domain/pagination';
 import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
 import {
   Body,
@@ -7,10 +8,12 @@ import {
   HttpStatus,
   Inject,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ListPageDto } from '../../../common/dto/list-page.dto';
 import { CreatePostCommand } from '../application/commands/create-post.command';
 import { ListPostsQuery } from '../application/queries/list-posts.query';
 import type { PostReadModel } from '../application/read-models/post.read-model';
@@ -35,8 +38,8 @@ export class PostsController {
   @ApiOperation({ summary: 'List posts in the active tenant' })
   @ApiResponse({ status: 200, description: 'Posts owned by the active tenant.' })
   @ApiResponse({ status: 403, description: 'No active tenant context.' })
-  list(): Promise<PostReadModel[]> {
-    return this.queryBus.execute<ListPostsQuery, PostReadModel[]>(new ListPostsQuery());
+  list(@Query() request: ListPageDto): Promise<Page<PostReadModel>> {
+    return this.queryBus.execute<ListPostsQuery, Page<PostReadModel>>(new ListPostsQuery(request));
   }
 
   @Post()

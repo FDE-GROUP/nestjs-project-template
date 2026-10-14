@@ -6,9 +6,10 @@ import type {
   WorkspaceRecord,
   WorkspaceRepository,
 } from '@core/modules/workspaces/domain/repositories/workspace.repository';
+import { createPage, type Page, type PageRequest } from '@core/shared-kernel/domain/pagination';
 import { TenantContextService } from '@core/tenancy/tenant-context.service';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 
 /**
  * Drizzle-backed workspace repository — the ONE place workspace isolation is enforced
@@ -27,12 +28,20 @@ export class DrizzleWorkspaceRepository implements WorkspaceRepository {
     @Inject(TenantContextService) private readonly tenant: TenantContextService,
   ) {}
 
-  async list(): Promise<WorkspaceRecord[]> {
+  async list(request: PageRequest): Promise<Page<WorkspaceRecord>> {
     const organizationId = this.tenant.requireTenantId();
-    return this.drizzle.db.query.workspace.findMany({
-      where: eq(workspace.organizationId, organizationId),
+    const where = eq(workspace.organizationId, organizationId);
+    const rows = (await this.drizzle.db.query.workspace.findMany({
+      where,
       orderBy: asc(workspace.createdAt),
-    }) as Promise<WorkspaceRecord[]>;
+      limit: request.limit,
+      offset: request.offset,
+    })) as WorkspaceRecord[];
+    const [{ count }] = await this.drizzle.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(workspace)
+      .where(where);
+    return createPage(rows, count, request);
   }
 
   async create(draft: WorkspaceDraft): Promise<WorkspaceRecord> {
