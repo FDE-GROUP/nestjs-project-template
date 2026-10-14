@@ -32,7 +32,6 @@ describe('ConfigService', () => {
       storage: { provider: 's3' },
       cors: { origin: '*' },
       swagger: { path: 'apidoc' },
-      security: { helmet: true },
       stripe: { apiVersion: '2025-02-24.acacia' },
     };
     innerGet.mockImplementation((key: string) => registry[key]);
@@ -44,7 +43,6 @@ describe('ConfigService', () => {
     expect(service.getStorageConfig()).toEqual(registry.storage);
     expect(service.getCorsConfig()).toEqual(registry.cors);
     expect(service.getSwaggerConfig()).toEqual(registry.swagger);
-    expect(service.getSecurityConfig()).toEqual(registry.security);
     expect(service.getStripeConfig()).toEqual(registry.stripe);
   });
 });

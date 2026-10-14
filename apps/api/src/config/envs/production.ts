@@ -32,10 +32,6 @@ export default {
     path: 'apidoc',
     openApiVersion: process.env.OPEN_API_VERSION || '3.1.0',
   },
-  security: {
-    helmet: true,
-    rateLimit: true,
-  },
   storage: {
     provider: process.env.STORAGE_PROVIDER || 'alioss',
     bucket: process.env.STORAGE_BUCKET || 'my-bucket',

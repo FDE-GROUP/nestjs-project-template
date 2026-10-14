@@ -1,4 +1,5 @@
 import type { QuotaService } from '@core/tenancy/quota/quota.service';
+import { Logger } from '@nestjs/common';
 import {
   BetterAuthError,
   type BetterAuthOptions,
@@ -18,6 +19,20 @@ import { tenantAccessControl, tenantRoles } from './tenancy-access-control';
 
 export type AuthRequest = FastifyRequest & { originalUrl?: string; url?: string };
 export type AuthResponse = FastifyReply;
+
+/**
+ * 限流信任链解析（module-auth-ip-trust·甲）：`AUTH_TRUSTED_PROXIES` 逗号分隔 CIDR 列表
+ * → BA `advanced.ipAddress.trustedProxies`；未配/空 → undefined（不传，保持库安全默认：
+ * 只信单值 XFF）。库实锤：限流 key = getIP|path，生产拿不到可信 IP 则全体用户落
+ * `no-trusted-ip` 共享桶（登录面 3 次/10s 整站误杀）。
+ */
+export function parseTrustedProxies(value?: string): string[] | undefined {
+  const list = (value ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return list.length > 0 ? list : undefined;
+}
 
 export interface CreateAuthResult {
   handler: (req: AuthRequest, res: AuthResponse) => Promise<any>;
@@ -58,6 +73,15 @@ export function CreateAuth(
   const authConfig = configService.getAuthConfig();
   const corsConfig = configService.getCorsConfig();
   const basePath = `/${appConfig.apiPrefix}/${appConfig.version}/auth`;
+
+  // 乙1·生产缺配显性化：反代部署未配 trustedProxies 时限流落共享桶——启动日志一响，
+  // 不拦启动（直连部署未必有反代，无 PIPL 级法定依据不做 fail-closed）。
+  const trustedProxies = parseTrustedProxies(process.env.AUTH_TRUSTED_PROXIES);
+  if (process.env.NODE_ENV === 'production' && !trustedProxies) {
+    new Logger('CreateAuth').warn(
+      'AUTH_TRUSTED_PROXIES 未配置：若经反向代理部署，Better Auth 限流将把所有用户归入共享桶（no-trusted-ip）导致登录面整站误杀——请配置代理网段 CIDR（逗号分隔）',
+    );
+  }
 
   const auth = betterAuth({
     database: drizzleAdapter(drizzleService.db, {
@@ -164,6 +188,13 @@ export function CreateAuth(
       accountLinking: {
         enabled: true,
         trustedProviders: ['google', 'github'],
+      },
+    },
+    // 限流由库默认开启（登录类路径 3 次/10s）；结构在场=显式意图（丙），窗值跟库默认不预调。
+    rateLimit: { enabled: true },
+    advanced: {
+      ipAddress: {
+        ...(trustedProxies ? { trustedProxies } : {}),
       },
     },
     // 邮箱+密码登录面（S9 补遗 · 真·BA 登录编排 e2e 依赖）：**仅在非生产环境启用**

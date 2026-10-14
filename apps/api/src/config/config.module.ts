@@ -40,6 +40,8 @@ const createSchemaForEnv = (_isProd: boolean) => {
     STRIPE_API_VERSION: Joi.string().optional(),
     PAYMENT_PROVIDER: Joi.string().valid('stripe', 'alipay', 'wechat_pay').default('stripe'),
     EVENT_STORE_ENABLED: Joi.string().valid('true', 'false').optional(),
+    // 生产限流信任链（module-auth-ip-trust）：反代网段 CIDR 逗号列表；未配=BA 安全默认（只信单值 XFF）。
+    AUTH_TRUSTED_PROXIES: Joi.string().optional(),
   };
   const betterAuthSchema = {};
   // Datadog 已移除（global-cn-adaptation G1 / D6）；生产 / 非生产环境 schema 一致。

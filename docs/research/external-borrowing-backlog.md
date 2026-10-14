@@ -7,8 +7,8 @@
 
 | # | 项 | 来源 | 触发判据 | 性质 |
 |---|---|---|---|---|
-| V1 | **反代 IP 信任链 + BA 限流 key 审计**：本仓 Fastify `trustProxy` 零配置；BA 默认限流 sign-in/up/change-* = **3 次/10s 窗（按 request.ip）**——生产经 nginx 反代时全体真实用户共享代理 IP 一个 key → **整站登录误杀（可用性事故级）**；不限则暴破防护名存实亡 | brocoders 轮反照（其无 throttler 照出我方配置问题） | **生产 Docker 部署前必须做**（docker-deployment 落地即触发） | 核验+小实现 |
-| V2 | **`security: { helmet, rateLimit }` 死配置清理**：config envs 声明 `rateLimit: true` 但消费方为零、`@fastify/rate-limit` 未安装——Prisma 时代遗产、名实不符（与 V1 一并裁：要么删声明、要么真接线） | 同 V1 勘察副产 | 随 V1 切片顺收 | 名实治理 |
+| V1 | ~~反代 IP 信任链 + BA 限流 key 审计~~ **已订正（实码勘定，见 plan v0.1 §4）**：限流 key 走 BA 自有 `advanced.ipAddress.*` 与 Fastify trustProxy 无关；风险本体坐实=生产无可信 IP 时全体用户落 `no-trusted-ip` 共享桶（登录面 3 次/10s 整站误杀）。解法已立项 | brocoders 轮反照 | **已立项 2026-10-14**（[module-auth-ip-trust](../plans/module-auth-ip-trust.md)） | 核验+小实现 |
+| V2 | ~~死配置清理~~ 已随 V1 切片立项（实态订正：非全死——有 getter+契约测但零生产消费方，helmet 名实在 main.ts 硬注册） | 同 V1 勘察副产 | 随 V1 切片顺收 | 名实治理 |
 | V3 | **改密后其他会话撤销**：BA `change-password` 流程**不自动**踢旧会话（库源码实锤：password.mjs 无 revoke 引用；`revokeOtherSessions` 是独立显式端点）——密码泄露场景下后门会话存活 | brocoders 对照（其 `deleteByUserIdWithExclude` 恰做了这步，照出我方缺口） | 前端入场（用户自助面成型）或安全加固立项时 | 设计决策+实现 |
 | B3 | 轻量 `hasNextPage` 分页形态（`rows.length === limit` 免第二发 count）：适合无限滚动 feed（posts），与本仓 `Page<T>`（total 已裁）互补不冲突 | brocoders infinity-pagination | 前端无限滚动需求成型 | 契约衍生小项 |
 | B4 | Swagger 文档按受众 groups 出件（admin/公开两套视图）+ OpenAPI 错误契约注解（requestId/errorCode 入文档） | brocoders @ApiProperty groups + softkit swagger decorators | OpenAPI 面建设立项 | 文档面小片 |
@@ -38,4 +38,5 @@
 
 | 行 | 状态 |
 |---|---|
-| V1–V3、B3–B6、C1–C7 | 挂账中（截至 2026-10-14） |
+| V1、V2 | **已立项**（module-auth-ip-trust·人裁"同意，1" 2026-10-14） |
+| V3、B3–B6、C1–C7 | 挂账中（截至 2026-10-14） |

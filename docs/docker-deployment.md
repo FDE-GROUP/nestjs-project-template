@@ -99,6 +99,8 @@ DATABASE_URL=postgres://postgres:postgres@postgres:5432/nestjs_practice
 
 Other environment variables can be set in `.env` file or configured in the `docker-compose.yml` file.
 
+**Reverse proxy (rate-limit trust chain):** when the app runs behind a reverse proxy (nginx, SLB, …), set `AUTH_TRUSTED_PROXIES` to the comma-separated CIDR list of the proxy network segment (e.g. `172.16.0.0/12,127.0.0.1`). Without it, Better Auth cannot resolve a trusted client IP in production and all users share a single rate-limit bucket, causing site-wide false lockouts on sign-in (see `docs/plans/module-auth-ip-trust.md`).
+
 ### Accessing the Application
 
 The application will be available at http://localhost:7009.

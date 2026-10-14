@@ -32,16 +32,6 @@ export interface SwaggerConfig {
   openApiVersion: string;
 }
 
-export interface SecurityConfig {
-  helmet: boolean;
-  rateLimit:
-    | boolean
-    | {
-        ttl: number;
-        limit: number;
-      };
-}
-
 export interface DatabaseConfig {
   url: string;
 }
@@ -96,7 +86,6 @@ export interface Config {
   auth: AuthConfig;
   cors: CorsConfig;
   swagger: SwaggerConfig;
-  security: SecurityConfig;
   database: DatabaseConfig;
   storage: StorageConfig;
   stripe: StripeConfig;

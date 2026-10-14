@@ -40,10 +40,6 @@ export class ConfigService {
     return this.get<Config['swagger']>('swagger');
   }
 
-  getSecurityConfig() {
-    return this.get<Config['security']>('security');
-  }
-
   getStripeConfig() {
     return this.get<Config['stripe']>('stripe');
   }
