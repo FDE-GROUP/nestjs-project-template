@@ -1,6 +1,6 @@
 # 技术方案 · 生产限流信任链（BA IP 信任配置 + 死配置清理）
 
-> 状态: **已实现待验收**（v0.2 人审通过"同意"照建议甲+乙1+丙+丁+戊；v0.3 实现登记见 §4）| 读者: **人**（验收用）
+> 状态: **已验收·结项**（v0.2 人审通过照建议甲+乙1+丙+丁+戊；v0.3 实现登记；v0.4 人验收 2026-10-14·commit `e46d2c7`）| 读者: **人**（存档）
 > 缘起: brocoders 借鉴轮反照项 V1+V2（[external-borrowing-backlog](../research/external-borrowing-backlog.md)）·人裁立项（"同意，1"）。
 > blast radius: **两个单文件小改 + config 契约三处**（`auth.implement.ts` 加 advanced 段・`envs/*.ts` 删 security・新增 1 个 env 变量・零 schema・零业务模块）
 
