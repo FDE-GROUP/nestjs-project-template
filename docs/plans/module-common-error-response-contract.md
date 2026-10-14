@@ -1,6 +1,6 @@
 # 技术方案 · 错误响应契约增强（requestId + errorCode）
 
-> 状态: **已实现·待验收**（人批准 2026-10-14·甲乙丙丁照建议·CI **327/13** 新基线）| 读者: **Agent**（开发依据）
+> 状态: **已验收·结项**（人验收 2026-10-14·commit `fed300b`·CI **327/13** 新基线）| 读者: **Agent**（历史开发依据·已归档）
 > 修订: v0.3 实现订正——§3.1 样例的 `String(request.id) ?? 'req-unknown'` 实作为与 LoggingInterceptor 完全同形的 `?? String(request.id ?? 'req-unknown')`（避免 `String(undefined)`='undefined' 穿入兜底链）；DoD ②的校验端点实机验证改由 e2e 迷你装配覆盖（本仓 Nest 侧无公开无鉴权校验端点，auth 走 better-auth 插件不过 Nest pipe），filter 侧 404/401 实机两证坐实
 > blast radius: **公共契约小片**（全局 filter 两个产体点 + `ErrorResponse` 形状·**形态甲为纯增量非破坏**·不动任何业务抛错点）
 > 缘起: softkit-core `libs/exceptions` 评价（2026-10-14）照出本仓两个实证缺口——①错误响应体**不带关联 id**（而 `x-request-id` 链昨日已建，`currentRequestId()` 唾手可得）；②**无 `errorCode`**（知识库异常体系篇自认头号缺口："error 只是 HTTP 类别名"；前端入场后 api-client 只能 message 字符串匹配，跨 i18n 语言失灵）。人裁立项（选项 1）。
@@ -65,3 +65,4 @@ interface ErrorResponse {
 - v0.1（2026-10-14）：初稿待审计。裁决点：**甲·形态**（甲增量/乙 RFC7807 迁移）；**乙·errorCode 机制先行零业务迁移**（或附 1 处示范迁移）；**丙·校验 formatter 不预填 VALIDATION_FAILED 码**；**丁·DoD 5 项照建议**。
 - v0.2（2026-10-14）：人批准过门，甲乙丙丁照建议。
 - v0.3（2026-10-14）：实现完成待验收——filter+formatter 双产出点同构补形；filter 单测新建 ×7（补零单测欠账·含脏数据 errorCode 不透传）；e2e 契约锁增补（requestId 存在+errorCode 键缺席）；实机 404/401 体 requestId 与头同源两证；CI **327/13**（+7）。订正两处见头部修订行。
+- v0.4（2026-10-14）：人验收结项。errorCode 码表与业务迁移、OpenAPI 错误契约注解留前端 api-client 立项按需消费（机制已备）。

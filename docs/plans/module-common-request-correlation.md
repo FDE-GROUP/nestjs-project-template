@@ -1,7 +1,7 @@
 # 技术方案 · 请求关联 id 统一链（correlationId 断链修复）
 
-> 状态: **已实现·待验收**（人批准 2026-10-14·甲乙丙丁戊照建议·CI **320/13** 新基线）| 读者: **Agent**（开发依据）
-> 修订: **v0.4 验收修订**——应裁将 `request-context` 归拢至 `shared-kernel/context/` 目录（横切契约落位纪律同步成文 tooling §4.9·同批签核），12 处 import 刷新，语义零变；v0.3 实现订正——hook e2e 以零 DB 真 Fastify inject 集成测 + 实机 curl 四证替代，事件穿透测覆盖 3/4 构造点（reject-handler 同形未单测）
+> 状态: **已验收·结项**（人验收 2026-10-14·commit `d026949` + 落位修订 `9a94af5`·验收时基线 CI 320/13，随后被错误契约片推至 327/13）| 读者: **Agent**（历史开发依据·已归档）
+> 修订: **v0.5 验收结项**；v0.4 验收修订——应裁将 `request-context` 归拢至 `shared-kernel/context/` 目录（横切契约落位纪律同步成文 tooling §4.9·同批签核），12 处 import 刷新，语义零变；v0.3 实现订正——hook e2e 以零 DB 真 Fastify inject 集成测 + 实机 curl 四证替代，事件穿透测覆盖 3/4 构造点（reject-handler 同形未单测）
 > blast radius: **跨面小中片**（main.ts 一枚 Fastify hook + core shared-kernel 加纯 ALS 上下文 + 4 处事件构造点补 `correlationId` + interceptor 换源 + CORS expose·**零 schema·零既有响应形状变更**·新增一枚响应头）
 > 缘起: softkit-core `libs/async-storage` 评价（2026-10-14）照出本仓三点断链实证——①`LoggingInterceptor` 自造 `req-${now}-${Math.random()}` 只活在日志字符串（连 Fastify 原生 `req.id` 都没用）；②`DomainEvent.correlationId` 契约字段 + event 表持久化列都在，但 **4 处构造点无一传值、恒落 null**（契约有孔无源）；③请求/日志/事件三者无共同 id 可串。ES 路线（Phase B 在跑）将来必补的一环，本轮立项。
 
