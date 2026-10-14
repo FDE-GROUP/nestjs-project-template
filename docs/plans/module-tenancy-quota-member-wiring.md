@@ -1,6 +1,6 @@
 # 技术方案 · S7 收尾：BA 成员增量配额挂钩接线（附 §10 挂账清欠）
 
-> 状态: **已审计**（人批准 2026-10-14·甲乙丙照建议自裁·高危#2/#5 随批签核）| 读者: **Agent**（开发依据）
+> 状态: **已验收·结项**（人确认 2026-10-14·commit `063c4dc`+`3d7ec54`）| 读者: **Agent**（开发依据）
 > blast radius: **module**（auth 装配 + tenancy/quota）+ 附片触 **高危#2 删码**（逐文件列明·须人单独签核）与 **#5 vision 收口**
 > 关联: [global-tenancy](./global-tenancy.md) §10 S7 行（*"BA member-add 生产挂点标接线点·留后续切片"*）· vision §7 阶段 2 收尾
 
@@ -56,3 +56,4 @@
 - 2026-10-14 v0.2: 人「同意」过门（甲乙丙照建议）。实现前二轮 spike 事实修正（不臆测条款兑现）：**`addMember` 在 BA 1.7.7 为 server-only、不注册 HTTP 路由**（编译产物注释明笔），teams 缺省未启用，项目内零服务端 addMember 调用——真实 HTTP 入组通道 = `invite-member`（仅发邀请·不写 member 行）→ **`accept-invitation`（member 行落行时点·唯一卡点）**；建租 creator 走平台审批 server 通道（S4/S5）不拦。另 accept-invitation 请求体仅 `{invitationId}`，目标 org 需查 invitation 表（读侧·守表所有权纪律条款②）。
 - 2026-10-14 v0.3: 实现期三项如实登记：① **hook 形态修正**——首轮按顶层 `options.hooks.before` 写，dispatch.mjs 运行时实读发现顶层形态是**单函数**，`{matcher,handler}[]` 只存在于插件级 hooks（对齐同文件 `add-account-to-session` 先例）→ 改自定义插件 `seats-quota-guard`；② **e2e 驱动形态**——harness 不复现前缀/版本化装配（BA HTTP 端点无匹配 Nest 路由→inject 404·老注释同因实证），改用 S9 补遗同款服务端透传（dispatch 注释明笔 auth.api.* 与 router 走同一 hooks pipeline·证效等价；server key 为 `createInvitation` 非 invite-member path 名）；实测服务端通道超限以 APIError 冒泡（asResponse 不拦）而生产 HTTP 面转 402 响应，两态都接同口径断言；③ **附片②挂账陈旧**——`TenantStatus`/`PlatformUserRow` read-model re-export 已于 ES 第二切片删过（global-tenancy §10 v0.18.12 处置记录 L241），挂账未清导致重报；本轮核验零命中即无需动作，回灌销账。① uploadFile 删除系**新签覆盖旧裁**（ES 切片 §6-② 曾裁保留担心断链）：本轮人签后删 service 门面，链路核验全仓无编译断裂（CI build 绿），副作用：provider 接口 `uploadFile` 方法+3 实现失去仓内唯一消费者→**provider 面作为对外扩展点保留·登记观察项**（下游 fork 若需 Buffer 直传可重建门面）；另顺手订正 auth.implement `appName` 兑底古董名 `nestjs-project-template`（仓库更名漏改面）。
 - 2026-10-14 v0.4: 验收——主片 hook+单测 7+gated e2e 真库绿（path 实证由测试本体完成）；附片三笔落定；CI 新基线 **283/11**·0 边界违规。
+- 2026-10-14 v0.5: 人「继续」验收·**结项**。commit `063c4dc`（主片）+ `3d7ec54`（附片）已推 origin/main（pre-push CI PASSED）。产物记忆：S7 接线决策升格为「BA hook 商业闭环」永久档；后续候选剩：租户级数据导出（待 vision 阶段 3 宣示）、microservice-readiness 后续项（均裁缓至触发）。
