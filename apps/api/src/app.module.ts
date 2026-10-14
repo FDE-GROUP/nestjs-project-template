@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CommonModule } from './common/common.module';
+import { HealthModule } from './common/health/health.module';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { AppI18nModule } from './i18n/i18n.module';
@@ -22,6 +23,7 @@ import { TenancyModule } from './tenancy/tenancy.module';
     DatabaseModule,
     AppI18nModule,
     CommonModule,
+    HealthModule,
     AuthModule.forRoot(),
     TenancyModule,
     UsersModule,

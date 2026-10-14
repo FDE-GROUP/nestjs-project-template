@@ -24,7 +24,7 @@ describe('AuthSessionReader (P1b · 会话端口适配)', () => {
   it('short-circuits bypass / health routes (no getSession)', async () => {
     const { reader, getSession } = readerWith({ user: { id: 'u1' } });
     await expect(
-      reader.read({ headers: { cookie: 'session=abc' }, url: '/healthcheck' }),
+      reader.read({ headers: { cookie: 'session=abc' }, url: '/api/v1/health' }),
     ).resolves.toBeNull();
     expect(getSession).not.toHaveBeenCalled();
   });

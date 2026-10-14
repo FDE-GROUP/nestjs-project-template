@@ -26,7 +26,9 @@ export const AUTH_BYPASS_PATHS = [
   '/better-auth/token',
   '/better-auth/session',
   '/better-auth/providers',
-  '/healthcheck',
+  // 存活探针（module-common-health-probe）：与 Dockerfile HEALTHCHECK 的 /api/v1/health 口径对齐
+  //（旧死字样 '/healthcheck' 无任何实现，已清）；auth middleware 与会话读取器共用此表。
+  '/health',
   '/apidoc',
   '/openapi.yaml',
   '/openapi.json',

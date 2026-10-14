@@ -19,6 +19,7 @@
         "@nestjs/cqrs": "^12.1.0",
         "@nestjs/platform-fastify": "^12.1.3",
         "@nestjs/swagger": "^12.0.2",
+        "@nestjs/terminus": "^12.1.0",
         "ali-oss": "^6.23.0",
         "bcryptjs": "^3.0.3",
         "better-auth": "^1.7.7",
@@ -438,6 +439,8 @@
     "@nestjs/schematics": ["@nestjs/schematics@12.0.7", "https://registry.npmmirror.com/@nestjs/schematics/-/schematics-12.0.7.tgz", { "dependencies": { "@angular-devkit/core": "22.2.2", "@angular-devkit/schematics": "22.2.2", "comment-json": "5.0.0", "jsonc-parser": "3.3.1", "pluralize": "8.0.0" }, "peerDependencies": { "prettier": "^3.0.0", "typescript": ">=6.0.0" }, "optionalPeers": ["prettier"] }, "sha512-zSzJVhsmn/m+vp28sRneq1N+GcNwzHOEfFpm6llOeZTPYnAN6UVpzSAaA2+AYqZtAgo3HB+eTOzkbwQVyBlb4g=="],
 
     "@nestjs/swagger": ["@nestjs/swagger@12.0.2", "https://registry.npmmirror.com/@nestjs/swagger/-/swagger-12.0.2.tgz", { "dependencies": { "@microsoft/tsdoc": "0.17.0", "@nestjs/mapped-types": "12.0.0", "@standard-schema/spec": "1.1.0", "es-toolkit": "1.52.0", "js-yaml": "5.4.2", "path-to-regexp": "8.4.2", "swagger-ui-dist": "5.33.0" }, "peerDependencies": { "@fastify/static": "^8.0.0 || ^9.0.0 || ^10.0.0", "@nestjs/common": "^12.0.0", "@nestjs/core": "^12.0.0", "class-transformer": "*", "class-validator": "*", "reflect-metadata": "^0.1.12 || ^0.2.0", "typescript": "^5.5.0 || ^6.0.0" }, "optionalPeers": ["@fastify/static", "class-transformer", "class-validator", "typescript"] }, "sha512-/IDj6o2k1wqZybhIkMaJp58YNrAos/4TwTf3zBn/j1flKpMb5Tyfbj9sP6rpLucQ7PzHHu7n4ucmeHWEisfn6A=="],
+
+    "@nestjs/terminus": ["@nestjs/terminus@12.1.0", "https://registry.npmmirror.com/@nestjs/terminus/-/terminus-12.1.0.tgz", { "peerDependencies": { "@grpc/grpc-js": "*", "@grpc/proto-loader": "*", "@mikro-orm/core": "*", "@mikro-orm/nestjs": "*", "@nestjs/axios": "^4.0.0 || ^12.0.0", "@nestjs/common": "^11.0.0 || ^12.0.0", "@nestjs/core": "^11.0.0 || ^12.0.0", "@nestjs/microservices": "^11.0.0 || ^12.0.0", "@nestjs/mongoose": "^11.0.0 || ^12.0.0", "@nestjs/sequelize": "^11.0.0 || ^12.0.0", "@nestjs/swagger": "^11.0.0 || ^12.0.0", "@nestjs/typeorm": "^11.0.0 || ^12.0.0", "@prisma/client": "*", "mongoose": "*", "reflect-metadata": "^0.1.12 || ^0.2.0", "rxjs": "^7.1.0", "sequelize": "*", "typeorm": "*" }, "optionalPeers": ["@grpc/grpc-js", "@grpc/proto-loader", "@mikro-orm/core", "@mikro-orm/nestjs", "@nestjs/axios", "@nestjs/microservices", "@nestjs/mongoose", "@nestjs/sequelize", "@nestjs/swagger", "@nestjs/typeorm", "@prisma/client", "mongoose", "sequelize", "typeorm"] }, "sha512-bag1KT1Pk2KpDhXh6fhf3F7IpRGs8IMSdPaD1+9hclP3hSAIkCYN/YUhkAY+2G7OuoUmyDuKVb7MgNw+L5ZBbQ=="],
 
     "@nestjs/testing": ["@nestjs/testing@12.1.3", "https://registry.npmmirror.com/@nestjs/testing/-/testing-12.1.3.tgz", { "dependencies": { "tslib": "2.8.1" }, "peerDependencies": { "@nestjs/common": "^12.0.0", "@nestjs/core": "^12.0.0", "@nestjs/microservices": "^12.0.0", "@nestjs/platform-express": "^12.0.0" }, "optionalPeers": ["@nestjs/microservices", "@nestjs/platform-express"] }, "sha512-bs+lebFzObxZC9kf7j2+46RGZ2yNXpHvc1NHWglJaQOhaWDAm7lblTwYygwwKlTu6ttlOfxi/9f8zlCexd/G+w=="],
 

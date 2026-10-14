@@ -243,6 +243,8 @@
 > - **依赖观察项 ×1（动依赖分类属高危，同上待裁）**：`reflect-metadata` 被 fallow 判为 test-only 生产依赖（仅测试显式 import）——但生产 DI 元数据依赖 Bun/SWC 运行时链，移 devDependencies 触构建面，仅登记不处置。
 > - **假阳性/接口位（不处置，留档防复报）**：`CreatePostCommandHandler.execute`（CommandBus 反射调用·框架静态图盲区）；`PaymentService.supportsRecurring`（**D9 明文「接口位保留不动」**·周期扣款待资质择机）；`AuthService.getOauthUserAccount`/`getOauthProviders`（关联本文 cn-adaptation §11-2 绑定流交互未定项·D8 暂缓面）；3 条 QueryBus 契约方法防御性 `fallow-ignore` 标注（报 stale·保留防版本抖动复发）。complexity 5 项落 `seed.ts`/`auth.implement.ts` 胶合面、duplication 6 组均 advisory 非门禁。
 
+> **tenancy 形态观察项（2026-10-14·softkit boilerplate 评价借鉴 #3·记账不落地）**：本仓固定「多租户 + BA 会话/active-org 识别」单一形态。对方枚举的分类学——单租户（同邮箱跨租互斥）/无租户 B2C × 识别载体 subdomain/path/header——其中 **subdomain/path 识别对国内私有化部署（每客户独立域名）是真需求**。触发判据：**私有化需求出现时才开租户识别轴设计切片**，本阶段不动不作；另同步挂账：对方 header 声明式租户 id（客户端可传）恰与本仓 S2「port 不暴露 tenantId·adapter 从 ALS 注入 fail-closed」相反，**勿被「更灵活的 header 指定租户」说服**（留档防复报）。
+
 ## 11. 影响面与迁移
 
 - **迁移策略（NFR-3）**：行级共享 = **单一 schema、无 per-tenant fan-out**，走常规 Drizzle migrate。**风险②已 S0 boot 坐实**（见 [research §7–§8](../research/better-auth-org.md)）：org 三表 + `session.activeOrganizationId` 并入手写单文件 `src/database/schema.ts`，`drizzle-kit generate` 产**纯 additive、FK 可解析** SQL（→ `0002`），runtime adapter 按列真实读写、`metadata` 为 **jsonb 真对象**（非 JSON string）、`activeOrganizationId` 无需额外 FK 均经真实库往返验证。
