@@ -1,6 +1,6 @@
 # 技术方案 · apps/reference 更名 apps/api（命名归行业惯例，语义归文档）
 
-> 状态: **已审计**（人裁 2026-10-14「1、2」= 目录改 `apps/api` + 参考实现叙事由文档承担）
+> 状态: **已验收·结项**（人验收 2026-10-14·commit `cf5ceda`）| 读者: **Agent**（历史归档）
 > blast radius: **global**（触构建配置全集 + `docs/specs/vision.md` 措辞补注 = 高危#5 随本批呈签）
 > 关联: 讨论源起「是否应更名 apps/api-server」→ 取证结论：`reference` 非行业通名（惯例为 `apps/api`/`apps/server`，示例语义惯例位置 `examples/` 或由文档承担）
 
@@ -33,3 +33,4 @@
 
 - 2026-10-14 v0.1: 人裁「1、2」= 改 `apps/api` + 文档承担语义；高危#5（vision 补注）随批视同签核。本 plan 即留痕，即刻执行。
 - 2026-10-14 v0.2: 交付——git mv + 配置/源码/文档全改单 commit；零残留；CI 276/10 基线不动；workspace 重链（api-app）。待验收。
+- 2026-10-14 v0.3: 人验收通过（「同意」）结项。本次 push 同时为 Pages workflow 新触发 paths（`apps/**`）首次源码改动实跑，就绪首切片遗留观察项随之自动验证。
