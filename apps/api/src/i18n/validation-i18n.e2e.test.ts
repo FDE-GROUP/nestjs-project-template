@@ -77,6 +77,11 @@ describe('Validation i18n localization (contract)', () => {
     // not the raw nestjs-i18n default body and not the untranslated-key passthrough).
     expect(typeof body.timestamp).toBe('string');
     expect(body.path).toBe('/probe');
+    // requestId 契约同步锁：本装配不经 main.ts hook，故走兜底链第二级（Fastify 原生 request.id）
+    expect(typeof body.requestId).toBe('string');
+    expect(body.requestId.length).toBeGreaterThan(0);
+    // 不为校验失败预填 errorCode（裁决点丙）
+    expect('errorCode' in body).toBe(false);
   });
 
   it('localizes to en via accept-language', async () => {

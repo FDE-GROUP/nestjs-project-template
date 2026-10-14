@@ -1,3 +1,4 @@
+import { currentRequestId } from '@core/shared-kernel/context/request-context';
 import { type ExecutionContext, Global, Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { I18nValidationExceptionFilter } from 'nestjs-i18n';
@@ -7,20 +8,22 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 
 // Localized validation errors keep the exact same response contract as the generic
-// filter below (statusCode / message / error / timestamp / path) — only `message`
-// content changes from raw i18n keys to translated strings.
+// filter below (statusCode / message / error / timestamp / path / requestId) — only
+// `message` content changes from raw i18n keys to translated strings.
 const validationErrorBodyFormatter = (
   host: ExecutionContext,
   exception: { getStatus(): number },
   error: unknown,
 ) => {
-  const request = host.switchToHttp().getRequest<{ url: string }>();
+  const request = host.switchToHttp().getRequest<{ url: string; id?: string | number }>();
   return {
     statusCode: exception.getStatus(),
     message: error,
     error: 'Bad Request',
     timestamp: new Date().toISOString(),
     path: request.url,
+    // 与 HttpExceptionFilter / LoggingInterceptor 同一兜底链口径（不为校验失败预填 errorCode 码）
+    requestId: currentRequestId() ?? String(request.id ?? 'req-unknown'),
   };
 };
 

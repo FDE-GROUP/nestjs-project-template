@@ -1,4 +1,5 @@
 import { LoggerService } from '@app/logger/logger.service';
+import { currentRequestId } from '@core/shared-kernel/context/request-context';
 import {
   type ArgumentsHost,
   Catch,
@@ -15,6 +16,10 @@ interface ErrorResponse {
   error: string;
   timestamp: string;
   path: string;
+  /** 请求关联 id：与 x-request-id 响应头、日志、领域事件 correlationId 同源（兜底链见 LoggingInterceptor）。 */
+  requestId: string;
+  /** 业务错误码：仅当异常以 object response 形态携带 `errorCode` 时透传（不引入自定义异常类）。 */
+  errorCode?: string;
 }
 
 @Catch()
@@ -31,6 +36,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     let message: string | string[] = 'Internal server error';
     let error = 'Internal Server Error';
+    let errorCode: string | undefined;
 
     if (exception instanceof HttpException) {
       const exceptionResponse = exception.getResponse();
@@ -39,6 +45,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const exceptionResponseObj = exceptionResponse as Record<string, unknown>;
         message = (exceptionResponseObj.message as string | string[]) || message;
         error = (exceptionResponseObj.error as string) || error;
+        // 业务错误码走 HttpException 原生 object response 携带（如 throw new ForbiddenException({ message, errorCode }))
+        if (typeof exceptionResponseObj.errorCode === 'string') {
+          errorCode = exceptionResponseObj.errorCode;
+        }
       } else {
         message = exceptionResponse as string;
       }
@@ -52,6 +62,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       error,
       timestamp: new Date().toISOString(),
       path: request.url,
+      requestId: currentRequestId() ?? String(request.id ?? 'req-unknown'),
+      ...(errorCode !== undefined ? { errorCode } : {}),
     };
 
     if (status >= 500) {
