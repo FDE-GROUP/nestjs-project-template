@@ -54,7 +54,7 @@
 
 ## 架构
 
-采用 **Clean Architecture + DDD + CQRS 的垂直切片**组织业务，并以 **Bun workspaces** 拆为共享内核与参考应用两包：
+采用 **Clean Architecture + DDD + CQRS 的垂直切片**与**分阶段 ES + EDA**（范式定义与阶段现状见 §技术栈·架构范式及[事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)：写路径统一 Command/Handler，跨上下文经领域事件通信，当前处 Phase B 影子追加）组织业务，并以 **Bun workspaces** 拆为共享内核与参考应用两包：
 
 ```
 packages/core/src/          # @core 共享内核：领域事件/聚合基类、tenancy 契约、subscriptions/workspaces 领域层
