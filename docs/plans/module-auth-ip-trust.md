@@ -57,5 +57,5 @@
   1. 甲微调：`AUTH_TRUSTED_PROXIES` 不入 `AuthConfig` 命名空间（envs 多文件覆盖合并机制有不确定性），改为 `CreateAuth` 内直读 env + 导出纯函数 `parseTrustedProxies`，Joi 契约照加——与甲目标（env-CIDR 透传）语义等价。
   2. 戊-2 降级：`@better-auth/core` 非直接依赖（deep import MODULE_NOT_FOUND 实锤），四态库算法契约测不可行——降为 parse 四态测 + `auth.options` 透传断言（库算法主防线=BA 上游测试，本仓锁"我们传了什么"），已如实记于测试文件头注。
   3. **新观察（出本片范围）**：实机验证发现 BA 挂载面 `POST /api/v1/better-auth/sign-up/email` 返 404（`GET /better-auth/session` 200=装配健康），而本仓 Nest 路由面（controller `/better-auth`）无该 POST 路由——疑 BA 处理器在 Fastify 适配下的路由匹配/`emailAndPassword.enabled` 生产关闭交互有先存缝隙；**与本片 diff 无关**（未碰 handler/挂载面）——"建号正道 HTTP 面可用性"待下一独立切片核。
-  4. 实现落地：`auth.implement.ts`（parse+warn+advanced+rateLimit 段）、`config.module.ts`（Joi）、三 env 删 security、interface/getter/测试删净、`auth.ip-trust.test.ts`（+5 测）、`.env.example`、docker-deployment.md、backlog V1/V2 订正。**CI 328/13（基线 323+5）**；实机 session 200。
+  4. 实现落地：`auth.implement.ts`（parse+warn+advanced+rateLimit 段）、`config.module.ts`（Joi）、三 env 删 security、interface/getter/测试删净、`auth.ip-trust.test.ts`（+5 测）、`.env.example`、docker-deployment.md、backlog V1/V2 订正。**CI 328/13（基线 323+5）**；实机 session 200（后经 [module-auth-http-surface](./module-auth-http-surface.md) §1-2 核正：系 stub 假信号，非 BA 装配健康证据）。
   5. 实现期失误留痕：development.ts 首次替换方向写反造成重复 security 块，当场订正净删（无残留，Biome/tsc 双验过）。
