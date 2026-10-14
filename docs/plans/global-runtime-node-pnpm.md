@@ -116,6 +116,23 @@
 
 **下一步（审计门签核前）**：需定（一）选哪个设计；（二）新片切片划分与完成判据；（三）高危登记（改构建链 = blast radius 双全局）。
 
+## 4.7 设计二 v0.5 详案（**人择设二·待最终审计门·未过零代码**）
+
+> 人于 2026-10-15 择 **设计二**。本小节为可直接实现的**决策完备**详案，经最终审计门放行后方动码。
+
+**额外现状实锤**：`libs/core` 内部也有 **20 处 `@core/*` 裸句柄自引用**（与相对 import 混用）；apps/api `main` 仍为失真的 `dist/main.js`；根 workspaces=[apps/*,libs/*]；vitest 靠 `resolve.tsconfigPaths` 解析。
+
+**切片（S0→S5·每步实证门禁）**：
+- **S0·回归防线（先证“prod 已坏”为真 bug）**：新增最小核验步 `verify:prod-boot`（构建后真起服 + `/api/v1/health`）。**基线上即红**（复现 `ERR_MODULE_NOT_FOUND`）——锁定“修复”的失败测试。判据：旧产物 FAIL · 修复后 PASS。
+- **S1·`libs/core` 独立构建**：先剥 core 内 20 处 `@core/*` 自引用→**包内相对路径**（包不应走自己包名）；新增 core 构建（SWC·保 `emitDecoratorMetadata`·目录结构不劣）产 `libs/core/dist/**.js`+`.d.ts`；`exports` 改指 dist（`".":"./dist/index.js"`、`"./*":"./dist/*.js"`）。判据：core 单编产出 dist·`tsc --noEmit` 0·grep 坐实 core 内零 `@core/*` 裸句柄。
+- **S2·apps/api 消费切包句柄**：75 生产文件（+相关测）`@core/x` → **包子路径 `@core/saas-kit/x`**（biome codemod + 人工核验·防回吸）；app tsconfig `@core/*` paths 仅供 typecheck 指 core dist `.d.ts`，不再参编译期重写；运行时经 workspace 链 `node_modules/@core/saas-kit`→exports dist 解析（isolated 链已由切片 A 证）。判据：编译产物 import 落地为 `@core/saas-kit/…` 裸包句柄（非相对指 src）·343 零掉。
+- **S3·构建编排**：`build:libs`（先编 core）→`build:nest`（再编 app）；root scripts + Dockerfile + ci.ts 串接。判据：端到端产出可运行 dist。
+- **S4·prod 起服实证（本案验收命门）**：`node dist/apps/api/src/main.js` 真 listen + `/api/v1/health` 200 存照；**Bun 下同样验**（`bun dist/…/main.js` 亦 200，证 prod 债根治、与运行时无关）。判据：两运行时 prod 起服 200 + S0 转绿。
+- **S5·回到运行时主线**：S1–S4 绿后 R-δ 消解，重推原切片 B/C/D（工具链 Node 化）+ E（删 bun + 宪法成文·高危·人签核）。
+
+**高危登记（workflow §3）**：✅ 改构建链（双全局）✅ 句柄 codemod 跨 75+20 文件✅ `libs/core` exports 公共契约变更✅ `docs/specs` 宪法（S5）——均需人签核。
+**新风险**：**R-ε** Node ESM 严格下 exports pattern 能否把无扩展深子路径 `@core/saas-kit/shared-kernel/…` 正确映射到 `dist/*.js`（需实机验）·**R-ζ** 跳包 DI：app 注 core service 时 `design:paramtypes` 跨包边界是否仍解析（§4.3 坑延伸至 core 内部·`di-context.integration` 须锁）。
+
 ## 5. 完成判据（过审计门后·可核验 + 穷尽）
 
 - [ ] 切片 A：`pnpm install` 成功 + 布局解析方案定档（isolated 或 hoist 兜底）写进 tooling
@@ -135,8 +152,9 @@
 | 2026-10-15 | 0.2.0 | 人以「照建议自裁」过审计门 + 切片 A 开工实证 | 审计翻**已审计·开工**；五未决项据实自裁（Node≥22 / pnpm@11.7.0 / SWC 沿用 / **isolated**无需 hoist / ORM 排除）；**R-α 证伪**（343 零掉）；新增唯一摩擦点=`allowBuilds` 放行 @swc/core+esbuild |
 | 2026-10-15 | 0.3.0 | 切片 B/C/D 落地 + 运行时起服实证拓出 **R-δ**（架构级新边界）→ 按铁律停手回退 | §3 新增 R-δ（终结性发现·@core 裸句柄直引 TS 源·CI 绿≠prod 起服可跑）；新增 §4.5 实证进展（切片 A–D 均落地后回退·仅留记录）与请裁三选一（A 维持 Bun / B 批准多包构建重设计 / **C 折中·建议**）；状态转**进行中·受阻 R-δ·待裁**；代码/config 全量回退至绿色 Bun 基线 |
 | 2026-10-15 | 0.4.0 | 人裁 **B**（多包构建重设计并入案）+ 实机复测发现 **R-δ 非 Node 专属（Bun prod 产物同坏）** | §3 R-δ 定性纠正：编译产物 prod 在 Bun/Node **都跑不通**·先于本迁移的潜伏债·“A 维持 Bun 零风险”作废；新增 §4.6 待审设计（现状实锤：nest build 只编 apps、dist 无 libs、75 生产文件走 @core/* 路径别名）+ 设计一（同编两树）/设计二（libs/core 独立成包+exports 指 dist·**推荐**）；状态转**待新一轮审计门·高危签核** |
+| 2026-10-15 | 0.5.0 | 人择 **设计二**（libs/core 独立成包）·要求先出可审详案 | 新增 §4.7 设计二 v0.5 决策完备详案：额外实锤（core 内 20 处 `@core/*` 自引用）+ 切片 S0（回归防线·基线即红）→S1（core 独立构建·exports 指 dist）→S2（app 75 文件句柄切包子路径）→S3（构建编排）→S4（两运行时 prod 起服实证）→S5（回工具链主线）；高危四项 + 新风险 R-ε/R-ζ；**待最终审计门放行** |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.4.0 变更，以当前正文内容为准。
+正文已于 2026-10-15 / v0.5.0 变更，以当前正文内容为准。
