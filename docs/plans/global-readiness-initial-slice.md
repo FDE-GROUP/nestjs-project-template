@@ -57,3 +57,4 @@
 - 2026-10-14 v0.2: 人「同意」过审计门（高危#5 附录写入、#4 workflow 简化随批视同签核）；甲乙丙照建议自裁。实现期新发现：① `suspend-user` handler 直写 `session` 表（auth core）——治理失权链所需，按**显式声明例外**入单源而非掩盖（§1 前轮 grep 只扫仓储漏了 handler，已补全仓写面扫描）；② workflow 触发 paths 写 `'src/**'` 早已失效（源码在 apps/reference/src），随 #4 简化一并订正。
 - 2026-10-14 v0.3: 实现交付——#1 单源+守卫测（3 测：违例即红/例外零暗账/新表漏登记）+ specs 附录；#4 codegen 字节级一致直出 + 脚本切换 + workflow 简化；CI 276/10。结项待验收。
 - 2026-10-14 v0.4: 人验收通过（「同意」）结项。遗留观察项：workflow 新触发 paths + DB-free 导出首跑 Pages 构建（后续首次源码改动时自动验证，异常回本 plan 追加留痕）。
+- 2026-10-14 v0.5: 观察项终态——首跑坐实历史故障（workflow DATABASE_URL 古董 mongodb 值卡死 Joi 校验，本 workflow 自 DB 迁移从未成功），修复与 Pages 站点启用均记于 global-rename-repo.md（修复 `73cdd54`·Pages 实测 200）；DB-free 导出在 CI 实跑通过，本切片目标全部成立。

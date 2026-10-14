@@ -16,7 +16,10 @@
 - **Pages URL 变更**：`fde-group.github.io/nestjs-project-template` → `…/nestjs-saas-start`（gh-pages 分支随仓库走，指向旧 Pages 的外部链接失效）。
 - **本地目录名未动**：`/home/abel/EA/nestjs-project-template` 保持（改目录会断 IDE 会话上下文，由人自行择机 rename）。
 - **真实 `.env` 未碰**（铁律：Agent 不改 `.env`）：若其内 `APP_NAME` 为旧值，本地运行 swagger 标题仍显示旧名，请人自行更新。
+- **观察项坐实为历史故障并已修复**（`73cdd54`）：workflow 的 `DATABASE_URL` 默认值仍是 Prisma 时代 `mongodb://` 串，迁 Drizzle+PG 后 Joi scheme 校验拒绝——即该 workflow 自迁移以来从未成功过（更名前两次 run 同样红）；改 postgres dummy 值后手动 dispatch 首次全绿（38s）。
+- **Pages 站点系从未启用**（新旧仓库皆然）：人签核后经 `gh api POST /pages` 启用（source: gh-pages 分支），`https://fde-group.github.io/nestjs-saas-start/` 与 `swagger.yaml` 均实测 200——文档部署线自此真正打通。
 
 ## 3. 审计记录
 
 - 2026-10-14 v0.1: 人直令执行，本文件为事后留痕（执行面 + 影响面）。
+- 2026-10-14 v0.2: 附两起顺藤摸瓜的历史问题处置：DATABASE_URL 古董值修复（`73cdd54`）+ Pages 站点启用（人签核·实测 200）。本切片至此全部闭环。
