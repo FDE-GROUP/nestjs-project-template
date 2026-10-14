@@ -211,6 +211,16 @@ export class DrizzleTenantGovernanceRepository implements TenantGovernanceReposi
     return { tenant, members, invitations, workspaces, subscriptions, posts };
   }
 
+  async destroy(organizationId: string): Promise<boolean> {
+    // 仅删主行；member/invitation/workspace/tenant_subscription/post 由 FK
+    // onDelete: 'cascade' 在 DB 层自动消灭（单一卡点·零迁移）。
+    const rows = await this.drizzle.db
+      .delete(organization)
+      .where(eq(organization.id, organizationId))
+      .returning({ id: organization.id });
+    return rows.length > 0;
+  }
+
   private async countWhere(
     table: typeof member | typeof invitation | typeof workspace | typeof post,
     column: Column,

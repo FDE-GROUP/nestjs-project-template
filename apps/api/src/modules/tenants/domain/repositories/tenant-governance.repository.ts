@@ -123,4 +123,11 @@ export interface TenantGovernanceRepository {
   diagnostics(organizationId: string): Promise<TenantDiagnostics | null>;
   /** 按租户导出全部名下数据（NFR-6）；不存在 → null。deleted 终态亦可导。 */
   exportTenantData(organizationId: string): Promise<TenantDataExport | null>;
+  /**
+   * 运营硬删（NFR-6 删除半）：仅删 organization 主行，五张子表由 DB FK cascade
+   * 自动消灭（单一卡点·应用层不逐表删）；实删 → true，行不存在 → false。
+   * **前置闸（仅 deleted 终态可硬删）在 application 层 handler 裁决**，访问控管在
+   * controller guard——本 port 供纯粹消灭动作，不叠业务门槛（与 diagnostics 同位阶）。
+   */
+  destroy(organizationId: string): Promise<boolean>;
 }

@@ -5,6 +5,7 @@ import { PlatformUsersController } from './api/platform-users.controller';
 import { TenantsController } from './api/tenants.controller';
 import { ApproveTenantCommandHandler } from './application/commands/handlers/approve-tenant.command-handler';
 import { DeleteTenantCommandHandler } from './application/commands/handlers/delete-tenant.command-handler';
+import { DeleteTenantPermanentlyCommandHandler } from './application/commands/handlers/delete-tenant-permanently.command-handler';
 import { RejectTenantCommandHandler } from './application/commands/handlers/reject-tenant.command-handler';
 import { ResumeTenantCommandHandler } from './application/commands/handlers/resume-tenant.command-handler';
 import { ResumeUserCommandHandler } from './application/commands/handlers/resume-user.command-handler';
@@ -30,6 +31,7 @@ const CommandHandlers = [
   SuspendTenantCommandHandler,
   ResumeTenantCommandHandler,
   DeleteTenantCommandHandler,
+  DeleteTenantPermanentlyCommandHandler,
   SuspendUserCommandHandler,
   ResumeUserCommandHandler,
 ];

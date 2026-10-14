@@ -13,6 +13,8 @@ function chain(rows: unknown[]) {
     offset: () => c,
     // export 成员名册用 innerJoin（链式同形：join 后仍可 where/await）
     innerJoin: () => c,
+    // destroy 用 delete().where().returning()
+    returning: () => c,
   };
   // Bracket assignment (not an object-literal `then` key) mimics drizzle's awaitable builder.
   c['then'] = (res: (v: unknown[]) => unknown) => Promise.resolve(rows).then(res);
@@ -22,9 +24,10 @@ function chain(rows: unknown[]) {
 /** select() pops the next queued chain per call (list issues 2: rows then count). */
 function makeRepo(queue: unknown[][]) {
   const select = vi.fn(() => chain(queue.shift() ?? []));
-  const db = { select } as unknown as DrizzleService['db'];
+  const del = vi.fn(() => chain(queue.shift() ?? []));
+  const db = { select, delete: del } as unknown as DrizzleService['db'];
   const drizzle = { db } as unknown as DrizzleService;
-  return { repo: new DrizzleTenantGovernanceRepository(drizzle), select };
+  return { repo: new DrizzleTenantGovernanceRepository(drizzle), select, del };
 }
 
 const orgRow = {
@@ -203,5 +206,21 @@ describe('DrizzleTenantGovernanceRepository.exportTenantData (NFR-6)', () => {
     const { repo, select } = makeRepo([[]]);
     await expect(repo.exportTenantData('ghost')).resolves.toBeNull();
     expect(select).toHaveBeenCalledTimes(1); // 仅 org 存在性查询
+  });
+});
+
+describe('DrizzleTenantGovernanceRepository.destroy (NFR-6 硬删主行)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('主行实删 → true（delete+returning 单一卡点，子表由 DB FK cascade）', async () => {
+    const { repo, del, select } = makeRepo([[{ id: 'orgA' }]]);
+    await expect(repo.destroy('orgA')).resolves.toBe(true);
+    expect(del).toHaveBeenCalledTimes(1);
+    expect(select).not.toHaveBeenCalled(); // 不逐表删·不预查
+  });
+
+  it('行不存在 → false（幂等）', async () => {
+    const { repo } = makeRepo([[]]);
+    await expect(repo.destroy('ghost')).resolves.toBe(false);
   });
 });

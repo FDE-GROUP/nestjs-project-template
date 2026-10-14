@@ -24,6 +24,10 @@ import {
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { DeleteTenantCommand } from '../application/commands/delete-tenant.command';
+import {
+  DeleteTenantPermanentlyCommand,
+  type TenantHardDeleteResult,
+} from '../application/commands/delete-tenant-permanently.command';
 import { ResumeTenantCommand } from '../application/commands/resume-tenant.command';
 import { SuspendTenantCommand } from '../application/commands/suspend-tenant.command';
 import { ExportTenantDataQuery } from '../application/queries/export-tenant-data.query';
@@ -153,6 +157,33 @@ export class PlatformTenantsController {
       DeleteTenantCommand,
       TenantApplicationReadModel | null
     >(new DeleteTenantCommand(id, user.id));
+    if (!result) throw new NotFoundException('Tenant not found');
+    return result;
+  }
+
+  @Delete(':id/permanent')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Hard-delete a deleted-terminal tenant (irreversible · FK cascade + event purge · NFR-6)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Tenant rows purged; payload carries purgedEvents for audit核对.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Tenant not found (or already hard-deleted · idempotent).',
+  })
+  @ApiResponse({ status: 409, description: 'Not in deleted terminal state — soft-delete first.' })
+  async permanentRemove(
+    @Param('id') id: string,
+    @CurrentUser() user: SessionUser,
+  ): Promise<TenantHardDeleteResult> {
+    const result = await this.commandBus.execute<
+      DeleteTenantPermanentlyCommand,
+      TenantHardDeleteResult | null
+    >(new DeleteTenantPermanentlyCommand(id, user.id));
     if (!result) throw new NotFoundException('Tenant not found');
     return result;
   }

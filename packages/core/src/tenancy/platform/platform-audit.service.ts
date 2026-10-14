@@ -2,7 +2,13 @@ import type { TenantStatus } from '@core/tenancy/lifecycle/tenant-lifecycle';
 import { Injectable, Logger } from '@nestjs/common';
 
 /** 平台级治理动作（FR-6 · S4/S5）：审批/驳回 + 暂停/恢复/删除。 */
-export type PlatformTenantAction = 'approve' | 'reject' | 'suspend' | 'resume' | 'delete';
+export type PlatformTenantAction =
+  | 'approve'
+  | 'reject'
+  | 'suspend'
+  | 'resume'
+  | 'delete'
+  | 'hard_delete';
 
 /** 平台级用户治理动作（FR-6/FR-10 · S6）：暂停/恢复/删除平台用户。 */
 export type PlatformUserAction = 'suspend' | 'resume' | 'delete';
