@@ -1,7 +1,5 @@
-import type { Page } from '@core/shared-kernel/domain/pagination';
 import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
 import {
-  Body,
   Controller,
   Delete,
   Get,
@@ -9,26 +7,25 @@ import {
   HttpStatus,
   Inject,
   Logger,
-  Param,
-  Post,
-  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ListPageDto } from '../../../common/dto/list-page.dto';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { SessionGuard, type SessionUser } from '../../auth/guards/session.guard';
-import { CreateUserCommand } from '../application/commands/create-user.command';
 import { DeleteUserCommand } from '../application/commands/delete-user.command';
 import { ExportUserDataQuery } from '../application/queries/export-user-data.query';
-import { GetUserQuery } from '../application/queries/get-user.query';
-import { GetUsersQuery } from '../application/queries/get-users.query';
-import type { UserReadModel } from '../application/read-models/user.read-model';
 import type { UserDataExportReadModel } from '../application/read-models/user-data-export.read-model';
-import type { PublicUser } from '../domain/entities/user.aggregate';
-import { CreateUserDto } from './dto/create-user.dto';
 
+/**
+ * Users controller.
+ *
+ * 暴露面收紧（module-users-surface-reduction·人裁甲）：原 `POST /users`・
+ * `GET /users`・`GET /users/:id` 已删除——`user` 表无租户列，三路由为跨租户 PII
+ * 冗余危险面且全仓零消费方；管理员查全用户走治理面 `/tenants/admin/users`
+ * （PlatformOperatorGuard），建号正道收口 better-auth sign-up。仅存用户自助面
+ * （本人导出 / 本人删除，PIPL 正当通道），各挂 SessionGuard。
+ */
 @ApiTags('users')
 // S11 复合全局：users 全路由属用户级（不经租户仓储）·需登录但合法无租户 → 类级豁免全局租户墙。
 @TenantExempt()
@@ -40,23 +37,6 @@ export class UsersController {
     @Inject(CommandBus) private readonly commandBus: CommandBus,
     @Inject(QueryBus) private readonly queryBus: QueryBus,
   ) {}
-
-  @Post()
-  @ApiOperation({ summary: 'Create a new user' })
-  @ApiResponse({ status: 201, description: 'User successfully created' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 409, description: 'User already exists' })
-  async create(@Body() createUserDto: CreateUserDto): Promise<PublicUser> {
-    this.logger.log(`Creating new user with email: ${createUserDto.email}`);
-    return this.commandBus.execute<CreateUserCommand, PublicUser>(
-      new CreateUserCommand(
-        createUserDto.email,
-        createUserDto.password,
-        createUserDto.firstName,
-        createUserDto.lastName,
-      ),
-    );
-  }
 
   @Get('me/data-export')
   @UseGuards(SessionGuard)
@@ -79,23 +59,5 @@ export class UsersController {
   async deleteMe(@CurrentUser() user: SessionUser): Promise<void> {
     this.logger.log(`Deleting user ${user.id} (PIPL right-to-erase)`);
     await this.commandBus.execute<DeleteUserCommand, void>(new DeleteUserCommand(user.id));
-  }
-
-  @Get()
-  @ApiOperation({ summary: 'Get all users' })
-  @ApiResponse({ status: 200, description: 'Return all users' })
-  findAll(@Query() request: ListPageDto): Promise<Page<UserReadModel>> {
-    this.logger.log('Finding all users');
-    return this.queryBus.execute<GetUsersQuery, Page<UserReadModel>>(new GetUsersQuery(request));
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a user by ID' })
-  @ApiParam({ name: 'id', description: 'User ID' })
-  @ApiResponse({ status: 200, description: 'Return the user' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  async findOne(@Param('id') id: string): Promise<UserReadModel> {
-    this.logger.log(`Finding user with ID: ${id}`);
-    return this.queryBus.execute<GetUserQuery, UserReadModel>(new GetUserQuery(id));
   }
 }

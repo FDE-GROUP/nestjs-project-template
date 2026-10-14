@@ -14,7 +14,7 @@ describe('Application', () => {
       import('./modules/users/infrastructure/repositories/drizzle-user.repository'),
     ).resolves.toBeDefined();
     await expect(
-      import('./modules/users/application/commands/handlers/create-user.command-handler'),
+      import('./modules/users/application/commands/handlers/delete-user.command-handler'),
     ).resolves.toBeDefined();
   });
 

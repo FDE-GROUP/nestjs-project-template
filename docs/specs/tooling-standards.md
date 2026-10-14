@@ -75,7 +75,7 @@
 
 ### 4.1 运行时与脚本（Bun）
 - 本地运行只通过 `package.json` scripts，不裸调 `bun src/main.ts`（会绕过 i18n/模块加载顺序约定）。
-- 服务端口 **7009**，全局前缀 `/api`，URI 版本 `v1`（如 `POST /api/v1/users`）。
+- 服务端口 **7009**，全局前缀 `/api`，URI 版本 `v1`（如 `POST /api/v1/workspaces`）。
 - 常用：`bun install`、`bun run start`、`bun run start:dev`（--watch）、`bun run build:nest`。
 
 ### 4.2 TypeScript / 构建

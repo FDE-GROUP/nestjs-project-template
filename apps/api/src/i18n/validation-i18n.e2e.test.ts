@@ -2,16 +2,24 @@ import 'reflect-metadata';
 import { Body, Controller, Module, Post } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
+import { IsEmail, IsNotEmpty } from 'class-validator';
 import { I18nValidationPipe } from 'nestjs-i18n';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CommonModule } from '../common/common.module';
-import { CreateUserDto } from '../modules/users/api/dto/create-user.dto';
 import { AppI18nModule } from './i18n.module';
+
+// 本地 probe DTO：自 module-users-surface-reduction（Users 面收紧删 CreateUserDto）起，
+// 本契约测不再寄居生产 DTO——显式 validate.* 键即被测面本身（翻译链 + S9 paramtypes 锁）。
+class ProbeDto {
+  @IsEmail({}, { message: 'validate.email.invalid' })
+  @IsNotEmpty({ message: 'validate.email.required' })
+  readonly email: string;
+}
 
 @Controller('probe')
 class ProbeController {
   @Post()
-  create(@Body() dto: CreateUserDto) {
+  create(@Body() dto: ProbeDto) {
     return { ok: true, email: dto.email };
   }
 }
@@ -51,11 +59,11 @@ describe('Validation i18n localization (contract)', () => {
     app.inject({
       method: 'POST',
       url: '/probe',
-      payload: { email: 'not-an-email', password: 'longenough123' },
+      payload: { email: 'not-an-email' },
       headers: lang ? { 'accept-language': lang } : {},
     });
 
-  it('keeps CreateUserDto in design:paramtypes so @Body validation runs', () => {
+  it('keeps ProbeDto in design:paramtypes so @Body validation runs', () => {
     // Guards the SWC/`import type` erasure pitfall: without the value import the global
     // pipe sees no metatype and silently skips validation (would return 2xx).
     const paramTypes = Reflect.getMetadata(
@@ -63,7 +71,7 @@ describe('Validation i18n localization (contract)', () => {
       ProbeController.prototype,
       'create',
     ) as unknown[];
-    expect(paramTypes[0]).toBe(CreateUserDto);
+    expect(paramTypes[0]).toBe(ProbeDto);
   });
 
   it('localizes to zh and preserves the response contract', async () => {
