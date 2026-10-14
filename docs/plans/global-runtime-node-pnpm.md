@@ -63,6 +63,7 @@
 - **主风险 R-γ：343 测试基线重验**——任何切片末尾 CI 掉测即红；gated e2e（13 既有 + 3 HTTP 面）真库链路须在 Node 下复跑一致。
 - **终结性发现 R-δ（本案真边界·2026-10-15 运行时起服实证拓出·R-α/β/γ 皆非拦路石）**：**跨 workspace 的 `@core/*` 裸句柄直引 TS 源，是 Bun 宽松解析器的隐性依赖；换 Node 后 prod 起服即崩。**
   - 现象：`pnpm run ci` **全绿**（build 148·TSC 0·343 零掉），但 `node dist/apps/api/src/main.js` 真起服报 `ERR_MODULE_NOT_FOUND: dist/libs/core/src/shared-kernel/context/request-context.js`（`/health` curl HTTP 000）。
+  - **定性纠正（实机复测拓出·比原估计更严重）**：`bun dist/apps/api/src/main.js` 报**完全相同的 `Cannot find module`**——即“当前 main 基线下、编译产物 prod 在 **Bun 与 Node 下都跑不起来**”。R-δ **不是 Node 专属回归，而是先于本迁移、与运行时切换正交的潜伏 prod 构建债**：Bun dev（`bun src/main.ts`）能跑只因直吃 TS 源 + tsconfig paths；真 prod 路径从未被端到端跑过（Dockerfile `start:prod` 甚将路径拼为 `dist/main.js`）才一直未暴露。**⇒ “维持 Bun”不等于“prod 可跑”（前文“A 零风险”的说法据此作废）。**
   - 根因链：① 源码 `import '@core/shared-kernel/context/request-context'`（裸句柄·无扩展名）→ ② SWC 编译把它重写为相对路径并补 `.js`，指向 `../../../../libs/core/src/…request-context.js`（**指 TS 源码目录**）→ ③ `nest build`（sourceRoot=`apps/api/src`）**只编译 apps、不编译 libs**，`dist/libs/core/` 根本不存在 → ④ Node 严格 ESM 解析落空。**为何测试全绿掩盖**：Vitest 经 `resolve.tsconfigPaths` 把 `@core/*` 即时解析回 `libs/core/src/*` TS 源——**CI 绿 ≠ prod 起服可跑**，唯运行时起服实证戳穿（印证本案门禁"须运行时实证、不采信文档面/CI 面兼容"的纪律价值）。
   - **性质**：架构级、越出"自裁 5 参数"授权范围——修法=**多包构建重设计**（`libs/core` 独立编译 + `package.json` exports 指向 dist + 句柄规格化；或让 `nest build` 同编 apps+libs 两棵树入 dist），非工具链配置微调可解。
   - **处置**：按铁律"遇边界即停·归人裁"——已把代码/config 全量回退至绿色 Bun 基线（`git checkout` 九文件 + 删 pnpm 产物 + `bun install` 复原 hoisted·`bun.lock` 未删·未碰 `docs/specs` 宪法与 `AGENTS.md`），**未把 dev/prod 运行时已坏的工具链推上 main**。R-δ 修复待人在 §4.5 三选一裁决后方可启动。
@@ -98,6 +99,23 @@
 
 > **建议：C**——“@core/* 直引 TS 源”是独立于运行时切换的真实技术债（现仅靠 Bun 宽松解析 + Vitest tsconfigPaths 两个“宽松”兼容层支撑 prod 假绿）；无论是否换 Node，规范化多包构建本身有独立价值，且完成后使本案风险面大幅收敛。
 
+## 4.6 人裁 B：多包构建重设计并入本案（**待新一轮审计门 · 高危签核**）
+
+> 人于 2026-10-15 裁 **B**（将 R-δ 多包构建重设计并入本案·双全局·需新一轮完整审计门）。本小节为待审设计，**未过审计门零代码**。
+
+**构建现状实锤（本轮勘察）**：
+- `nest build --builder swc`（sourceRoot=`apps/api/src`）**只编 apps** → `dist/` 仅 `dist/apps/api/src/**`，**无 `dist/libs`**（已实测）。
+- SWC 把 75 个 apps/api 生产文件的 `@core/*`（tsconfig 路径别名·**非包名 `@core/saas-kit`**）重写为相对路径 + `.js`→ 指向不存在的 `dist/libs/core/src/*.js`。
+- `libs/core`：55 生产 ts + barrel `index.ts`；`package.json` main/exports 均指 `src/*.ts`（Bun/dev 可、编译后 Node 不可）。
+- **后果（纠正后）**：编译产物 prod 在 **Bun 与 Node 下都跑不通**——先于本迁移的潜伏债。
+
+**设方案候选（归人择一签核）**：
+- **设计一·同编两树入 dist（低改动）**：新增 `libs/core` 独立构建步骤，输出对齐 `dist/libs/core/src/**.js`（与 SWC 相对重写假设一致）→ 75 个 import 不动。优：零源码句柄 churn·Bun/Node 同时修好。缺：双阶段构建编排 + 依赖编译期路径数学与输出目录严格对齐（脆弱耦合）。
+- **设计二·`libs/core` 独立成包 + exports 指 dist + 句柄规格化（推荐）**：`libs/core` 编译至 `libs/core/dist/**.js`，`package.json` `exports` 指 dist（`"./*": "./dist/*.js"` pattern 支持无扩展深子路径解析）；apps/api 侧 `@core/x` 由路径别名改为经 workspace 链解析到包（或改 `@core/saas-kit/x` 包子路径·涉 75 文件句柄）；与 S10/P2 “物理分包、core 独立可构建”目标同构。优：架构干净·无脆弱路径数学·Bun/Node 一致真解·prod 债根治。缺：句柄 churn（若走包子路径）· isolated 布局下需复验（紧回切片 A）。
+- **推荐：设计二**（与既有架构目标 S10 P2 一致、真解耦、不靠脆弱的相对路径数学对齐）。但若优先修 prod 债、最小 churn → 设计一可作过渡。
+
+**下一步（审计门签核前）**：需定（一）选哪个设计；（二）新片切片划分与完成判据；（三）高危登记（改构建链 = blast radius 双全局）。
+
 ## 5. 完成判据（过审计门后·可核验 + 穷尽）
 
 - [ ] 切片 A：`pnpm install` 成功 + 布局解析方案定档（isolated 或 hoist 兜底）写进 tooling
@@ -116,8 +134,9 @@
 | 2026-10-15 | 0.1.0 | 人取向"是否换回 Node+pnpm" + AskUserQuestion 裁"运行时修宪（未勾 ORM）·更新勘察文+出 B 案" | 首版·候选稿·待审计门。含 R1 订正澄清（换 Node 与 v7 无关）、5 片 expand–contract 路线、三项高危登记、R-α/β/γ 风险、未决项 1–5 |
 | 2026-10-15 | 0.2.0 | 人以「照建议自裁」过审计门 + 切片 A 开工实证 | 审计翻**已审计·开工**；五未决项据实自裁（Node≥22 / pnpm@11.7.0 / SWC 沿用 / **isolated**无需 hoist / ORM 排除）；**R-α 证伪**（343 零掉）；新增唯一摩擦点=`allowBuilds` 放行 @swc/core+esbuild |
 | 2026-10-15 | 0.3.0 | 切片 B/C/D 落地 + 运行时起服实证拓出 **R-δ**（架构级新边界）→ 按铁律停手回退 | §3 新增 R-δ（终结性发现·@core 裸句柄直引 TS 源·CI 绿≠prod 起服可跑）；新增 §4.5 实证进展（切片 A–D 均落地后回退·仅留记录）与请裁三选一（A 维持 Bun / B 批准多包构建重设计 / **C 折中·建议**）；状态转**进行中·受阻 R-δ·待裁**；代码/config 全量回退至绿色 Bun 基线 |
+| 2026-10-15 | 0.4.0 | 人裁 **B**（多包构建重设计并入案）+ 实机复测发现 **R-δ 非 Node 专属（Bun prod 产物同坏）** | §3 R-δ 定性纠正：编译产物 prod 在 Bun/Node **都跑不通**·先于本迁移的潜伏债·“A 维持 Bun 零风险”作废；新增 §4.6 待审设计（现状实锤：nest build 只编 apps、dist 无 libs、75 生产文件走 @core/* 路径别名）+ 设计一（同编两树）/设计二（libs/core 独立成包+exports 指 dist·**推荐**）；状态转**待新一轮审计门·高危签核** |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.3.0 变更，以当前正文内容为准。
+正文已于 2026-10-15 / v0.4.0 变更，以当前正文内容为准。
