@@ -1,5 +1,5 @@
-import { DomainEvent, type DomainEventProps } from '@core/shared-kernel/domain/domain-event';
-import { DOMAIN_EVENTS } from '@core/shared-kernel/domain/domain-event-names';
+import { DomainEvent, type DomainEventProps } from '@core/saas-kit/shared-kernel/domain/domain-event';
+import { DOMAIN_EVENTS } from '@core/saas-kit/shared-kernel/domain/domain-event-names';
 
 export interface UserRegisteredPayload {
   readonly id: string;

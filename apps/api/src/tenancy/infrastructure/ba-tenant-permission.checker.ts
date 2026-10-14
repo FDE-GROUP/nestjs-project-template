@@ -1,6 +1,6 @@
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
-import type { TenantPermissionChecker } from '@core/tenancy/rbac/tenant-permission.port';
+import type { TenantPermissionChecker } from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 
 /**

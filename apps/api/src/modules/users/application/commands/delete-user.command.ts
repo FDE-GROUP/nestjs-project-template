@@ -1,4 +1,4 @@
-import { BaseCommand } from '@core/shared-kernel/cqrs/types';
+import { BaseCommand } from '@core/saas-kit/shared-kernel/cqrs/types';
 
 /**
  * PIPL right-to-erase (C1 · FR-7): hard-delete the natural-person user row.

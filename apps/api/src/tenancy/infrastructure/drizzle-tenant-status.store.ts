@@ -1,6 +1,6 @@
 import { DrizzleService } from '@app/database/drizzle.service';
 import { organization } from '@app/database/schema';
-import type { TenantStatusStore } from '@core/tenancy/lifecycle/tenant-status.store';
+import type { TenantStatusStore } from '@core/saas-kit/tenancy/lifecycle/tenant-status.store';
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 

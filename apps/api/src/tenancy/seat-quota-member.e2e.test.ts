@@ -3,7 +3,7 @@ import { DrizzleService } from '@app/database/drizzle.service';
 import { account, invitation, member, organization, session, user } from '@app/database/schema';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
-import { FREE_PLAN } from '@core/tenancy/quota/tenant-plans';
+import { FREE_PLAN } from '@core/saas-kit/tenancy/quota/tenant-plans';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { APIError } from 'better-auth/api';

@@ -11,7 +11,7 @@ import {
   user,
   workspace,
 } from '@app/database/schema';
-import { TENANT_STATUS } from '@core/tenancy/lifecycle/tenant-lifecycle';
+import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import { CommandBus } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
 import { eq, inArray } from 'drizzle-orm';

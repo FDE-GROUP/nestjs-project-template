@@ -1,5 +1,5 @@
-import type { Page, PageRequest } from '@core/shared-kernel/domain/pagination';
-import type { UserStatus } from '@core/tenancy/lifecycle/user-status.service';
+import type { Page, PageRequest } from '@core/saas-kit/shared-kernel/domain/pagination';
+import type { UserStatus } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
 
 /**
  * Platform user-governance repository port (domain-owned · global-tenancy S6 · FR-6/FR-10).

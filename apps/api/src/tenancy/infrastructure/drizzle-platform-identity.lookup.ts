@@ -1,6 +1,6 @@
 import { DrizzleService } from '@app/database/drizzle.service';
 import { user } from '@app/database/schema';
-import type { PlatformIdentityLookup } from '@core/tenancy/platform/platform-identity.port';
+import type { PlatformIdentityLookup } from '@core/saas-kit/tenancy/platform/platform-identity.port';
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 

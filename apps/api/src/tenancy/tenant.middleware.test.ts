@@ -1,8 +1,8 @@
-import type { TenantStatusService } from '@core/tenancy/lifecycle/tenant-status.service';
-import type { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
-import type { RequestSessionReader } from '@core/tenancy/session/request-session.port';
-import { TenantMiddleware } from '@core/tenancy/tenant.middleware';
-import { type TenantContext, tenantStorage } from '@core/tenancy/tenant-context';
+import type { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
+import type { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
+import type { RequestSessionReader } from '@core/saas-kit/tenancy/session/request-session.port';
+import { TenantMiddleware } from '@core/saas-kit/tenancy/tenant.middleware';
+import { type TenantContext, tenantStorage } from '@core/saas-kit/tenancy/tenant-context';
 import { describe, expect, it, vi } from 'vitest';
 
 /**

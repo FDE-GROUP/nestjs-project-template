@@ -6,8 +6,8 @@ import type {
   TenantDiagnostics,
 } from '@app/modules/tenants/application/read-models/platform-tenant.read-model';
 import type { TenantDataExport } from '@app/modules/tenants/application/read-models/tenant-data-export.read-model';
-import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
-import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
+import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
+import { TenantExempt } from '@core/saas-kit/tenancy/tenant-exempt.decorator';
 import {
   Controller,
   Delete,

@@ -1,8 +1,8 @@
-import { CreateWorkspaceCommandHandler } from '@core/modules/workspaces/application/commands/handlers/create-workspace.command-handler';
-import { DeleteWorkspaceCommandHandler } from '@core/modules/workspaces/application/commands/handlers/delete-workspace.command-handler';
-import { UpdateWorkspaceCommandHandler } from '@core/modules/workspaces/application/commands/handlers/update-workspace.command-handler';
-import { ListWorkspacesQueryHandler } from '@core/modules/workspaces/application/queries/handlers/list-workspaces.query-handler';
-import { WORKSPACE_REPOSITORY } from '@core/modules/workspaces/domain/repositories/workspace.repository';
+import { CreateWorkspaceCommandHandler } from '@core/saas-kit/modules/workspaces/application/commands/handlers/create-workspace.command-handler';
+import { DeleteWorkspaceCommandHandler } from '@core/saas-kit/modules/workspaces/application/commands/handlers/delete-workspace.command-handler';
+import { UpdateWorkspaceCommandHandler } from '@core/saas-kit/modules/workspaces/application/commands/handlers/update-workspace.command-handler';
+import { ListWorkspacesQueryHandler } from '@core/saas-kit/modules/workspaces/application/queries/handlers/list-workspaces.query-handler';
+import { WORKSPACE_REPOSITORY } from '@core/saas-kit/modules/workspaces/domain/repositories/workspace.repository';
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { WorkspacesController } from './api/workspaces.controller';

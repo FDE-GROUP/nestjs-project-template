@@ -1,4 +1,4 @@
-import { BaseCommand } from '@core/shared-kernel/cqrs/types';
+import { BaseCommand } from '../../../../shared-kernel/cqrs/types';
 
 /** Delete a workspace within the active tenant (repository scopes by trusted tenant id). */
 export class DeleteWorkspaceCommand extends BaseCommand<boolean> {

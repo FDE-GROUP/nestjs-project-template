@@ -1,4 +1,4 @@
-import type { Page, PageRequest } from '@core/shared-kernel/domain/pagination';
+import type { Page, PageRequest } from '@core/saas-kit/shared-kernel/domain/pagination';
 
 /**
  * Post repository port (domain-owned, dependency inversion).

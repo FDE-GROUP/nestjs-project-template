@@ -1,9 +1,9 @@
-import type { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
-import type { PlatformSettings } from '@core/tenancy/platform/platform-config.port';
-import type { PlatformIdentityLookup } from '@core/tenancy/platform/platform-identity.port';
-import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
+import type { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
+import type { PlatformSettings } from '@core/saas-kit/tenancy/platform/platform-config.port';
+import type { PlatformIdentityLookup } from '@core/saas-kit/tenancy/platform/platform-identity.port';
+import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
 
-import type { RequestSessionReader } from '@core/tenancy/session/request-session.port';
+import type { RequestSessionReader } from '@core/saas-kit/tenancy/session/request-session.port';
 import type { ExecutionContext } from '@nestjs/common';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';

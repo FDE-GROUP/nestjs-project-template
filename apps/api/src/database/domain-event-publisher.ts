@@ -1,7 +1,7 @@
 import { ConfigService } from '@app/config/config.service';
-import type { DomainEvent } from '@core/shared-kernel/domain/domain-event';
-import type { DomainEventPublisher } from '@core/shared-kernel/domain/event-publisher.port';
-import { EVENT_STORE, type EventStore } from '@core/shared-kernel/domain/event-store.port';
+import type { DomainEvent } from '@core/saas-kit/shared-kernel/domain/domain-event';
+import type { DomainEventPublisher } from '@core/saas-kit/shared-kernel/domain/event-publisher.port';
+import { EVENT_STORE, type EventStore } from '@core/saas-kit/shared-kernel/domain/event-store.port';
 import { Inject, Injectable } from '@nestjs/common';
 import { EventBus } from '@nestjs/cqrs';
 

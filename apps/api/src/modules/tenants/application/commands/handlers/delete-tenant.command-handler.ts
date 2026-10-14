@@ -1,6 +1,6 @@
-import { TENANT_STATUS } from '@core/tenancy/lifecycle/tenant-lifecycle';
-import { TenantStatusService } from '@core/tenancy/lifecycle/tenant-status.service';
-import { PlatformAuditService } from '@core/tenancy/platform/platform-audit.service';
+import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
+import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import type { TenantApplicationReadModel } from '../../read-models/tenant-application.read-model';

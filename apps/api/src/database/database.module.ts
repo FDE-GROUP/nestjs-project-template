@@ -1,5 +1,5 @@
-import { DOMAIN_EVENT_PUBLISHER } from '@core/shared-kernel/domain/event-publisher.port';
-import { EVENT_STORE } from '@core/shared-kernel/domain/event-store.port';
+import { DOMAIN_EVENT_PUBLISHER } from '@core/saas-kit/shared-kernel/domain/event-publisher.port';
+import { EVENT_STORE } from '@core/saas-kit/shared-kernel/domain/event-store.port';
 import { Global, Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '../config/config.module';

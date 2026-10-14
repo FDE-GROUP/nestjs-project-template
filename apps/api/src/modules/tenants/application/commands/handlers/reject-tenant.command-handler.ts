@@ -1,12 +1,12 @@
-import { currentRequestId } from '@core/shared-kernel/context/request-context';
+import { currentRequestId } from '@core/saas-kit/shared-kernel/context/request-context';
 import {
   DOMAIN_EVENT_PUBLISHER,
   type DomainEventPublisher,
-} from '@core/shared-kernel/domain/event-publisher.port';
-import { TenantRejectedEvent } from '@core/tenancy/lifecycle/events/tenant-rejected.event';
-import { TENANT_STATUS } from '@core/tenancy/lifecycle/tenant-lifecycle';
-import { TenantStatusService } from '@core/tenancy/lifecycle/tenant-status.service';
-import { PlatformAuditService } from '@core/tenancy/platform/platform-audit.service';
+} from '@core/saas-kit/shared-kernel/domain/event-publisher.port';
+import { TenantRejectedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-rejected.event';
+import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
+import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import {

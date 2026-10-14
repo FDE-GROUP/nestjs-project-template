@@ -1,16 +1,16 @@
-import { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
+import { UserStatusService } from '../lifecycle/user-status.service';
 import {
   PLATFORM_SETTINGS,
   type PlatformSettings,
-} from '@core/tenancy/platform/platform-config.port';
+} from './platform-config.port';
 import {
   PLATFORM_IDENTITY_LOOKUP,
   type PlatformIdentityLookup,
-} from '@core/tenancy/platform/platform-identity.port';
+} from './platform-identity.port';
 import {
   type RequestSessionReader,
   SESSION_READER,
-} from '@core/tenancy/session/request-session.port';
+} from '../session/request-session.port';
 import {
   type CanActivate,
   type ExecutionContext,

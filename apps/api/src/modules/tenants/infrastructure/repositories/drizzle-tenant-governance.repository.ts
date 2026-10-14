@@ -8,12 +8,12 @@ import {
   user,
   workspace,
 } from '@app/database/schema';
-import { createPage } from '@core/shared-kernel/domain/pagination';
+import { createPage } from '@core/saas-kit/shared-kernel/domain/pagination';
 import {
   readTenantStatus,
   TENANT_STATUS,
   type TenantStatus,
-} from '@core/tenancy/lifecycle/tenant-lifecycle';
+} from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import { Inject, Injectable } from '@nestjs/common';
 import { type Column, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import type {

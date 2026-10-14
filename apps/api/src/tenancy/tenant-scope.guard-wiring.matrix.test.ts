@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { PostsController } from '@app/modules/posts/api/posts.controller';
 import { SubscriptionsController } from '@app/modules/subscriptions/api/subscriptions.controller';
 import { WorkspacesController } from '@app/modules/workspaces/api/workspaces.controller';
-import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
+import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import { describe, expect, it } from 'vitest';
 
 /**

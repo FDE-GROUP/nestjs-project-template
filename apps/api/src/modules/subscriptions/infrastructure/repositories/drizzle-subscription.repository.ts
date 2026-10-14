@@ -5,9 +5,9 @@ import type {
   SubscriptionDraft,
   SubscriptionRecord,
   SubscriptionRepository,
-} from '@core/modules/subscriptions/domain/repositories/subscription.repository';
-import { SUBSCRIPTION_STATUS } from '@core/tenancy/quota/tenant-plans';
-import { TenantContextService } from '@core/tenancy/tenant-context.service';
+} from '@core/saas-kit/modules/subscriptions/domain/repositories/subscription.repository';
+import { SUBSCRIPTION_STATUS } from '@core/saas-kit/tenancy/quota/tenant-plans';
+import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { desc, eq } from 'drizzle-orm';
 

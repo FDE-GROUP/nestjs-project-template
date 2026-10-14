@@ -1,4 +1,4 @@
-import { BaseCommand } from '@core/shared-kernel/cqrs/types';
+import { BaseCommand } from '@core/saas-kit/shared-kernel/cqrs/types';
 import type { TenantApplicationReadModel } from '../read-models/tenant-application.read-model';
 
 /**

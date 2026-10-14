@@ -1,12 +1,12 @@
-import { CreateWorkspaceCommand } from '@core/modules/workspaces/application/commands/create-workspace.command';
-import { DeleteWorkspaceCommand } from '@core/modules/workspaces/application/commands/delete-workspace.command';
-import { UpdateWorkspaceCommand } from '@core/modules/workspaces/application/commands/update-workspace.command';
-import { ListWorkspacesQuery } from '@core/modules/workspaces/application/queries/list-workspaces.query';
-import type { WorkspaceReadModel } from '@core/modules/workspaces/application/read-models/workspace.read-model';
-import type { Page } from '@core/shared-kernel/domain/pagination';
-import { RequirePermissions } from '@core/tenancy/rbac/require-permissions.decorator';
-import { TenantPermissionGuard } from '@core/tenancy/rbac/tenant-permission.guard';
-import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
+import { CreateWorkspaceCommand } from '@core/saas-kit/modules/workspaces/application/commands/create-workspace.command';
+import { DeleteWorkspaceCommand } from '@core/saas-kit/modules/workspaces/application/commands/delete-workspace.command';
+import { UpdateWorkspaceCommand } from '@core/saas-kit/modules/workspaces/application/commands/update-workspace.command';
+import { ListWorkspacesQuery } from '@core/saas-kit/modules/workspaces/application/queries/list-workspaces.query';
+import type { WorkspaceReadModel } from '@core/saas-kit/modules/workspaces/application/read-models/workspace.read-model';
+import type { Page } from '@core/saas-kit/shared-kernel/domain/pagination';
+import { RequirePermissions } from '@core/saas-kit/tenancy/rbac/require-permissions.decorator';
+import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
+import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import {
   Body,
   Controller,

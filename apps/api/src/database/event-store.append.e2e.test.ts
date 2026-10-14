@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { UserRegisteredEvent } from '@app/modules/users/domain/events/user-registered.event';
-import { TenantStatusTransitionedEvent } from '@core/tenancy/lifecycle/events/tenant-status-transitioned.event';
-import { UserStatusTransitionedEvent } from '@core/tenancy/lifecycle/events/user-status-transitioned.event';
+import { TenantStatusTransitionedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-status-transitioned.event';
+import { UserStatusTransitionedEvent } from '@core/saas-kit/tenancy/lifecycle/events/user-status-transitioned.event';
 import { eq, inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DrizzleService } from './drizzle.service';

@@ -1,6 +1,6 @@
-import { QuotaService } from '@core/tenancy/quota/quota.service';
-import type { ActiveSubscriptionView, QuotaStore } from '@core/tenancy/quota/quota.store';
-import { FREE_PLAN } from '@core/tenancy/quota/tenant-plans';
+import { QuotaService } from '@core/saas-kit/tenancy/quota/quota.service';
+import type { ActiveSubscriptionView, QuotaStore } from '@core/saas-kit/tenancy/quota/quota.store';
+import { FREE_PLAN } from '@core/saas-kit/tenancy/quota/tenant-plans';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

@@ -1,4 +1,4 @@
-import { BaseCommand } from '@core/shared-kernel/cqrs/types';
+import { BaseCommand } from '@core/saas-kit/shared-kernel/cqrs/types';
 
 /** 硬删结果（丁裁：200+purgedEvents 供审计核对）。 */
 export interface TenantHardDeleteResult {

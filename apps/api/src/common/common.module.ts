@@ -1,4 +1,4 @@
-import { currentRequestId } from '@core/shared-kernel/context/request-context';
+import { currentRequestId } from '@core/saas-kit/shared-kernel/context/request-context';
 import { type ExecutionContext, Global, Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { I18nValidationExceptionFilter } from 'nestjs-i18n';

@@ -1,4 +1,4 @@
-import { EVENT_STORE, type EventStore } from '@core/shared-kernel/domain/event-store.port';
+import { EVENT_STORE, type EventStore } from '@core/saas-kit/shared-kernel/domain/event-store.port';
 import { Inject, Logger, NotFoundException } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { USER_REPOSITORY, type UserRepository } from '../../../domain/repositories/user.repository';

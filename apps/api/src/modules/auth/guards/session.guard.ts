@@ -1,5 +1,5 @@
-import { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
-import { IS_PUBLIC_KEY } from '@core/tenancy/public.decorator';
+import { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
+import { IS_PUBLIC_KEY } from '@core/saas-kit/tenancy/public.decorator';
 import {
   type CanActivate,
   type ExecutionContext,

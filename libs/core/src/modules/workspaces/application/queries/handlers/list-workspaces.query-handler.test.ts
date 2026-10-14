@@ -1,4 +1,4 @@
-import type { Page } from '@core/shared-kernel/domain/pagination';
+import type { Page } from '@core/saas-kit/shared-kernel/domain/pagination';
 import { describe, expect, it, vi } from 'vitest';
 import type { WorkspaceRecord } from '../../../domain/repositories/workspace.repository';
 import type { WorkspaceReadModel } from '../../read-models/workspace.read-model';

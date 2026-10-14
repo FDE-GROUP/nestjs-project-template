@@ -1,7 +1,7 @@
 import { DrizzleService } from '@app/database/drizzle.service';
 import { session } from '@app/database/schema';
-import { USER_STATUS, UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
-import { PlatformAuditService } from '@core/tenancy/platform/platform-audit.service';
+import { USER_STATUS, UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
+import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { eq } from 'drizzle-orm';

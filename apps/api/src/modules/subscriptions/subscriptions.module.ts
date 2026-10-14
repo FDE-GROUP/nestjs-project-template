@@ -1,7 +1,7 @@
-import { CreateSubscriptionCommandHandler } from '@core/modules/subscriptions/application/commands/handlers/create-subscription.command-handler';
-import { GetSubscriptionQueryHandler } from '@core/modules/subscriptions/application/queries/handlers/get-current-subscription.query-handler';
-import { CUSTOMER_PROVISIONER } from '@core/modules/subscriptions/domain/ports/customer-provisioner.port';
-import { SUBSCRIPTION_REPOSITORY } from '@core/modules/subscriptions/domain/repositories/subscription.repository';
+import { CreateSubscriptionCommandHandler } from '@core/saas-kit/modules/subscriptions/application/commands/handlers/create-subscription.command-handler';
+import { GetSubscriptionQueryHandler } from '@core/saas-kit/modules/subscriptions/application/queries/handlers/get-current-subscription.query-handler';
+import { CUSTOMER_PROVISIONER } from '@core/saas-kit/modules/subscriptions/domain/ports/customer-provisioner.port';
+import { SUBSCRIPTION_REPOSITORY } from '@core/saas-kit/modules/subscriptions/domain/repositories/subscription.repository';
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { SubscriptionsController } from './api/subscriptions.controller';

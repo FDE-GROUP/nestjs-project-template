@@ -1,7 +1,7 @@
 import type { DrizzleService } from '@app/database/drizzle.service';
 import { organization } from '@app/database/schema';
 import type { AuthInstance, InjectAuthInstance } from '@app/modules/auth/auth.interface';
-import { TENANT_STATUS } from '@core/tenancy/lifecycle/tenant-lifecycle';
+import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DrizzleTenantProvisioningRepository } from './drizzle-tenant-provisioning.repository';

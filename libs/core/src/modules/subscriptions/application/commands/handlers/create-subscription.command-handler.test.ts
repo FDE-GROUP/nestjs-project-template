@@ -1,5 +1,5 @@
-import type { QuotaService, SeatQuotaSnapshot } from '@core/tenancy/quota/quota.service';
-import type { TenantContextService } from '@core/tenancy/tenant-context.service';
+import type { QuotaService, SeatQuotaSnapshot } from '@core/saas-kit/tenancy/quota/quota.service';
+import type { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CustomerProvisioner } from '../../../domain/ports/customer-provisioner.port';
 import type { SubscriptionRepository } from '../../../domain/repositories/subscription.repository';

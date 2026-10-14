@@ -1,7 +1,7 @@
 import { DrizzleService } from '@app/database/drizzle.service';
 import { user, userStatus } from '@app/database/schema';
-import { createPage } from '@core/shared-kernel/domain/pagination';
-import { TENANT_STATUS, type TenantStatus } from '@core/tenancy/lifecycle/tenant-lifecycle';
+import { createPage } from '@core/saas-kit/shared-kernel/domain/pagination';
+import { TENANT_STATUS, type TenantStatus } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import { Inject, Injectable } from '@nestjs/common';
 import { desc, eq, ilike, or, sql } from 'drizzle-orm';
 import type {

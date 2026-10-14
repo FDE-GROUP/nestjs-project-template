@@ -1,4 +1,4 @@
-import { Public } from '@core/tenancy/public.decorator';
+import { Public } from '@core/saas-kit/tenancy/public.decorator';
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 // S9 铁律：HealthCheckService 为构造函数注入的类，必须值导入（import type 会擦除 design:paramtypes）

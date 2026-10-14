@@ -1,4 +1,4 @@
-import { currentRequestId } from '@core/shared-kernel/context/request-context';
+import { currentRequestId } from '@core/saas-kit/shared-kernel/context/request-context';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { requestIdHook } from './request-id.hook';

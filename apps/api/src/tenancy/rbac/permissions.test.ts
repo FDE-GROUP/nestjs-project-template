@@ -1,4 +1,4 @@
-import { TENANT_ACTIONS, toPermissionMap } from '@core/tenancy/rbac/permissions';
+import { TENANT_ACTIONS, toPermissionMap } from '@core/saas-kit/tenancy/rbac/permissions';
 import { describe, expect, it } from 'vitest';
 
 describe('tenant rbac permissions', () => {

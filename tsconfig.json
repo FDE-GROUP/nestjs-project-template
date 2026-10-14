@@ -33,7 +33,7 @@
       "@config/*": ["apps/api/src/config/*"],
       "@common/*": ["apps/api/src/common/*"],
       "@shared/*": ["apps/api/src/shared/*"],
-      "@core/*": ["libs/core/src/*"]
+      "@core/saas-kit/*": ["libs/core/src/*"]
     }
   },
   "exclude": ["node_modules", "dist", "test", "**/*.spec.ts", "prisma/**/*"]

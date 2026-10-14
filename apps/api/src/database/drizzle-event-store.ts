@@ -1,5 +1,5 @@
-import type { DomainEvent } from '@core/shared-kernel/domain/domain-event';
-import type { EventStore } from '@core/shared-kernel/domain/event-store.port';
+import type { DomainEvent } from '@core/saas-kit/shared-kernel/domain/domain-event';
+import type { EventStore } from '@core/saas-kit/shared-kernel/domain/event-store.port';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq } from 'drizzle-orm';
 import { DrizzleService } from './drizzle.service';

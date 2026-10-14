@@ -1,7 +1,7 @@
-import { IS_PUBLIC_KEY } from '@core/tenancy/public.decorator';
-import type { TenantContextService } from '@core/tenancy/tenant-context.service';
-import { IS_TENANT_EXEMPT_KEY } from '@core/tenancy/tenant-exempt.decorator';
-import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
+import { IS_PUBLIC_KEY } from '@core/saas-kit/tenancy/public.decorator';
+import type { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
+import { IS_TENANT_EXEMPT_KEY } from '@core/saas-kit/tenancy/tenant-exempt.decorator';
+import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import type { ExecutionContext } from '@nestjs/common';
 import { ForbiddenException } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';

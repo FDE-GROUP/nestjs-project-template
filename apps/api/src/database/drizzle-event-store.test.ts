@@ -1,4 +1,4 @@
-import type { DomainEvent } from '@core/shared-kernel/domain/domain-event';
+import type { DomainEvent } from '@core/saas-kit/shared-kernel/domain/domain-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DrizzleEventStore } from './drizzle-event-store';
 

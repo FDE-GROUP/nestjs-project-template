@@ -1,5 +1,5 @@
-import { Public } from '@core/tenancy/public.decorator';
-import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
+import { Public } from '@core/saas-kit/tenancy/public.decorator';
+import { TenantExempt } from '@core/saas-kit/tenancy/tenant-exempt.decorator';
 import type { RawBodyRequest } from '@nestjs/common';
 import { Body, Controller, Get, Headers, Inject, Param, Post, Req } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';

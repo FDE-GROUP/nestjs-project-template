@@ -1,5 +1,5 @@
 import { LoggerService } from '@app/logger/logger.service';
-import { currentRequestId } from '@core/shared-kernel/context/request-context';
+import { currentRequestId } from '@core/saas-kit/shared-kernel/context/request-context';
 import {
   type ArgumentsHost,
   Catch,

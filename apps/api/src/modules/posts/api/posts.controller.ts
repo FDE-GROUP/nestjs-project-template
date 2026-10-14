@@ -1,5 +1,5 @@
-import type { Page } from '@core/shared-kernel/domain/pagination';
-import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
+import type { Page } from '@core/saas-kit/shared-kernel/domain/pagination';
+import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import {
   Body,
   Controller,

@@ -1,7 +1,7 @@
-import { DOMAIN_EVENTS } from '@core/shared-kernel/domain/domain-event-names';
-import { TenantRejectedEvent } from '@core/tenancy/lifecycle/events/tenant-rejected.event';
-import { TenantStatusTransitionedEvent } from '@core/tenancy/lifecycle/events/tenant-status-transitioned.event';
-import { UserStatusTransitionedEvent } from '@core/tenancy/lifecycle/events/user-status-transitioned.event';
+import { DOMAIN_EVENTS } from '@core/saas-kit/shared-kernel/domain/domain-event-names';
+import { TenantRejectedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-rejected.event';
+import { TenantStatusTransitionedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-status-transitioned.event';
+import { UserStatusTransitionedEvent } from '@core/saas-kit/tenancy/lifecycle/events/user-status-transitioned.event';
 import { describe, expect, it } from 'vitest';
 import { User } from '../entities/user.aggregate';
 import { UserRegisteredEvent } from './user-registered.event';

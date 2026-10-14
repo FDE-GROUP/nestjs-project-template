@@ -1,7 +1,7 @@
 import { DrizzleService } from '@app/database/drizzle.service';
 import { member, tenantSubscription } from '@app/database/schema';
-import type { ActiveSubscriptionView, QuotaStore } from '@core/tenancy/quota/quota.store';
-import { SUBSCRIPTION_STATUS } from '@core/tenancy/quota/tenant-plans';
+import type { ActiveSubscriptionView, QuotaStore } from '@core/saas-kit/tenancy/quota/quota.store';
+import { SUBSCRIPTION_STATUS } from '@core/saas-kit/tenancy/quota/tenant-plans';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, count, desc, eq } from 'drizzle-orm';
 

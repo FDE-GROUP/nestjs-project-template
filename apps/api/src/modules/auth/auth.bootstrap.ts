@@ -2,7 +2,7 @@
 // design:paramtypes 退化、DI 运行时 UnknownDependenciesException——原 AuthMiddleware 同款写法）
 import { ConfigService } from '@app/config/config.service';
 import { DrizzleService } from '@app/database/drizzle.service';
-import { QuotaService } from '@core/tenancy/quota/quota.service';
+import { QuotaService } from '@core/saas-kit/tenancy/quota/quota.service';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import type { BetterAuthOptions } from 'better-auth';

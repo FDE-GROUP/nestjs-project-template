@@ -5,7 +5,7 @@ import {
   readTenantStatus,
   TENANT_STATUS,
   withTenantStatus,
-} from '@core/tenancy/lifecycle/tenant-lifecycle';
+} from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import { describe, expect, it } from 'vitest';
 
 describe('tenant-lifecycle (S4 · FR-1 状态机纯函数)', () => {

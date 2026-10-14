@@ -11,7 +11,7 @@
  * invitation 表查询为**读侧**（表所有权纪律条款②：读宽松·写卡 owner）。
  */
 
-import type { QuotaService } from '@core/tenancy/quota/quota.service';
+import type { QuotaService } from '@core/saas-kit/tenancy/quota/quota.service';
 import type { BetterAuthPlugin } from 'better-auth';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { eq } from 'drizzle-orm';

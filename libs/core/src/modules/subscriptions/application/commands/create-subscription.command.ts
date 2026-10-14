@@ -1,4 +1,4 @@
-import { BaseCommand } from '@core/shared-kernel/cqrs/types';
+import { BaseCommand } from '../../../../shared-kernel/cqrs/types';
 import type { TenantSubscriptionView } from '../read-models/subscription.read-model';
 
 /**

@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { DrizzleService } from '@app/database/drizzle.service';
 import { post } from '@app/database/schema';
-import { createPage, type Page, type PageRequest } from '@core/shared-kernel/domain/pagination';
-import { TenantContextService } from '@core/tenancy/tenant-context.service';
+import { createPage, type Page, type PageRequest } from '@core/saas-kit/shared-kernel/domain/pagination';
+import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import type {

@@ -1,14 +1,14 @@
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
-import type { UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
-import type { PlatformSettings } from '@core/tenancy/platform/platform-config.port';
-import type { PlatformIdentityLookup } from '@core/tenancy/platform/platform-identity.port';
-import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
-import { TenantPermissionGuard } from '@core/tenancy/rbac/tenant-permission.guard';
-import type { TenantPermissionChecker } from '@core/tenancy/rbac/tenant-permission.port';
-import type { RequestSessionReader } from '@core/tenancy/session/request-session.port';
-import { TenantContextService } from '@core/tenancy/tenant-context.service';
-import { TenantScopeGuard } from '@core/tenancy/tenant-scope.guard';
+import type { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
+import type { PlatformSettings } from '@core/saas-kit/tenancy/platform/platform-config.port';
+import type { PlatformIdentityLookup } from '@core/saas-kit/tenancy/platform/platform-identity.port';
+import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
+import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
+import type { TenantPermissionChecker } from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
+import type { RequestSessionReader } from '@core/saas-kit/tenancy/session/request-session.port';
+import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
+import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import { type ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

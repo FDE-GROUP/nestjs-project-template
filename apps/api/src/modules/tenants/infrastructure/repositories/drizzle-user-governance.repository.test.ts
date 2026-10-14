@@ -1,5 +1,5 @@
 import type { DrizzleService } from '@app/database/drizzle.service';
-import { TENANT_STATUS } from '@core/tenancy/lifecycle/tenant-lifecycle';
+import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DrizzleUserGovernanceRepository } from './drizzle-user-governance.repository';
 

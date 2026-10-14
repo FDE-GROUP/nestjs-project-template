@@ -1,4 +1,4 @@
-import type { QuotaService } from '@core/tenancy/quota/quota.service';
+import type { QuotaService } from '@core/saas-kit/tenancy/quota/quota.service';
 import { Logger } from '@nestjs/common';
 import {
   BetterAuthError,

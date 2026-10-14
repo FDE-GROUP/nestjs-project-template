@@ -2,7 +2,7 @@ import { PaymentService } from '@app/modules/payment/services/payment.service';
 import type {
   CustomerProvisioner,
   ProvisionedCustomer,
-} from '@core/modules/subscriptions/domain/ports/customer-provisioner.port';
+} from '@core/saas-kit/modules/subscriptions/domain/ports/customer-provisioner.port';
 import { Inject, Injectable } from '@nestjs/common';
 
 /**

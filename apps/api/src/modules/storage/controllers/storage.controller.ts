@@ -1,4 +1,4 @@
-import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
+import { TenantExempt } from '@core/saas-kit/tenancy/tenant-exempt.decorator';
 import {
   BadRequestException,
   Controller,

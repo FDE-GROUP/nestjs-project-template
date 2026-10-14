@@ -1,5 +1,5 @@
-import { USER_STATUS, UserStatusService } from '@core/tenancy/lifecycle/user-status.service';
-import { PlatformAuditService } from '@core/tenancy/platform/platform-audit.service';
+import { USER_STATUS, UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
+import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import type { UserGovernanceResult } from '../../read-models/platform-user.read-model';

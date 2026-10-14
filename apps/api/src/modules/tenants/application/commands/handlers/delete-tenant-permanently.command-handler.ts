@@ -1,7 +1,7 @@
 // S9 铁律：EVENT_STORE 为 Symbol token 必须值导入；EventStore 纯类型面可 import type
-import { EVENT_STORE, type EventStore } from '@core/shared-kernel/domain/event-store.port';
-import { TENANT_STATUS } from '@core/tenancy/lifecycle/tenant-lifecycle';
-import { PlatformAuditService } from '@core/tenancy/platform/platform-audit.service';
+import { EVENT_STORE, type EventStore } from '@core/saas-kit/shared-kernel/domain/event-store.port';
+import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import {

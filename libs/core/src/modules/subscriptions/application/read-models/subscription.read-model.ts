@@ -5,5 +5,5 @@
  * （限额逻辑单点·禁散点），此处只做类型转发供 application/controller 消费；历史列表复用
  * domain port 的记录形状。
  */
-export type { SeatQuotaSnapshot as TenantSubscriptionView } from '@core/tenancy/quota/quota.service';
+export type { SeatQuotaSnapshot as TenantSubscriptionView } from '../../../../tenancy/quota/quota.service';
 export type { SubscriptionRecord as SubscriptionHistoryRow } from '../../domain/repositories/subscription.repository';

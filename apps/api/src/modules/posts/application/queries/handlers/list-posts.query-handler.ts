@@ -1,4 +1,4 @@
-import type { Page } from '@core/shared-kernel/domain/pagination';
+import type { Page } from '@core/saas-kit/shared-kernel/domain/pagination';
 import { Inject } from '@nestjs/common';
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { POST_REPOSITORY, type PostRepository } from '../../../domain/repositories/post.repository';
