@@ -1,6 +1,6 @@
 # 技术方案 · 租户生命周期事件接入 event store（第二切片 · 含 PIPL 级联补删 + dead-code 挂账顺路）
 
-> 状态: **已审计**（人授权·Agent 自裁·可翻案，裁决见 §6）| 读者: **Agent**（开发依据）
+> 状态: **已验收·结项**（审计：人授权·Agent 自裁·§6；实现 commit `8e3e422`；验收 2026-10-14）| 读者: **Agent**（历史执行记录）
 > blast radius: **module**（tenancy 生命周期卡点 + users PIPL 删除路径 + 两处挂账顺路）
 > 关联: [module-users-es-append](./module-users-es-append.md)（已结项·端口/表/开关全部复用）· [event-sourcing-roadmap](./event-sourcing-roadmap.md) Phase B · global-tenancy §10 挂账（dead-code 两项·v0.18.12）与 §6-④（PIPL 定向）
 
@@ -67,3 +67,4 @@
 - 2026-10-14 v0.1: 初稿（待审计）。
 - 2026-10-14 v0.2: 经人授权 Agent 自裁四项→**已审计放行**；高危#2 顺路项（删 re-export）已在本文档内呈签。
 - 2026-10-14 v0.3: 实现完成——core（事件类/常量/端口 deleteByAggregate/transition 发布+opts）、适配+4 handler 传参+PIPL 补删、re-export 冗余已删（uploadFile 按 §6-② 保留）；单测 +7、gated +2（真库 4/4）、CI **267/9**·边界 0·无新迁移不触高危#1；挂账顺路处置回灌 global-tenancy §10。
+- 2026-10-14 v0.4: 经人「继续」指令视同**验收通过·结项**（commit `8e3e422` 已在远端·工作区净）。后续切片：[module-tenancy-es-user-status-events](./module-tenancy-es-user-status-events.md)（待审计·§6-④ 预告的第三切片）。

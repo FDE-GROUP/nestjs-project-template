@@ -25,6 +25,7 @@ export class SuspendUserCommandHandler implements ICommandHandler<SuspendUserCom
   async execute(command: SuspendUserCommand): Promise<UserGovernanceResult | null> {
     const result = await this.status.transition(command.userId, USER_STATUS.SUSPENDED, {
       reason: command.reason,
+      actorId: command.operatorId,
     });
     if (result.kind === 'not-found') return null;
     if (result.kind === 'illegal') {

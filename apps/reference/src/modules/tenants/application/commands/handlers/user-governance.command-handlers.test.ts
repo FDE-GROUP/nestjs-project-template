@@ -39,7 +39,10 @@ describe('SuspendUserCommandHandler (S6 · FR-10 暂停 + session 硬删)', () =
       userId: 'u1',
       status: USER_STATUS.SUSPENDED,
     });
-    expect(d.transition).toHaveBeenCalledWith('u1', USER_STATUS.SUSPENDED, { reason: 'fraud' });
+    expect(d.transition).toHaveBeenCalledWith('u1', USER_STATUS.SUSPENDED, {
+      reason: 'fraud',
+      actorId: 'op-1',
+    });
     expect(d.del).toHaveBeenCalledTimes(1); // FR-10 immediate session invalidation
     expect(d.auditSpy).toHaveBeenCalledWith('suspend', 'u1', 'op-1', {
       from: TENANT_STATUS.ACTIVE,
@@ -86,7 +89,7 @@ describe('ResumeUserCommandHandler (S6 · FR-10 恢复·不重建 session)', () 
       userId: 'u1',
       status: USER_STATUS.ACTIVE,
     });
-    expect(d.transition).toHaveBeenCalledWith('u1', USER_STATUS.ACTIVE);
+    expect(d.transition).toHaveBeenCalledWith('u1', USER_STATUS.ACTIVE, { actorId: 'op-1' });
     expect(d.auditSpy).toHaveBeenCalledWith('resume', 'u1', 'op-1', {
       from: TENANT_STATUS.SUSPENDED,
       to: USER_STATUS.ACTIVE,

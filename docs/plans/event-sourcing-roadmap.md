@@ -18,6 +18,8 @@
 > **首切片已落地（shadow append·2026-10-14·[module-users-es-append](./module-users-es-append.md)）**：users 域事件经双模开关耐久落 `event` 表（迁移 0009·camelCase 列名 + `eventId` 保真列·见其 §6），CRUD 仍为唯一真相源；下述 schema 即其形态，回放/投影/同事务化待续。
 >
 > **第二切片已落地（2026-10-14·[module-tenancy-es-lifecycle-events](./module-tenancy-es-lifecycle-events.md)）**：租户治理动作（approve/suspend/resume/delete）经 `TenantStatusService.transition` 单点产出 `tenant.status.transitioned` 同表耐久（无新迁移）；`EventStore.deleteByAggregate` 收口 PIPL 硬删级联补删（§6-④ 定向关闭）。
+>
+> **第三切片已落地（2026-10-14·[module-tenancy-es-user-status-events](./module-tenancy-es-user-status-events.md)）**：平台用户 suspend/resume 经 `UserStatusService.transition` 产出 `user.status.transitioned`，与 `user.registered` **同聚合流**（version 跨事件类型连续·PIPL 补删零额外代码覆盖）。至此 event store 覆盖：注册流 + 租户/用户两级治理动作。
 
 只针对**需要审计轨迹的重状态上下文**（如 orders / ledger）。auth users 这类有状态身份数据**可能永远保持 CRUD**。
 

@@ -1,5 +1,6 @@
 import { DOMAIN_EVENTS } from '@core/shared-kernel/domain/domain-event-names';
 import { TenantStatusTransitionedEvent } from '@core/tenancy/lifecycle/events/tenant-status-transitioned.event';
+import { UserStatusTransitionedEvent } from '@core/tenancy/lifecycle/events/user-status-transitioned.event';
 import { describe, expect, it } from 'vitest';
 import { User } from '../entities/user.aggregate';
 import { UserRegisteredEvent } from './user-registered.event';
@@ -31,5 +32,13 @@ describe('domain event name contract', () => {
     // 线上传输值锁死：改名是契约变更，须过审计门
     expect(TenantStatusTransitionedEvent.EVENT_TYPE).toBe('tenant.status.transitioned');
     expect(TenantStatusTransitionedEvent.AGGREGATE_TYPE).toBe('tenant');
+  });
+
+  it('UserStatusTransitionedEvent（ES 第三切片）命中常量且与 user.registered 同聚合流', () => {
+    expect(UserStatusTransitionedEvent.EVENT_TYPE).toBe(DOMAIN_EVENTS.userStatusTransitioned);
+    // 线上传输值锁死：改名是契约变更，须过审计门
+    expect(UserStatusTransitionedEvent.EVENT_TYPE).toBe('user.status.transitioned');
+    // 同流不变量：与 UserRegisteredEvent 同一 aggregateType（PIPL deleteByAggregate 覆盖两事件）
+    expect(UserStatusTransitionedEvent.AGGREGATE_TYPE).toBe(UserRegisteredEvent.AGGREGATE_TYPE);
   });
 });

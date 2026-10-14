@@ -1,4 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
+import {
+  DOMAIN_EVENT_PUBLISHER,
+  type DomainEventPublisher,
+} from '../../shared-kernel/domain/event-publisher.port';
+import { UserStatusTransitionedEvent } from './events/user-status-transitioned.event';
 import { canTransition, TENANT_STATUS, type TenantStatus } from './tenant-lifecycle';
 import { USER_STATUS_STORE, type UserStatusStore } from './user-status.store';
 
@@ -27,7 +32,11 @@ export type UserTransitionResult =
  */
 @Injectable()
 export class UserStatusService {
-  constructor(@Inject(USER_STATUS_STORE) private readonly store: UserStatusStore) {}
+  constructor(
+    @Inject(USER_STATUS_STORE) private readonly store: UserStatusStore,
+    // S9 教训：非 controller provider 必须显式 @Inject token + 值导入，防 swc design:paramtypes 退化
+    @Inject(DOMAIN_EVENT_PUBLISHER) private readonly events: DomainEventPublisher,
+  ) {}
 
   /** 读取用户当前生命周期状态；无记录行 → undefined（视同 active）。 */
   async read(userId: string): Promise<UserStatus | undefined> {
@@ -44,11 +53,13 @@ export class UserStatusService {
    * 严格状态迁移：目标用户不存在 → not-found（转 404）；非法边 → illegal（转 409）；
    * 合法则 upsert `user_status` 并返回 previous 供审计。平台级动作专用（suspend/resume/delete），
    * 权限裁决归 PlatformOperatorGuard；session 硬删由调用方（治理 handler）叠加。
+   * ES 第三切片：upsert 成功后经 `DOMAIN_EVENT_PUBLISHER` 产出 `user.status.transitioned`
+   *（shadow append·与 user.registered 同聚合流·not-found/illegal 零发·失败连带 500 宁缺勿错发）。
    */
   async transition(
     userId: string,
     to: UserStatus,
-    opts?: { reason?: string },
+    opts?: { reason?: string; actorId?: string },
   ): Promise<UserTransitionResult> {
     if (!(await this.store.userExists(userId))) return { kind: 'not-found' };
 
@@ -56,6 +67,17 @@ export class UserStatusService {
     if (!canTransition(previous, to)) return { kind: 'illegal', from: previous, to };
 
     await this.store.upsert(userId, to, opts?.reason ?? null);
+    await this.events.publishAll([
+      new UserStatusTransitionedEvent({
+        aggregateId: userId,
+        payload: {
+          from: previous ?? null,
+          to,
+          actorId: opts?.actorId,
+          reason: opts?.reason,
+        },
+      }),
+    ]);
     return { kind: 'ok', previous, status: to };
   }
 }

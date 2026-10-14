@@ -17,7 +17,9 @@ export class ResumeUserCommandHandler implements ICommandHandler<ResumeUserComma
   ) {}
 
   async execute(command: ResumeUserCommand): Promise<UserGovernanceResult | null> {
-    const result = await this.status.transition(command.userId, USER_STATUS.ACTIVE);
+    const result = await this.status.transition(command.userId, USER_STATUS.ACTIVE, {
+      actorId: command.operatorId,
+    });
     if (result.kind === 'not-found') return null;
     if (result.kind === 'illegal') {
       this.audit.logUserGovernance('resume', command.userId, command.operatorId, {

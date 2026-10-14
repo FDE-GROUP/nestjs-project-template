@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { UserRegisteredEvent } from '@app/modules/users/domain/events/user-registered.event';
 import { TenantStatusTransitionedEvent } from '@core/tenancy/lifecycle/events/tenant-status-transitioned.event';
+import { UserStatusTransitionedEvent } from '@core/tenancy/lifecycle/events/user-status-transitioned.event';
 import { eq, inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DrizzleService } from './drizzle.service';
@@ -129,5 +130,34 @@ gated('DrizzleEventStore real-DB round trip (ES first slice · env-gated)', () =
     await expect(store.deleteByAggregate('user', victim)).resolves.toBe(1);
     const left = await drizzle.db.select().from(event).where(eq(event.aggregateId, bystander));
     expect(left).toHaveLength(1);
+  });
+
+  it('user stream shares one version sequence across event kinds; PIPL purge covers both（第三切片同流不变量）', async () => {
+    const userId = `es-gated-same-stream-${Date.now()}`;
+    aggregateIds.push(userId);
+    // registered=1 → status.transitioned=2：不同 eventType 同 (user, userId) 流连续递增
+    await store.append([makeRegistrationEvent(userId)]);
+    await store.append([
+      new UserStatusTransitionedEvent({
+        aggregateId: userId,
+        payload: { from: 'active', to: 'suspended', actorId: 'op-1', reason: 'fraud' },
+      }),
+    ]);
+
+    const rows = await drizzle.db
+      .select()
+      .from(event)
+      .where(eq(event.aggregateId, userId))
+      .orderBy(event.version);
+    expect(rows.map((row) => row.version)).toEqual([1, 2]);
+    expect(rows.map((row) => row.eventType)).toEqual([
+      'user.registered',
+      'user.status.transitioned',
+    ]);
+
+    // deleteByAggregate('user', id) 零额外代码一并归零两类事件
+    await expect(store.deleteByAggregate('user', userId)).resolves.toBe(2);
+    const remaining = await drizzle.db.select().from(event).where(eq(event.aggregateId, userId));
+    expect(remaining).toHaveLength(0);
   });
 });
