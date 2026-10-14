@@ -398,6 +398,26 @@ paths:
           description: Illegal transition for the current status.
       summary: Resume a suspended tenant (suspended → active)
       tags: *ref_5
+  /api/v1/platform/tenants/{id}/permanent:
+    delete:
+      operationId: PlatformTenantsController_permanentRemove_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant rows purged; payload carries purgedEvents for audit核对.
+        '404':
+          description: Tenant not found (or already hard-deleted · idempotent).
+        '409':
+          description: Not in deleted terminal state — soft-delete first.
+      summary: >-
+        Hard-delete a deleted-terminal tenant (irreversible · FK cascade + event
+        purge · NFR-6)
+      tags: *ref_5
   /api/v1/platform/users:
     get:
       operationId: PlatformUsersController_list_v1
