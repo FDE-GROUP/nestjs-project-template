@@ -1,6 +1,6 @@
 # 工具使用规范（Tooling Standards）
 
-> 状态：现行 · 适用仓库：`nestjs-project-template` · 关联文档：[architecture.md](./architecture.md)、[workflow.md](./workflow.md)（流程与工具矩阵 L1–L4）、[drizzle-migration-guide.md](../drizzle-migration-guide.md)
+> 状态：现行 · 适用仓库：`nestjs-saas-start` · 关联文档：[architecture.md](./architecture.md)、[workflow.md](./workflow.md)（流程与工具矩阵 L1–L4）、[drizzle-migration-guide.md](../drizzle-migration-guide.md)
 > 受众: **人 + Agent**（`读者: Agent`——工具红线与命令，须遵循）
 
 本文件定义本项目的**唯一合规工具链**及其使用规则。目的：消除同类工具并存导致的配置漂移、构建失败与运行时陷阱。凡新增/升级工具，须先更新本规范并走一次提交。

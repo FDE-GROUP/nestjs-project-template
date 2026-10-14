@@ -23,7 +23,7 @@ jobs:
       PORT: ${{ vars.PORT || '7009' }}
       HOST: ${{ vars.HOST || 'localhost' }}
       API_PREFIX: ${{ vars.API_PREFIX || 'api' }}
-      APP_NAME: ${{ vars.APP_NAME || 'NestJS Project Template' }}
+      APP_NAME: ${{ vars.APP_NAME || 'NestJS SaaS Start' }}
       APP_DESCRIPTION: ${{ vars.APP_DESCRIPTION || 'NestJS template with best practices' }}
       API_VERSION: ${{ vars.API_VERSION || '1.0' }}
       OPEN_API_VERSION: ${{ vars.OPEN_API_VERSION || '3.1.0' }}

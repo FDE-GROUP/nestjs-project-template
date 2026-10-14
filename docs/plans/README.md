@@ -18,6 +18,7 @@
 | [microservice-readiness](./microservice-readiness.md) | 微服务就绪度路线（触发器判据 + 三阶段迁移 + 就绪机制排序） | **已审计**（人签核 2026-10-14·未决 ①–④ 逐裁见 §4·v0.2.0） | 盘点已交付·执行入口=首切片（不预授权实现） | `research/nestjs-fastify-nx-review.md` · event-sourcing-roadmap Phase B · global-tenancy §9.5 |
 | [global-readiness-initial-slice](./global-readiness-initial-slice.md) | 就绪首切片：表所有权纪律成文 + codegen 导出模块（高危#5/#4 随审计门签核） | **已审计**（人批准 2026-10-14·甲乙丙照建议自裁） | **已验收·结项**（commit `0e0ad02`·守卫测绿基线·codegen 字节级一致·CI 276/10·遗留 Pages 首跑观察项） | microservice-readiness §4-① |
 | [global-rename-apps-api](./global-rename-apps-api.md) | apps/reference 更名 apps/api：目录名归行业惯例，“参考实现”语义归文档（高危#5 vision 补注随签） | **已审计**（人裁「1、2」2026-10-14） | **已验收·结项**（commit `cf5ceda`·零残留·CI 276/10 基线不动） | 讨论源起更名 api-server 咨询 → 取证：reference 非行业通名 |
+| [global-rename-repo](./global-rename-repo.md) | GitHub 仓库更名 nestjs-project-template → **nestjs-saas-start**（gh rename + 仓内展示名 13 处同步） | 人直令·执行即授权 | **已验收·结项**（零残留·CI 276/10·Pages URL 变更已登记） | 人指令 2026-10-14 |
 
 **列取值**
 - **审计**：`待审计` / `已审计`（无已审方案不写码——`workflow.md` §3）

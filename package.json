@@ -1,5 +1,5 @@
 {
-  "name": "nestjs-project-template",
+  "name": "nestjs-saas-start",
   "version": "1.1.0",
   "description": "NestJS project structure template with best practices using Fastify, Drizzle, PostgreSQL, and Bun",
   "type": "module",

@@ -1,6 +1,6 @@
 export default {
   app: {
-    name: process.env.APP_NAME || 'Nest JS Project Template',
+    name: process.env.APP_NAME || 'NestJS SaaS Start',
     description: process.env.APP_DESCRIPTION || 'NestJS template with best practices',
     version: process.env.API_VERSION || '1.0',
     port: parseInt(process.env.PORT || '7009', 10),
@@ -26,8 +26,8 @@ export default {
   },
   swagger: {
     enabled: false,
-    title: 'NestJS Project Template API',
-    description: 'NestJS Project Template API documentation',
+    title: 'NestJS SaaS Start API',
+    description: 'NestJS SaaS Start API documentation',
     version: process.env.API_DOC_VERSION || '1.0.0',
     path: 'apidoc',
     openApiVersion: process.env.OPEN_API_VERSION || '3.1.0',
