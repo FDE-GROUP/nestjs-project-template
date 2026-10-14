@@ -11,6 +11,7 @@ import { ResumeUserCommandHandler } from './application/commands/handlers/resume
 import { SubmitTenantApplicationCommandHandler } from './application/commands/handlers/submit-tenant-application.command-handler';
 import { SuspendTenantCommandHandler } from './application/commands/handlers/suspend-tenant.command-handler';
 import { SuspendUserCommandHandler } from './application/commands/handlers/suspend-user.command-handler';
+import { ExportTenantDataQueryHandler } from './application/queries/handlers/export-tenant-data.query-handler';
 import { GetPlatformTenantQueryHandler } from './application/queries/handlers/get-platform-tenant.query-handler';
 import { GetTenantDiagnosticsQueryHandler } from './application/queries/handlers/get-tenant-diagnostics.query-handler';
 import { ListPlatformTenantsQueryHandler } from './application/queries/handlers/list-platform-tenants.query-handler';
@@ -37,6 +38,7 @@ const QueryHandlers = [
   ListPlatformTenantsQueryHandler,
   GetPlatformTenantQueryHandler,
   GetTenantDiagnosticsQueryHandler,
+  ExportTenantDataQueryHandler,
   ListPlatformUsersQueryHandler,
 ];
 

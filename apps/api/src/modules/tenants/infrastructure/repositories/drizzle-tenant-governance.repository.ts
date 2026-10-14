@@ -1,5 +1,13 @@
 import { DrizzleService } from '@app/database/drizzle.service';
-import { invitation, member, organization, post, workspace } from '@app/database/schema';
+import {
+  invitation,
+  member,
+  organization,
+  post,
+  tenantSubscription,
+  user,
+  workspace,
+} from '@app/database/schema';
 import {
   readTenantStatus,
   TENANT_STATUS,
@@ -8,8 +16,10 @@ import {
 import { Inject, Injectable } from '@nestjs/common';
 import { type Column, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import type {
+  ExportedTenantMember,
   PlatformTenantPage,
   PlatformTenantRow,
+  TenantDataExport,
   TenantDiagnostics,
   TenantGovernanceRepository,
 } from '../../domain/repositories/tenant-governance.repository';
@@ -109,6 +119,96 @@ export class DrizzleTenantGovernanceRepository implements TenantGovernanceReposi
       workspaceCount: workspaces,
       postCount: posts,
     };
+  }
+
+  async exportTenantData(organizationId: string): Promise<TenantDataExport | null> {
+    // 租户全列（含 metadata 状态机）；**不按 status 过滤**——deleted 终态可导是 S5
+    // 软删「保留行供按租户导出/硬删」的取证用途（NFR-6）。
+    const [tenant] = await this.drizzle.db
+      .select({
+        id: organization.id,
+        name: organization.name,
+        slug: organization.slug,
+        logo: organization.logo,
+        metadata: organization.metadata,
+        createdAt: organization.createdAt,
+        updatedAt: organization.updatedAt,
+      })
+      .from(organization)
+      .where(eq(organization.id, organizationId))
+      .limit(1);
+    if (!tenant) return null;
+
+    // 成员名册：user 侧仅取最小身份面（id/name/email/handle）——凭据列（password 等）
+    // 在 select 投影面就排除，而非取回后再删（domain port SECURITY 注释同口径）。
+    const memberRows = await this.drizzle.db
+      .select({
+        id: member.id,
+        role: member.role,
+        createdAt: member.createdAt,
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        userHandle: user.handle,
+      })
+      .from(member)
+      .innerJoin(user, eq(member.userId, user.id))
+      .where(eq(member.organizationId, organizationId));
+    const members: ExportedTenantMember[] = memberRows.map((r) => ({
+      id: r.id,
+      role: r.role,
+      createdAt: r.createdAt,
+      user: { id: r.userId, name: r.userName, email: r.userEmail, handle: r.userHandle },
+    }));
+
+    const [invitations, workspaces, subscriptions, posts] = await Promise.all([
+      this.drizzle.db
+        .select()
+        .from(invitation)
+        .where(eq(invitation.organizationId, organizationId)),
+      this.drizzle.db
+        .select({
+          id: workspace.id,
+          name: workspace.name,
+          slug: workspace.slug,
+          createdAt: workspace.createdAt,
+          updatedAt: workspace.updatedAt,
+        })
+        .from(workspace)
+        .where(eq(workspace.organizationId, organizationId)),
+      this.drizzle.db
+        .select({
+          id: tenantSubscription.id,
+          plan: tenantSubscription.plan,
+          status: tenantSubscription.status,
+          seatsLimit: tenantSubscription.seatsLimit,
+          storageQuota: tenantSubscription.storageQuota,
+          apiQuota: tenantSubscription.apiQuota,
+          periodStart: tenantSubscription.periodStart,
+          periodEnd: tenantSubscription.periodEnd,
+          provider: tenantSubscription.provider,
+          providerCustomerId: tenantSubscription.providerCustomerId,
+          providerSubscriptionId: tenantSubscription.providerSubscriptionId,
+          createdAt: tenantSubscription.createdAt,
+          updatedAt: tenantSubscription.updatedAt,
+        })
+        .from(tenantSubscription)
+        .where(eq(tenantSubscription.tenantId, organizationId)),
+      this.drizzle.db
+        .select({
+          id: post.id,
+          title: post.title,
+          content: post.content,
+          published: post.published,
+          workspaceId: post.workspaceId,
+          createdAt: post.createdAt,
+          updatedAt: post.updatedAt,
+        })
+        .from(post)
+        .where(eq(post.organizationId, organizationId)),
+    ]);
+
+    return { tenant, members, invitations, workspaces, subscriptions, posts };
   }
 
   private async countWhere(

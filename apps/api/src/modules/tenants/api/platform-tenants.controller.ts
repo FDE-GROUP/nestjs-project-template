@@ -5,6 +5,7 @@ import type {
   PlatformTenantRow,
   TenantDiagnostics,
 } from '@app/modules/tenants/application/read-models/platform-tenant.read-model';
+import type { TenantDataExport } from '@app/modules/tenants/application/read-models/tenant-data-export.read-model';
 import { PlatformOperatorGuard } from '@core/tenancy/platform/platform-operator.guard';
 import { TenantExempt } from '@core/tenancy/tenant-exempt.decorator';
 import {
@@ -25,6 +26,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { DeleteTenantCommand } from '../application/commands/delete-tenant.command';
 import { ResumeTenantCommand } from '../application/commands/resume-tenant.command';
 import { SuspendTenantCommand } from '../application/commands/suspend-tenant.command';
+import { ExportTenantDataQuery } from '../application/queries/export-tenant-data.query';
 import { GetPlatformTenantQuery } from '../application/queries/get-platform-tenant.query';
 import { GetTenantDiagnosticsQuery } from '../application/queries/get-tenant-diagnostics.query';
 import { ListPlatformTenantsQuery } from '../application/queries/list-platform-tenants.query';
@@ -86,6 +88,21 @@ export class PlatformTenantsController {
     );
     if (!diag) throw new NotFoundException('Tenant not found');
     return diag;
+  }
+
+  @Get(':id/export')
+  @ApiOperation({ summary: 'Export all tenant-owned data as a single JSON payload (NFR-6)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Six-section tenant data export (credentials excluded).',
+  })
+  @ApiResponse({ status: 404, description: 'Tenant not found.' })
+  async exportData(@Param('id') id: string): Promise<TenantDataExport> {
+    const payload = await this.queryBus.execute<ExportTenantDataQuery, TenantDataExport | null>(
+      new ExportTenantDataQuery(id),
+    );
+    if (!payload) throw new NotFoundException('Tenant not found');
+    return payload;
   }
 
   @Patch(':id/suspend')

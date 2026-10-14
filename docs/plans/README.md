@@ -20,6 +20,7 @@
 | [global-rename-apps-api](./global-rename-apps-api.md) | apps/reference 更名 apps/api：目录名归行业惯例，“参考实现”语义归文档（高危#5 vision 补注随签） | **已审计**（人裁「1、2」2026-10-14） | **已验收·结项**（commit `cf5ceda`·零残留·CI 276/10 基线不动） | 讨论源起更名 api-server 咨询 → 取证：reference 非行业通名 |
 | [global-rename-repo](./global-rename-repo.md) | GitHub 仓库更名 nestjs-project-template → **nestjs-saas-start**（gh rename + 仓内展示名 13 处同步） | 人直令·执行即授权 | **已验收·结项**（零残留·CI 276/10·附DATABASE_URL修复+Pages站点启用实测200） | 人指令 2026-10-14 |
 | [module-tenancy-quota-member-wiring](./module-tenancy-quota-member-wiring.md) | S7 收尾：BA 成员增量端点配额 hook 接线（商业闭环合龙）+ 附片 §10 挂账清欠（高危#2） | **已审计**（人批准 2026-10-14·甲乙丙照建议·高危#2/#5 随批） | **已验收·结项**（commit `063c4dc`+`3d7ec54`·CI 283/11·path 实证由 gated e2e 本体完成·挂账陈旧重报已销账） | global-tenancy §10 S7 挂账 · vision §7 阶段 2 |
+| [module-tenancy-data-export](./module-tenancy-data-export.md) | 租户级数据导出（NFR-6）：六表聚合 JSON·平台侧类级 guard·vision 阶段 3 开段首切片（高危#5 随审） | **已审计**（人批准 2026-10-14·甲乙丙丁照建议·高危#5 随批） | **已实现·待验收**（adapter+4 测含红线序列化/deleted 可导·CI 287/11·实现期三段式订正见 plan v0.3） | global-tenancy NFR-6/S5 挂账 · vision §7 阶段 3 |
 
 **列取值**
 - **审计**：`待审计` / `已审计`（无已审方案不写码——`workflow.md` §3）

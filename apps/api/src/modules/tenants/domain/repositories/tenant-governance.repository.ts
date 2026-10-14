@@ -37,6 +37,83 @@ export interface TenantDiagnostics {
   postCount: number;
 }
 
+/**
+ * 租户级数据导出（NFR-6 · GDPR 按租户可携）：成员名册行的最小身份面——
+ * 仅 id/name/email/handle 四项，**绝不携带 password/account/session 凭据**
+ *（对齐 users 侧 user-data-export.read-model 的 SECURITY 纪律）。
+ */
+export interface ExportedTenantUser {
+  id: string;
+  name: string;
+  email: string;
+  handle: string;
+}
+
+export interface ExportedTenantMember {
+  id: string;
+  role: string;
+  createdAt: Date;
+  user: ExportedTenantUser;
+}
+
+/**
+ * 按租户导出 payload（六段聚合·SSOT = organizationId 归属可导表）。
+ * `tenant` 为 organization 全列（含 metadata 状态机）；deleted 终态租户亦可导出
+ *（S5 软删「保留行供按租户导出/硬删」的取证用途·查询面刻意不按 status 过滤）。
+ */
+export interface TenantDataExport {
+  tenant: {
+    id: string;
+    name: string;
+    slug: string;
+    logo: string | null;
+    metadata: unknown;
+    createdAt: Date;
+    updatedAt: Date | null;
+  };
+  members: ExportedTenantMember[];
+  invitations: {
+    id: string;
+    email: string;
+    role: string;
+    status: string;
+    expiresAt: Date;
+    inviterId: string;
+    createdAt: Date;
+  }[];
+  workspaces: {
+    id: string;
+    name: string;
+    slug: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+  subscriptions: {
+    id: string;
+    plan: string;
+    status: string;
+    seatsLimit: number;
+    storageQuota: number | null;
+    apiQuota: number | null;
+    periodStart: Date;
+    periodEnd: Date | null;
+    provider: string | null;
+    providerCustomerId: string | null;
+    providerSubscriptionId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+  posts: {
+    id: string;
+    title: string;
+    content: string | null;
+    published: boolean;
+    workspaceId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+}
+
 export interface TenantGovernanceRepository {
   /** 跨租户列表（name/slug 模糊过滤·createdAt 倒序·limit/offset 分页）。 */
   list(opts: { limit: number; offset: number; search?: string }): Promise<PlatformTenantPage>;
@@ -44,4 +121,6 @@ export interface TenantGovernanceRepository {
   findById(organizationId: string): Promise<PlatformTenantRow | null>;
   /** 按租户诊断（成员/邀请/workspace/帖子计数）；不存在 → null。 */
   diagnostics(organizationId: string): Promise<TenantDiagnostics | null>;
+  /** 按租户导出全部名下数据（NFR-6）；不存在 → null。deleted 终态亦可导。 */
+  exportTenantData(organizationId: string): Promise<TenantDataExport | null>;
 }
