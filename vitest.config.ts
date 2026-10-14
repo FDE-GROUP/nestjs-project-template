@@ -1,7 +1,7 @@
 import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
-// Vitest configuration for the Nest 12 / Bun / ESM project.
+// Vitest configuration for the Nest 12 / Node / ESM project.
 // - `resolve.tsconfigPaths` (Vite 8+ native) resolves `@app/*` and other tsconfig paths.
 // - `unplugin-swc` transforms TS with decorator + emitDecoratorMetadata support,
 //   required for Nest's DI / reflect-metadata (esbuild alone cannot emit metadata).

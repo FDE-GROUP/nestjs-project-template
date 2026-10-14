@@ -6,10 +6,10 @@
   "private": true,
   "main": "dist/main.js",
   "scripts": {
-    "build:nest": "nest build --builder swc",
-    "start": "bun run src/main.ts",
-    "start:dev": "bun --watch run src/main.ts",
-    "start:prod": "bun dist/main.js",
-    "db:seed": "bun src/database/seed.ts"
+    "build:nest": "pnpm -w run build:nest",
+    "start": "pnpm -w run start",
+    "start:dev": "pnpm -w run start:dev",
+    "start:prod": "pnpm -w run start:prod",
+    "db:seed": "pnpm -w run db:seed"
   }
 }

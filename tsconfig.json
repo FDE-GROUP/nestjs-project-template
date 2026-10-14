@@ -25,7 +25,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
-    "types": ["bun"],
+    "types": ["node"],
     "paths": {
       "@app/*": ["apps/api/src/*"],
       "@modules/*": ["apps/api/src/modules/*"],

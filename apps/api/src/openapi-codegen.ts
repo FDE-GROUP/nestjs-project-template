@@ -1,6 +1,4 @@
-import * as dotenv from 'dotenv';
-
-dotenv.config();
+import './load-env';
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { Logger, VersioningType } from '@nestjs/common';

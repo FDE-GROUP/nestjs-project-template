@@ -1,7 +1,7 @@
 {
   "name": "nestjs-saas-start",
   "version": "1.1.0",
-  "description": "NestJS project structure template with best practices using Fastify, Drizzle, PostgreSQL, and Bun",
+  "description": "NestJS project structure template with best practices using Fastify, Drizzle, PostgreSQL, and Node/pnpm",
   "type": "module",
   "main": "dist/main.js",
   "workspaces": [
@@ -12,18 +12,19 @@
     "prebuild": "rimraf dist",
     "build:libs": "cd libs/core && nest build --builder swc && cd ../.. && tsc --project libs/core/tsconfig.build.json --emitDeclarationOnly",
     "build:nest": "nest build --builder swc",
-    "build": "bun run build:libs && bun run build:nest",
+    "build": "pnpm run build:libs && pnpm run build:nest",
     "format": "biome format --write .",
-    "start": "bun run apps/api/src/main.ts",
-    "start:dev": "bun --watch run apps/api/src/main.ts",
-    "start:debug": "bun --inspect --watch run apps/api/src/main.ts",
-    "start:prod": "bun dist/main.js",
+    "start": "pnpm run build:libs && nest start",
+    "start:dev": "pnpm run build:libs && nest start --watch",
+    "start:debug": "pnpm run build:libs && nest start --debug --watch",
+    "start:prod": "node dist/apps/api/src/main.js",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "check": "biome check .",
     "check:fix": "biome check --write .",
-    "ci": "bun scripts/ci.ts",
-    "ci:quick": "bun scripts/ci.ts quick",
+    "ci": "node scripts/ci.ts",
+    "ci:quick": "node scripts/ci.ts quick",
+    "verify:prod-boot": "node scripts/verify-prod-boot.ts",
     "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -32,10 +33,10 @@
     "drizzle:migrate": "drizzle-kit migrate",
     "drizzle:push": "drizzle-kit push",
     "drizzle:studio": "drizzle-kit studio",
-    "db:seed": "bun apps/api/src/database/seed.ts",
-    "db:reset": "bun run drizzle:push -- --force && bun run db:seed",
-    "db:setup": "bun run drizzle:push && bun run db:seed",
-    "openapi:export": "bun apps/api/src/openapi-codegen.ts"
+    "db:seed": "node apps/api/src/database/seed.ts",
+    "db:reset": "pnpm run drizzle:push -- --force && pnpm run db:seed",
+    "db:setup": "pnpm run drizzle:push && pnpm run db:seed",
+    "openapi:export": "pnpm run build && node dist/apps/api/src/openapi-codegen.js"
   },
   "keywords": [],
   "author": {
@@ -44,8 +45,9 @@
     "url": "https://github.com/lifefloating"
   },
   "license": "MIT",
+  "packageManager": "pnpm@11.7.0",
   "engines": {
-    "bun": ">=1.0.0"
+    "node": ">=22.0.0"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1150.0",
@@ -97,7 +99,6 @@
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.16.18",
     "@types/ali-oss": "^6.23.3",
-    "@types/bun": "^1.4.3",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^26.6.5",
     "@types/uuid": "^11.0.0",

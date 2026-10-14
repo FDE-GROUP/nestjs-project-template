@@ -30,12 +30,15 @@ dist/
 tmp/
 temp/
 
+# runtime artifacts（pino file transport 落 ./logs，随起服生成，不入库）
+logs/
+
 .vercel
 
 # other
 .clinic
 .cache
-.npmrc
+# .npmrc 需随库追踪以保证 registry 可复现（境内镜像 npmmirror），故不再忽略
 
 #openapi
 openapi/*.yaml

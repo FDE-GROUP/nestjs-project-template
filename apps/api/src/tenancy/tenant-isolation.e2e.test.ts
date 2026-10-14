@@ -220,9 +220,9 @@ gated('租户隔离全栈 e2e（真·Better Auth 登录编排 · 无认证桩 ·
 /*
  * 本地跑法（专用 nestjs_e2e 库·不污染 dev 数据）：
  *   docker exec nestjs-pg-dev psql -U postgres -c "CREATE DATABASE nestjs_e2e;"            # 若不存在
- *   DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e bun run drizzle:push -- --force
+ *   DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e pnpm run drizzle:push -- --force
  *   E2E_DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
  *     DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
- *     bunx vitest run apps/api/src/tenancy/tenant-isolation.e2e.test.ts
+ *     pnpm exec vitest run apps/api/src/tenancy/tenant-isolation.e2e.test.ts
  *   docker exec nestjs-pg-dev psql -U postgres -c "DROP DATABASE nestjs_e2e;"              # 用完清理（可选）
  */

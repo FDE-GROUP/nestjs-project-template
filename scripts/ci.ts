@@ -1,11 +1,13 @@
 // 本地 CI 编排器 —— 在开发者机器上一次跑完全部质量门禁，替代远程 CI。
-// 两种模式：full（默认）= check → build:nest → test 三道硬门禁 + fallow 架构佐证；
+// 两种模式：full（默认）= check → build（libs→nest）→ test 三道硬门禁 + fallow 架构佐证；
 // quick = 仅 check + test（跳过 build 与 fallow，供快速回归）。硬性门禁快速失败；
 // fallow 仅作佐证（其结论须二次人工核验，见 docs/specs/tooling-standards.md §4.7），
-// 任何情况下都不使流水线失败。触发：`bun run ci` / `bun run ci:quick`，或 push 时
+// 任何情况下都不使流水线失败。触发：`pnpm run ci` / `pnpm run ci:quick`，或 push 时
 // 由 .husky/pre-push 自动执行（full）。
+//
+// 运行时=Node（弃 Bun）：不再依赖 `bun:shell`，改用 node:child_process spawnSync 调 pnpm。
 
-import { $ } from 'bun';
+import { spawnSync } from 'node:child_process';
 
 const quick = process.argv[2] === 'quick';
 
@@ -20,39 +22,42 @@ const RST = wrap('\x1b[0m');
 
 let failed = 0;
 
-type Step = () => Promise<{ exitCode: number | null }>;
+// 经 pnpm 运行 package.json 脚本；nothrow：不因非零退出抛错，交由调用方按 exit code 处置。
+function run(...args: string[]): number {
+  const res = spawnSync('pnpm', args, { stdio: 'inherit', shell: process.platform === 'win32' });
+  return res.status ?? 1;
+}
 
-async function step(name: string, run: Step): Promise<void> {
+function step(name: string, code: number): void {
   console.log(`${BOLD}▶ ${name}${RST}`);
-  const { exitCode } = await run();
-  if (exitCode === 0) {
+  if (code === 0) {
     console.log(`${GREEN}✓ ${name} passed${RST}\n`);
   } else {
-    console.log(`${RED}✗ ${name} failed (exit ${exitCode})${RST}\n`);
+    console.log(`${RED}✗ ${name} failed (exit ${code})${RST}\n`);
     failed = 1;
   }
 }
 
 console.log(`${BOLD}── Local CI (${quick ? 'quick' : 'full'}) ──${RST}`);
-console.log(`${DIM}Bun ${Bun.version} · ${new Date().toLocaleString()}${RST}\n`);
+console.log(`${DIM}Node ${process.version} · ${new Date().toLocaleString()}${RST}\n`);
 
-await step('Lint & format (biome)', () => $`bun run check`.nothrow());
+step('Lint & format (biome)', run('run', 'check'));
 if (!quick) {
-  await step('Build & typecheck (nest + swc)', () => $`bun run build:nest`.nothrow());
+  step('Build & typecheck (libs + nest)', run('run', 'build'));
 }
-await step('Tests (vitest)', () => $`bun run test`.nothrow());
+step('Tests (vitest)', run('run', 'test'));
 
 // 佐证（advisory）：fallow 架构边界。工具未安装/报错也不阻断本地 CI；quick 模式跳过。
 if (!quick) {
   console.log(`${BOLD}── Advisory (fallow) ──${RST}`);
   console.log(`${BOLD}▶ architecture boundaries${RST}`);
-  const arch = await $`bunx fallow architecture`.nothrow();
-  if (arch.exitCode === 0) {
+  const arch = run('dlx', 'fallow', 'architecture');
+  if (arch === 0) {
     console.log(`${GREEN}✓ no boundary violations${RST}\n`);
-  } else if (arch.exitCode === 1) {
+  } else if (arch === 1) {
     console.log(`${YELLOW}⚠ fallow findings — advisory only, verify manually (§4.7)\n${RST}`);
   } else {
-    console.log(`${YELLOW}⚠ fallow unavailable/error (exit ${arch.exitCode}) — skipped\n${RST}`);
+    console.log(`${YELLOW}⚠ fallow unavailable/error (exit ${arch}) — skipped\n${RST}`);
   }
 }
 

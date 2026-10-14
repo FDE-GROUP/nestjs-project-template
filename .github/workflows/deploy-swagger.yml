@@ -65,27 +65,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        # 版本由 package.json 的 packageManager 字段（pnpm@11.7.0）供给，无需在此写死
 
-      - name: Setup Bun cache
-        uses: actions/cache@v6
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-          
+          node-version: 22
+          cache: pnpm
+
       - name: Install dependencies
-        run: bun install
+        run: pnpm install --frozen-lockfile
 
       - name: Generate OpenAPI documentation
         run: |
           # DB-free codegen：不启服务直接整树装配导出 spec（就绪首切片 #4，
           # 替代旧「起服务 + sleep 15 + curl」hack；与运行态导出字节级一致）
-          bun openapi:export
+          pnpm run openapi:export
 
           # Create directory for static files
           mkdir -p swagger-static
