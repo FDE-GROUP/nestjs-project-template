@@ -188,6 +188,22 @@
 - `tooling-standards.md` **§2.1 依赖镜像行**补写 corepack 不吃 `.npmrc` 的双通道口径。
 - `AGENTS.md` **§2 新增铁律指针**「部署声明必须真跑对拍（tooling §4.10）」（只指不复述）。
 
+## 4.12 人类验收与结项（**已验收·结项**·2026-10-15）
+
+> 人于验收取证包上回「**签核结项**」。签核链：`599ae16`（S5 工具链）→ `0c73ef7`（S5 宪法成文）→ `7efa89e`（切片 D 三真缺陷）→ `54aefca`（§4.9.1 留痕）→ `eb5af93`（部署纪律入宪法）。
+
+**验收取证（本轮实跑·非历史引用）**
+- `pnpm run ci` **PASSED**（EXIT=0）：Biome `Checked 303 files · No fixes applied` → build → Tests **327 passed | 16 skipped（总 343）** → fallow advisory（平台二进制缺·不阻断）
+- `pnpm run verify:prod-boot` **PASSED**：node 起编译产物 → `GET /api/v1/health` **200** `{"status":"ok"}`
+- 部署面（§4.9.1）：`docker build` EXIT=0 → 容器 `/health` 200 → `State.Health` = `healthy` → compose 全图 `Up (healthy)` → Actions run `38619434210` success（真实运行·非 dry-run）
+- 制品面：Git 追踪集 = `.npmrc` / `pnpm-lock.yaml` / `pnpm-workspace.yaml`（`bun.lock`/`bunfig.toml` 已删且不追踪）
+
+**残留观察（登记不阻断结项）**
+- prod i18n 资产 `dist/i18n/**` 与 `AppI18nModule` 期望路径历史失配（boot 非关键·本迁移未触发亦未修）→ 待下次 i18n 立项顺带收。
+- `.qoder/repowiki` 5 张知识卡仍为 Bun 口径——**IDE 生成物**，手工改会双源漂移，待触发一次重新生成收敛。
+- MikroORM v7（`research/mikro-orm-ddd-feasibility.md` §2.5）为**独立另案**，本案只裁工具链、未启动。
+- 开发机环境噪声（非仓库缺陷）：Docker Desktop VM 对 `registry.npmmirror.com` DNS 不可解析；为实跑曾临时改 WSL `/etc/resolv.conf`（备份 `/tmp/resolv.conf.bak`）并临时挂 buildkit remote builder（验毕已全清）。
+
 ## 5. 完成判据（过审计门后·可核验 + 穷尽）
 
 - [x] 切片 A：`pnpm install` 成功 + 布局解析方案定档（**isolated 无需 hoist**·唯一配置=`allowBuilds` 放行 @swc/core+esbuild）已写进 tooling §2/§4
@@ -213,8 +229,12 @@
 | 2026-10-15 | 0.8.0 | 人择「现在就执行 S5 全量切换」（高危三项签核）·S5 落地实证全绿 | 新增 §4.9 S5 落地实证：**Node-ESM 源兼容清扫**（openapi-codegen→load-env·cos/seed 保留）+ **工具链切 node/pnpm**（scripts/engines/packageManager·ci.ts→node:child_process·tsconfig types node·删 @types/bun）+ **workspace/制品**（pnpm-workspace `allowBuilds`+.npmrc 转追踪+pnpm-lock·删 bun.lock/bunfig）+ **hooks/Docker/GHA 切 node/pnpm** + **宪法成文**（tooling/AGENTS/architecture/workflow/README/运维文档 Bun 现行口径归零）+ **回归防线成文**（`scripts/verify-prod-boot.ts`·继承 env 与数据驻留正交）；§5 判据诚实勾选（D 片 docker/Actions 待实机）；实证 `pnpm install` EXIT=0·`pnpm run ci` **PASSED 343**·`verify:prod-boot` **/health 200**；状态转 **S0–S5 全落地·迁移完成·待人类验收** |
 | 2026-10-15 | 0.9.0 | 切片 D 挂账实机补验（docker/build/compose/Actions 全跑） | 新增 §4.9.1：**`docker build` EXIT=0·容器 `/health` 200·compose 全图 healthy·Actions run 38619434210 success**；拓并修三真缺陷 **R-θ**（`node:22-slim` 无 wget/curl→HEALTHCHECK 永 unhealthy·改 node 内置 fetch）**R-ι**（corepack 不吃 `.npmrc`→补 `COREPACK_NPM_REGISTRY` 指 npmmirror）**R-κ**（runner 带不可用的 corepack/pnpm 与 `drizzle.config.ts` 死面→删净并重验 EXIT=0/200/healthy）；据实登记部署前提（compose 生产档 + 占位 `.env` 触发数据驻留 fail-closed·属正确行为）入 `docker-deployment.md`；§5 切片 D 由 [~] 翻 [x]；本机 Docker VM DNS 噪声与模板问题明确区分 |
 | 2026-10-15 | 0.10.0 | 人签核「两条都升」→ 部署纪律入宪法 | 新增 §4.11：`tooling-standards.md` 成文 **§4.10 部署声明对拍**（探针工具实存 / `.npmrc` vs `COREPACK_NPM_REGISTRY` 双通道 / 实跑链为验收口径 / 不留不可用死面）+ **§3 新增红线**（禁把未真跑对拍的部署声明当可用）+ §2.1 依赖镜像行订正；`AGENTS.md` §2 新增铁律指针；§5 切片 E 判据补登升格事实 |
+| 2026-10-15 | 0.11.0 | 人回「签核结项」→ **已人类验收·结项** | 新增 §4.12：验收取证（`pnpm run ci` PASSED · **343（327/16）** · Biome 303 files 净 · `verify:prod-boot` /health 200 · 部署面四张实跑存照 · 制品追踪集核验）+ 签核链五 commit + **四条残留观察登记**（prod i18n 资产路径·repowiki 生成物·MikroORM 另案·开发机 DNS 噪声）；索引状态单源同步翻为结项 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.10.0 变更，以当前正文内容为准。
+正文已于 2026-10-15 / v0.11.0 变更，以当前正文内容为准。
+
+<!-- 归档戳 -->
+本 plan 已人类验收·结项（2026-10-15），状态单源见 [`README.md`](./README.md) 索引表；后续变更需另立新 plan。
