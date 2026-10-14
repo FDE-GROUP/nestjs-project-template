@@ -1,7 +1,7 @@
 # 技术方案 · 业务面列表端点补分页（Page<T> 契约兑现）
 
-> 状态: **已实现·待验收**（人批准 2026-10-14·甲乙丙丁戊照建议·CI **337/13** 新基线）| 读者: **Agent**（开发依据）
-> 修订: v0.3 实现登记——DoD⑤ 实机面降级：/workspaces・/posts・/users 均有 session/租户墙前置（guard 先于 pipe），未鉴权 curl 无法触达 DTO/信封面；改由元数据测（@Query ListPageDto paramtypes 锁 ×3）+ adapter/handler 测（信封+两发+参数下传）等价覆盖，真会话面留 gated tenant-isolation e2e（其 substring 断言对 Page 形天然兼容·零改）。既有测试刷新 4 处调用点（两 adapter list() 加参 + users.controller findAll + mock 形状），逐处披露于 diff。
+> 状态: **已验收·结项**（人验收 2026-10-14·commit `6748f3c`·CI **337/13** 新基线）| 读者: **Agent**（历史开发依据·已归档）
+> 修订: **v0.4 验收结项**；v0.3 实现登记——DoD⑤ 实机面降级：/workspaces・/posts・/users 均有 session/租户墙前置（guard 先于 pipe），未鉴权 curl 无法触达 DTO/信封面；改由元数据测（@Query ListPageDto paramtypes 锁 ×3）+ adapter/handler 测（信封+两发+参数下传）等价覆盖，真会话面留 gated tenant-isolation e2e（其 substring 断言对 Page 形天然兼容·零改）。既有测试刷新 4 处调用点（两 adapter list() 加参 + users.controller findAll + mock 形状），逐处披露于 diff。
 > blast radius: **跨模块小中片**（3 个业务列表端点 `T[]` → `Page<T>` **响应形状破坏性变更**·port 签名 ×2·query 载体 ×3·零 schema）
 > 缘起: 分页契约片（结项 `8d85e5b`）甲项遗留——`Page<T>`/`createPage`/`ListPageDto` 契约已就位，但业务面三个裸数组端点未接入，契约只有平台治理面在用。人裁立项（选项 3）。
 
@@ -54,3 +54,4 @@
 - v0.1（2026-10-14）：初稿待审计。裁决点：**甲·破坏性窗口**（三端点统一换 Page 形·或缩面保留裸数组白名单）；**乙·port 换签名不留并存 list()**（消费方实锤单一）；**丙·users 不新设 port 直查改造**；**丁·ListPageDto 直接复用不新建业务 DTO**；**戊·DoD 6 项照建议**。
 - v0.2（2026-10-14）：人批准过门，甲乙丙丁戊照建议。
 - v0.3（2026-10-14）：实现完成待验收——port×2 换签名・query×3 收 PageRequest・handler×3 透传・adapter×2+users 直查两发+createPage・controller×3 收 ListPageDto（值导入）；新建/增补测 10 张（含元数据锁×3·信封测×2·透传测×2·users 直查测×3）；既有 4 处调用点刷新；gated e2e 零改（substring 断言形状不敏感）；CI **337/13**（+10）。
+- v0.4（2026-10-14）：人验收结项（commit `6748f3c`）。遗留候选：GET /users 暴露面收紧（独立议题）、sort/cursor 白名单（缓账）、租户自助面若需列表再按同款落位。
