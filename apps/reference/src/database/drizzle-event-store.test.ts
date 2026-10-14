@@ -15,8 +15,11 @@ function makeEvent(over: Partial<DomainEvent> = {}): DomainEvent {
   } as unknown as DomainEvent;
 }
 
-function makeDb(opts: { topVersion?: number | null; insertError?: Error } = {}) {
+function makeDb(
+  opts: { topVersion?: number | null; insertError?: Error; deleteCount?: number } = {},
+) {
   const inserted: Record<string, unknown>[] = [];
+  const deleted: Record<string, unknown>[] = [];
   const selectCalls: number[] = [];
   const db = {
     insert: vi.fn(() => ({
@@ -24,6 +27,15 @@ function makeDb(opts: { topVersion?: number | null; insertError?: Error } = {}) 
         if (opts.insertError) throw opts.insertError;
         inserted.push(row);
       }),
+    })),
+    delete: vi.fn(() => ({
+      where: vi.fn(() => ({
+        returning: vi.fn(async () => {
+          const n = opts.deleteCount ?? 0;
+          deleted.push({ n });
+          return Array.from({ length: n }, (_, i) => ({ id: i + 1 }));
+        }),
+      })),
     })),
     select: vi.fn(() => ({
       from: () => ({
@@ -36,7 +48,7 @@ function makeDb(opts: { topVersion?: number | null; insertError?: Error } = {}) 
       }),
     })),
   };
-  return { db, inserted, selectCalls };
+  return { db, inserted, deleted, selectCalls };
 }
 
 describe('DrizzleEventStore (ES first slice · shadow append adapter)', () => {
@@ -89,5 +101,17 @@ describe('DrizzleEventStore (ES first slice · shadow append adapter)', () => {
     fixture = makeDb({ insertError: new Error('duplicate key event_aggregate_version_key') });
     store = new DrizzleEventStore({ db: fixture.db } as never);
     await expect(store.append([makeEvent()])).rejects.toThrow('duplicate key');
+  });
+
+  it('deleteByAggregate issues a scoped delete and returns the purged row count（PIPL §3.2）', async () => {
+    fixture = makeDb({ deleteCount: 2 });
+    store = new DrizzleEventStore({ db: fixture.db } as never);
+    await expect(store.deleteByAggregate('user', 'user-1')).resolves.toBe(2);
+    expect(fixture.db.delete).toHaveBeenCalledTimes(1);
+    expect(fixture.deleted).toHaveLength(1);
+  });
+
+  it('deleteByAggregate returns 0 when the stream never existed (no error)', async () => {
+    await expect(store.deleteByAggregate('user', 'ghost')).resolves.toBe(0);
   });
 });

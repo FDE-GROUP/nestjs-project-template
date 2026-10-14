@@ -19,7 +19,9 @@ export class SuspendTenantCommandHandler implements ICommandHandler<SuspendTenan
   ) {}
 
   async execute(command: SuspendTenantCommand): Promise<TenantApplicationReadModel | null> {
-    const result = await this.status.transition(command.organizationId, TENANT_STATUS.SUSPENDED);
+    const result = await this.status.transition(command.organizationId, TENANT_STATUS.SUSPENDED, {
+      actorId: command.operatorId,
+    });
     if (result.kind === 'not-found') return null;
     if (result.kind === 'illegal') {
       this.audit.logTenantGovernance('suspend', command.organizationId, command.operatorId, {

@@ -1,5 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  DOMAIN_EVENT_PUBLISHER,
+  type DomainEventPublisher,
+} from '../../shared-kernel/domain/event-publisher.port';
+import { TenantStatusTransitionedEvent } from './events/tenant-status-transitioned.event';
+import {
   canTransition,
   isTenantBlocked,
   readTenantStatus,
@@ -14,13 +19,25 @@ export type TenantTransitionResult =
   | { kind: 'not-found' }
   | { kind: 'illegal'; from: TenantStatus | undefined; to: TenantStatus };
 
+/** 迁移可选上下文（§6-③）：治理动作主体与理由，进事件 payload，不落 metadata 新键。 */
+export interface TenantTransitionOptions {
+  readonly actorId?: string;
+  readonly reason?: string;
+}
+
 /**
  * 租户状态读写唯一卡点（S4 · FR-1）：直接落 `organization.metadata`（jsonb），
  * 不另建表/列 → 无迁移。读侧 fail-closed：查无此行/非法 status 一律非 active。
+ * ES 第二切片：合法迁移成功后经 `DOMAIN_EVENT_PUBLISHER` 产出
+ * `tenant.status.transitioned`（shadow append·双模开关语义由发布器实现承担）。
  */
 @Injectable()
 export class TenantStatusService {
-  constructor(@Inject(TENANT_STATUS_STORE) private readonly store: TenantStatusStore) {}
+  constructor(
+    @Inject(TENANT_STATUS_STORE) private readonly store: TenantStatusStore,
+    // S9 教训：非 controller provider 必须显式 @Inject token + 值导入，防 swc design:paramtypes 退化
+    @Inject(DOMAIN_EVENT_PUBLISHER) private readonly events: DomainEventPublisher,
+  ) {}
 
   /** 读取租户当前生命周期状态；行不存在/无合法状态 → undefined。 */
   async read(organizationId: string): Promise<TenantStatus | undefined> {
@@ -46,14 +63,31 @@ export class TenantStatusService {
    * 严格状态迁移（S5 收紧）：按 §9.4 迁移表裁决合法边，非法 → illegal（调用方转 409）；
    * 行不存在 → not-found（转 404）；合法则合并写回 metadata（保留其余键）并返回 previous
    * 供审计。平台级动作专用（approve/suspend/resume/delete），权限裁决归 PlatformOperatorGuard。
+   * 事件在写成功后发布：发布失败连带 500（宁缺勿错发·非事务窗口与首切片 handler 同语义）；
+   * not-found/illegal 零分支绝不发事件。
    */
-  async transition(organizationId: string, to: TenantStatus): Promise<TenantTransitionResult> {
+  async transition(
+    organizationId: string,
+    to: TenantStatus,
+    options?: TenantTransitionOptions,
+  ): Promise<TenantTransitionResult> {
     const row = await this.store.load(organizationId);
     if (!row) return { kind: 'not-found' };
     const previous = readTenantStatus(row.metadata);
     if (!canTransition(previous, to)) return { kind: 'illegal', from: previous, to };
     const metadata = withTenantStatus(row.metadata, to);
     await this.store.save(organizationId, metadata);
+    await this.events.publishAll([
+      new TenantStatusTransitionedEvent({
+        aggregateId: organizationId,
+        payload: {
+          from: previous ?? null,
+          to,
+          actorId: options?.actorId,
+          reason: options?.reason,
+        },
+      }),
+    ]);
     return { kind: 'ok', previous, status: to };
   }
 }

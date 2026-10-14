@@ -12,6 +12,7 @@ import { event } from './schema';
  * `version`（聚合内序号）由适配器按 max+1 递增取得——领域信封首切片不动（`eventVersion`
  * 是 schema 版本，非序号，见 plan §6 审计改动）；并发窗口由唯一键
  * (aggregateType, aggregateId, version) 兜底 fail-loud。空批 noop；落库错误如实抛。
+ * `deleteByAggregate` 为 PIPL 级联补删面（第二切片 §3.2）。
  */
 @Injectable()
 export class DrizzleEventStore implements EventStore {
@@ -48,5 +49,17 @@ export class DrizzleEventStore implements EventStore {
       .orderBy(desc(event.version))
       .limit(1);
     return (rows[0]?.version ?? 0) + 1;
+  }
+
+  /**
+   * PIPL 级联补删（module-tenancy-es-lifecycle-events §3.2）：显式清指定聚合的全部事件行，
+   * 返回删除条数。不受 EVENT_STORE_ENABLED 开关控制（调用方直注 EVENT_STORE）；失败 fail-loud。
+   */
+  async deleteByAggregate(aggregateType: string, aggregateId: string): Promise<number> {
+    const rows = await this.drizzleService.db
+      .delete(event)
+      .where(and(eq(event.aggregateType, aggregateType), eq(event.aggregateId, aggregateId)))
+      .returning({ id: event.id });
+    return rows.length;
   }
 }

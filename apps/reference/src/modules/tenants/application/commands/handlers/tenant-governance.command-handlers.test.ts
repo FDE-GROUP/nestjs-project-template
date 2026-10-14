@@ -29,7 +29,9 @@ describe('SuspendTenantCommandHandler (S5 · FR-6/FR-10)', () => {
       organizationId: 'org-1',
       status: TENANT_STATUS.SUSPENDED,
     });
-    expect(d.transition).toHaveBeenCalledWith('org-1', TENANT_STATUS.SUSPENDED);
+    expect(d.transition).toHaveBeenCalledWith('org-1', TENANT_STATUS.SUSPENDED, {
+      actorId: 'op-1',
+    });
     expect(d.auditSpy).toHaveBeenCalledWith('suspend', 'org-1', 'op-1', {
       from: TENANT_STATUS.ACTIVE,
       to: TENANT_STATUS.SUSPENDED,
@@ -65,7 +67,7 @@ describe('ResumeTenantCommandHandler (S5 · FR-6)', () => {
       organizationId: 'org-1',
       status: TENANT_STATUS.ACTIVE,
     });
-    expect(d.transition).toHaveBeenCalledWith('org-1', TENANT_STATUS.ACTIVE);
+    expect(d.transition).toHaveBeenCalledWith('org-1', TENANT_STATUS.ACTIVE, { actorId: 'op-1' });
     expect(d.auditSpy).toHaveBeenCalledWith('resume', 'org-1', 'op-1', {
       from: TENANT_STATUS.SUSPENDED,
       to: TENANT_STATUS.ACTIVE,
@@ -81,7 +83,10 @@ describe('DeleteTenantCommandHandler (S5 · FR-6/NFR-6 软删)', () => {
       organizationId: 'org-1',
       status: TENANT_STATUS.DELETED,
     });
-    expect(d.transition).toHaveBeenCalledWith('org-1', TENANT_STATUS.DELETED);
+    expect(d.transition).toHaveBeenCalledWith('org-1', TENANT_STATUS.DELETED, {
+      actorId: 'op-1',
+      reason: 'platform_delete',
+    });
     expect(d.auditSpy).toHaveBeenCalledWith('delete', 'org-1', 'op-1', {
       from: TENANT_STATUS.ACTIVE,
       to: TENANT_STATUS.DELETED,

@@ -1,5 +1,3 @@
-import type { TenantStatus } from '@core/tenancy/lifecycle/tenant-lifecycle';
-
 /**
  * Platform governance read-model projections (FR-6 · S5 · CQRS read side).
  * Shapes are owned by the domain port (see `domain/repositories/tenant-governance.repository`);
@@ -12,4 +10,3 @@ export type {
   PlatformTenantRow,
   TenantDiagnostics,
 } from '../../domain/repositories/tenant-governance.repository';
-export type { TenantStatus };

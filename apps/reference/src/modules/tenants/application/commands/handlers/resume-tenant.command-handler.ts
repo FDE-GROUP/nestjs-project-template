@@ -18,7 +18,9 @@ export class ResumeTenantCommandHandler implements ICommandHandler<ResumeTenantC
   ) {}
 
   async execute(command: ResumeTenantCommand): Promise<TenantApplicationReadModel | null> {
-    const result = await this.status.transition(command.organizationId, TENANT_STATUS.ACTIVE);
+    const result = await this.status.transition(command.organizationId, TENANT_STATUS.ACTIVE, {
+      actorId: command.operatorId,
+    });
     if (result.kind === 'not-found') return null;
     if (result.kind === 'illegal') {
       this.audit.logTenantGovernance('resume', command.organizationId, command.operatorId, {

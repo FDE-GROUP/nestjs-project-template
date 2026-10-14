@@ -1,6 +1,6 @@
 # 技术方案 · users 上下文 ES 首切片（event store 影子追加）
 
-> 状态: **已审计**（人授权 · Agent 自裁 · 可翻案，裁决见 §6）| 读者: **Agent**（开发依据）
+> 状态: **已验收·结项**（审计：人授权·Agent 自裁·§6；实现 commit `fab6ffd`；验收 2026-10-14）| 读者: **Agent**（历史执行记录）
 > blast radius: **module**（users 上下文 + shared-kernel 端口 + 新增 additive 表）
 > 关联: [event-sourcing-roadmap](./event-sourcing-roadmap.md) Phase B（本切片为其**首切片细化**）· research/nestjs-fastify-nx-review §2.2（事件名常量 + 契约锁机制）· 记忆「ES 与 EDA 经人澄清升格为确定的架构目标」
 
@@ -75,3 +75,4 @@
 - 2026-10-14 v0.1: 初稿——Phase B 首切片（shadow append）细化，含表/端口/发布收口/事件名锁/双模开关/六项测试口径（待审计）。
 - 2026-10-14 v0.2: 经人授权 Agent 自裁四项未决→已审计放行（裁决与实现期忠实修正见 §6）；高危#1 迁移 SQL 仍逐次呈审。
 - 2026-10-14 v0.3: **首切片实现完成**——17 文件（core 端口/常量、适配/发布器/handler 改注/envs 三段/schema+0009、+12 单测 +2 gated）；0009 经人签核 apply·三方一致；真库往返 2/2；CI 260/7·边界 0。遗留（非本片）：同事务化（Phase B 后半）、rehydrate/投影/快照（B 后半/C）、其他上下文接入、PIPL 级联补删（§6-④）。
+- 2026-10-14 v0.4: 经人「继续」指令视同**验收通过·结项**（commit `fab6ffd` 已在远端·工作区净）。后续切片：[module-tenancy-es-lifecycle-events](./module-tenancy-es-lifecycle-events.md)（待审计）。

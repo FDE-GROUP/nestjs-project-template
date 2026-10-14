@@ -238,6 +238,7 @@
 
 > **收尾验证挂账（v0.18.12·2026-10-14 11:14 复验于 HEAD `8daf82f`）**：本轮仅验证不开新任务——全量 `bun run ci` 复验 **CI 248 passed/5 skipped（env-gated e2e 常规 skip）· build 0 issues · fallow 架构边界 0 违规**，工作区无差异。fallow dead-code 全量候选经人工二次核验后**均不据以删除**，分流如下：
 > - **清理候选 ×2（删码属高危#2，待下次切片过审计门顺路处理）**：① `StorageService.uploadFile`（`apps/reference/src/modules/storage/services/storage.service.ts:53`）——controller 实际走 `uploadMultipartFile`/`deleteFile`/`getFileUrl`，grep 交叉验证确无调用方，属真未使用；② `TenantStatus`/`PlatformUserRow` 两处 read-model re-export 冗余（`platform-tenant.read-model.ts:15`·`platform-user.read-model.ts:12`）——消费方均从 domain 源头取值，re-export 无消费者。
+>   **处置记录（2026-10-14·ES 第二切片 [module-tenancy-es-lifecycle-events](./module-tenancy-es-lifecycle-events.md) 过审计门顺路）**：② 两处 re-export 冗余**已删**（高危#2 已在该 plan 内呈签）；① 经其 §6-② 裁**保留**——挂账候选系 `StorageService.uploadFile` **门面方法**，其为 provider 契约（interface + 5 provider）的唯一服务入口，删门面即断链，挂账转观察项留档防复报。
 > - **依赖观察项 ×1（动依赖分类属高危，同上待裁）**：`reflect-metadata` 被 fallow 判为 test-only 生产依赖（仅测试显式 import）——但生产 DI 元数据依赖 Bun/SWC 运行时链，移 devDependencies 触构建面，仅登记不处置。
 > - **假阳性/接口位（不处置，留档防复报）**：`CreatePostCommandHandler.execute`（CommandBus 反射调用·框架静态图盲区）；`PaymentService.supportsRecurring`（**D9 明文「接口位保留不动」**·周期扣款待资质择机）；`AuthService.getOauthUserAccount`/`getOauthProviders`（关联本文 cn-adaptation §11-2 绑定流交互未定项·D8 暂缓面）；3 条 QueryBus 契约方法防御性 `fallow-ignore` 标注（报 stale·保留防版本抖动复发）。complexity 5 项落 `seed.ts`/`auth.implement.ts` 胶合面、duplication 6 组均 advisory 非门禁。
 

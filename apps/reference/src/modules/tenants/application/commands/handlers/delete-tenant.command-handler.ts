@@ -18,7 +18,10 @@ export class DeleteTenantCommandHandler implements ICommandHandler<DeleteTenantC
   ) {}
 
   async execute(command: DeleteTenantCommand): Promise<TenantApplicationReadModel | null> {
-    const result = await this.status.transition(command.organizationId, TENANT_STATUS.DELETED);
+    const result = await this.status.transition(command.organizationId, TENANT_STATUS.DELETED, {
+      actorId: command.operatorId,
+      reason: 'platform_delete',
+    });
     if (result.kind === 'not-found') return null;
     if (result.kind === 'illegal') {
       this.audit.logTenantGovernance('delete', command.organizationId, command.operatorId, {

@@ -16,6 +16,8 @@
 ## Phase B — 为选定上下文点亮 ES
 
 > **首切片已落地（shadow append·2026-10-14·[module-users-es-append](./module-users-es-append.md)）**：users 域事件经双模开关耐久落 `event` 表（迁移 0009·camelCase 列名 + `eventId` 保真列·见其 §6），CRUD 仍为唯一真相源；下述 schema 即其形态，回放/投影/同事务化待续。
+>
+> **第二切片已落地（2026-10-14·[module-tenancy-es-lifecycle-events](./module-tenancy-es-lifecycle-events.md)）**：租户治理动作（approve/suspend/resume/delete）经 `TenantStatusService.transition` 单点产出 `tenant.status.transitioned` 同表耐久（无新迁移）；`EventStore.deleteByAggregate` 收口 PIPL 硬删级联补删（§6-④ 定向关闭）。
 
 只针对**需要审计轨迹的重状态上下文**（如 orders / ledger）。auth users 这类有状态身份数据**可能永远保持 CRUD**。
 

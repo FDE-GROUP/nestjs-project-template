@@ -7,10 +7,7 @@ import type { UserStatus } from '@core/tenancy/lifecycle/user-status.service';
  * Cross-platform by design — the operator sees every user; these shapes must never leak
  * into tenant-scoped slices.
  */
-export type {
-  PlatformUserPage,
-  PlatformUserRow,
-} from '../../domain/repositories/user-governance.repository';
+export type { PlatformUserPage } from '../../domain/repositories/user-governance.repository';
 
 /** suspend/resume 迁移成功后的最小回执（供 controller 返回·status 为新态）。 */
 export interface UserGovernanceResult {

@@ -27,7 +27,7 @@ describe('ApproveTenantCommandHandler (S4/S5 · FR-1 严格迁移 · FR-6 审计
       organizationId: 'org-1',
       status: TENANT_STATUS.ACTIVE,
     });
-    expect(transition).toHaveBeenCalledWith('org-1', TENANT_STATUS.ACTIVE);
+    expect(transition).toHaveBeenCalledWith('org-1', TENANT_STATUS.ACTIVE, { actorId: 'op-1' });
     expect(audit.logTenantGovernance).toHaveBeenCalledWith('approve', 'org-1', 'op-1', {
       from: TENANT_STATUS.PENDING,
       to: TENANT_STATUS.ACTIVE,
