@@ -1,6 +1,6 @@
 # 技术方案 · 租户级数据导出（NFR-6 · vision 阶段 3 开段首切片）
 
-> 状态: **已实现·待验收**（人批准 2026-10-14·甲乙丙丁照建议·高危#5 随批·实现完成 CI **287/11**）| 读者: **Agent**（开发依据）
+> 状态: **已验收·结项**（人确认 2026-10-14·commit `110b884`）| 读者: **Agent**（开发依据）
 > blast radius: **module**（`modules/tenants` 读侧扩展·**零 schema 变更不触 migrate**·不接全局 APP_GUARD）+ 触 **高危#5**（vision §7 阶段 3 开段落笔·随审计门签核）
 > 关联: [global-tenancy](./global-tenancy.md) NFR-6 / S5 行「保留行供按租户导出」/ §8 FR-6 · [vision](../specs/vision.md) §7 阶段 3 · §45 数据与合规
 
@@ -82,3 +82,4 @@
 - 2026-10-14 v0.2: 人「同意」过门——甲乙丙丁照建议·高危#5 随批。
 - 2026-10-14 v0.3: 实现期三项如实订正：① **接线层位**——§3.1 首轮写「handler 经 DrizzleService.db 聚合」与本模块既有「handler→domain port→infrastructure adapter」三段式不符（既有全部 governance handler 均走 port·P1 倒置里程碑同线），改：`TenantGovernanceRepository` 加 `exportTenantData`，Drizzle adapter 实现，handler 纯转发；形状由 domain 持有，read-model 文件作消费门面 re-export（有真实消费者·非挂账冗余）。② **guard 接线**——§3.2 写「逐路由 `@UseGuards`」，实态 controller 已类级 `PlatformOperatorGuard` 罩全路由，新端点自动覆盖，无需重复接线（安全语义不变·仅措辞订正）。③ **gated e2e 未做**——§4-3 弹性条款（「若成本低」）：operator 判据依赖 `platform.operatorEmail` 配置+seed 实用户，真库 e2e 成本高于预期；掩盖面由 adapter 单测（含红线序列化断言）+ 既有 boot 冒烟（整树 DI 含新 handler）+ 类级 guard 既有矩阵测覆盖。另：invitation 段走 `select()` 全列（表无敏感列），其余五段显式投影。
 - 2026-10-14 v0.4: 验收——单测 +4（11/11 绿）·tsc 净·CI 全绿新基线；文档四处同步（vision 0.1.3/global-tenancy 0.20.0/README）。
+- 2026-10-14 v0.5: 人「同意」验收·**结项**（commit `110b884` 已推 origin/main·pre-push CI PASSED·新基线 **287/11**）。遗留登记：按租户**删除**硬删执行面（NFR-6 另一半）、租户管理员自助导出（甲项）、gated e2e 平台面（弹性条款缓）、ZIP/流式/异步（乙项留大租户触发）。
