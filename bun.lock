@@ -69,7 +69,7 @@
       "name": "api-app",
       "version": "0.0.0",
     },
-    "packages/core": {
+    "libs/core": {
       "name": "@core/saas-kit",
       "version": "0.0.0",
       "peerDependencies": {
@@ -220,7 +220,7 @@
 
     "@conventional-changelog/template": ["@conventional-changelog/template@1.4.0", "https://registry.npmmirror.com/@conventional-changelog/template/-/template-1.4.0.tgz", {}, "sha512-aalGyl7dbB5PArRebDIX43ZvBlXrYm9uWzGJ26t+4SzJVPsOuvfILGGbw5X4yX7i50YEmJ8zvbiWnqH/AAnZqg=="],
 
-    "@core/saas-kit": ["@core/saas-kit@workspace:packages/core"],
+    "@core/saas-kit": ["@core/saas-kit@workspace:libs/core"],
 
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.10.2", "https://registry.npmmirror.com/@drizzle-team/brocli/-/brocli-0.10.2.tgz", {}, "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="],
 

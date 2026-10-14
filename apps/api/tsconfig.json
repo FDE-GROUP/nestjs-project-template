@@ -9,8 +9,8 @@
       "@config/*": ["src/config/*"],
       "@common/*": ["src/common/*"],
       "@shared/*": ["src/shared/*"],
-      "@shared-kernel/*": ["../../packages/core/src/shared-kernel/*"],
-      "@core/*": ["../../packages/core/src/*"]
+      "@shared-kernel/*": ["../../libs/core/src/shared-kernel/*"],
+      "@core/*": ["../../libs/core/src/*"]
     }
   },
   "include": ["src/**/*"],

@@ -6,7 +6,7 @@
   "main": "dist/main.js",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "libs/*"
   ],
   "scripts": {
     "prebuild": "rimraf dist",

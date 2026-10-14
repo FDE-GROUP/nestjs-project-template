@@ -57,7 +57,7 @@
 采用 **Clean Architecture + DDD + CQRS 的垂直切片**与**分阶段 ES + EDA**（范式定义与阶段现状见 §技术栈·架构范式及[事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)：写路径统一 Command/Handler，跨上下文经领域事件通信，当前处 Phase B 影子追加）组织业务，并以 **Bun workspaces** 拆为共享内核与参考应用两包（参考应用目录按行业惯例命名 `apps/api`，“参考实现”语义由文档承担）：
 
 ```
-packages/core/src/          # @core 共享内核：领域事件/聚合基类、tenancy 契约、subscriptions/workspaces 领域层
+libs/core/src/              # @core 共享内核：领域事件/聚合基类、tenancy 契约、subscriptions/workspaces 领域层
 apps/api/src/
 ├─ modules/<上下文>/        # 限界上下文（users / auth / tenants / workspaces / payment / storage / subscriptions / posts）
 │  ├─ domain/               # 实体、值对象、领域事件、仓储接口
