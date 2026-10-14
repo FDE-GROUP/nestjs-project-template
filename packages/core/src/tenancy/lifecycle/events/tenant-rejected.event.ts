@@ -1,0 +1,34 @@
+import { DomainEvent, type DomainEventProps } from '../../../shared-kernel/domain/domain-event';
+import { DOMAIN_EVENTS } from '../../../shared-kernel/domain/domain-event-names';
+
+export interface TenantRejectedPayload {
+  /** 驳回动作主体（会话用户 id）。 */
+  readonly actorId?: string;
+  /** 预留向后兼容位：当前 RejectTenantCommand 无 reason 字段，本切片恒不填（plan §3）。 */
+  readonly reason?: string;
+}
+
+/**
+ * Raised when a platform operator rejects a pending tenant application
+ * (reject 硬删路径成功)。eventType `tenant.rejected`, eventVersion 1。
+ *
+ * 驳回是「删除事实」而非状态迁移，故独立事件名、不复用 transitioned。
+ * org 行被物理删除后，本事件是该租户「存在过并被驳回」的唯一耐久痕迹
+ *（影子追加体系里「行没了、事件还在」的入口，plan §1）。
+ * PII 边界：payload 只证明「何人何时驳回何 orgId」，不携 name/slug——
+ * 驳回即应抹掉申请内容。aggregateType 取 `tenant` 与 tenant.transitioned 同流。
+ */
+export class TenantRejectedEvent extends DomainEvent<TenantRejectedPayload> {
+  static readonly EVENT_TYPE = DOMAIN_EVENTS.tenantRejected;
+  static readonly EVENT_VERSION = 1;
+  static readonly AGGREGATE_TYPE = 'tenant';
+
+  constructor(props: Omit<DomainEventProps<TenantRejectedPayload>, 'eventType' | 'aggregateType'>) {
+    super({
+      ...props,
+      aggregateType: TenantRejectedEvent.AGGREGATE_TYPE,
+      eventType: TenantRejectedEvent.EVENT_TYPE,
+      eventVersion: TenantRejectedEvent.EVENT_VERSION,
+    });
+  }
+}

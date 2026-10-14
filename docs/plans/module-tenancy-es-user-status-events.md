@@ -1,6 +1,6 @@
 # 技术方案 · 用户级生命周期事件接入 event store（第三切片 · suspend/resume 耐久化）
 
-> 状态: **已审计**（人批准 2026-10-14·§6 无开放项）| 读者: **Agent**（开发依据）
+> 状态: **已验收·结项**（审计：人直批·§6 零未决；实现 commit `3b6f0b1`；验收 2026-10-14）| 读者: **Agent**（历史执行记录）
 > blast radius: **module**（tenancy 用户状态卡点 + 2 个治理 handler）
 > 关联: [module-tenancy-es-lifecycle-events](./module-tenancy-es-lifecycle-events.md)（已结项·其 §6-④ 预告的本切片）· [module-users-es-append](./module-users-es-append.md)（已结项·同流 PIPL 覆盖）· [event-sourcing-roadmap](./event-sourcing-roadmap.md) Phase B
 
@@ -51,3 +51,4 @@
 
 - 2026-10-14 v0.1: 初稿（待审计）。
 - 2026-10-14 v0.2: 实现完成——core（事件类/常量/服务发布+opts.actorId）+ 2 handler 传参；单测 +4、gated +1（真库 5/5·同流 [1,2] 坐实）；CI **271/10**·边界 0·无新迁移。零未决零忠实修正（对称性设计完整成立）。
+- 2026-10-14 v0.3: 经人「继续」指令视同**验收通过·结项**（commit `3b6f0b1` 已在远端·工作区净）。后续切片：[module-tenancy-es-tenant-rejected-event](./module-tenancy-es-tenant-rejected-event.md)（待审计·含对本系列 §6-① 的误判忠实修正）。

@@ -9,6 +9,7 @@ export const DOMAIN_EVENTS = {
   userRegistered: 'user.registered',
   tenantStatusTransitioned: 'tenant.status.transitioned',
   userStatusTransitioned: 'user.status.transitioned',
+  tenantRejected: 'tenant.rejected',
 } as const;
 
 export type DomainEventName = (typeof DOMAIN_EVENTS)[keyof typeof DOMAIN_EVENTS];

@@ -1,4 +1,5 @@
 import { DOMAIN_EVENTS } from '@core/shared-kernel/domain/domain-event-names';
+import { TenantRejectedEvent } from '@core/tenancy/lifecycle/events/tenant-rejected.event';
 import { TenantStatusTransitionedEvent } from '@core/tenancy/lifecycle/events/tenant-status-transitioned.event';
 import { UserStatusTransitionedEvent } from '@core/tenancy/lifecycle/events/user-status-transitioned.event';
 import { describe, expect, it } from 'vitest';
@@ -40,5 +41,13 @@ describe('domain event name contract', () => {
     expect(UserStatusTransitionedEvent.EVENT_TYPE).toBe('user.status.transitioned');
     // 同流不变量：与 UserRegisteredEvent 同一 aggregateType（PIPL deleteByAggregate 覆盖两事件）
     expect(UserStatusTransitionedEvent.AGGREGATE_TYPE).toBe(UserRegisteredEvent.AGGREGATE_TYPE);
+  });
+
+  it('TenantRejectedEvent（ES 第四切片）命中常量且与 tenant.transitioned 同聚合流', () => {
+    expect(TenantRejectedEvent.EVENT_TYPE).toBe(DOMAIN_EVENTS.tenantRejected);
+    // 线上传输值锁死：改名是契约变更，须过审计门
+    expect(TenantRejectedEvent.EVENT_TYPE).toBe('tenant.rejected');
+    // 同流不变量：与租户状态迁移同一 aggregateType（version 同 tenant 流连续）
+    expect(TenantRejectedEvent.AGGREGATE_TYPE).toBe(TenantStatusTransitionedEvent.AGGREGATE_TYPE);
   });
 });
