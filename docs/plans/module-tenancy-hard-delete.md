@@ -1,6 +1,6 @@
 # 技术方案 · 按租户硬删执行面（NFR-6 另一半 · 阶段 3 第二切片）
 
-> 状态: **已实现·待验收**（人批准 2026-10-14·甲乙丙丁照建议·实现完成 CI **294/13**）| 读者: **Agent**（开发依据）
+> 状态: **已验收·结项**（人批准 2026-10-14·甲乙丙丁照建议·实现完成 CI **294/13**·人验收 2026-10-14·commit `f56cae3`）| 读者: **Agent**（开发依据）
 > blast radius: **module**（`modules/tenants` 写侧扩展·**零 schema 变更不触 migrate**——FK cascade 已在表定义内·不接全局 APP_GUARD）
 > 关联: [global-tenancy](./global-tenancy.md) NFR-6（"按租户**删除**硬删执行面仍留后续"）/ S5 行「deleted 终态·保留行供按租户导出/硬删」· [module-tenancy-data-export](./module-tenancy-data-export.md)（取证闭环前置已就位）
 
@@ -73,3 +73,4 @@ FK cascade 关系与 event 表结构均现成；不触 `drizzle:generate/migrate
 - 2026-10-14 v0.2: 人「同意」过门——甲乙丙丁照建议。
 - 2026-10-14 v0.3: 实现期两项如实登记：① **起草后自审顺序修正**（已在 plan 正文 §3.1/§7 反映）：先主删后补删会在补删失败时被 404 挡死重跑路径——改**先补删后主删**，任意失败可整请求重试；单测以 calls 序列锁死该顺序契约。② **gated e2e 新坑：CommandBus 驱动需 `ref.init()`**——纯 `Test.compile()` 不触发 CqrsModule 生命周期，@CommandHandler 未注册进 bus（报 No handler found）；本测经 bus 编排必 init（与 boot 冒烟只用 compile 的分工边界清晰）。另：`PlatformTenantAction` 扩 'hard_delete'（core 包 audit 类型面）；路由 `:id/permanent` 与 `:id` 段数不同天然无冲突（无需注册序特判）；并发窗口（查态后主行被他人删）补 destroy=false → null+already_gone 审计分支并单测覆盖。
 - 2026-10-14 v0.4: 验收——单测 +7·gated e2e 真库 2/2（cascade/补删/幸存/幂等/409）·CI 新基线 **294/13**·0 边界违规；文档回灌 global-tenancy 0.21.0/NFR-6 全兑现/README。
+- 2026-10-14 v0.5: 人「同意」验收 → **结项**（commit `f56cae3`·CI 新基线 **294/13**）。NFR-6 两面（导出 `110b884` + 硬删 `f56cae3`）全兑现，S5「保留行供导出/硬删」闭环合龙，vision 阶段 3 第二切片落定。
