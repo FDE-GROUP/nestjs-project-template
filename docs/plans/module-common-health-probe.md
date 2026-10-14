@@ -1,6 +1,6 @@
 # 技术方案 · 存活探针端点（health probe · 修 Docker HEALTHCHECK 断头路）
 
-> 状态: **已实现·待验收**（人批准 2026-10-14·甲乙丙丁照建议）| 读者: **Agent**（开发依据）
+> 状态: **已验收·结项**（人批准 2026-10-14·甲乙丙丁照建议·commit `e958add`·人验收 2026-10-14·CI **297/13** 新基线）| 读者: **Agent**（开发依据）
 > blast radius: **app 级小片**（新增 `common/health` 一个模块 + 修正 auth 旁路表一条 + 一个依赖 `@nestjs/terminus`·**零 schema 变更不触 migrate**·不接新守卫）
 > 缘起: 评价 softkit-nestjs-boilerplate 时的**正向借鉴 #1**（其 `@nestjs/terminus` 范式）；本仓对应位置是**已存在的真实缺陷**而非功能缺口。另呼应 [nestjs-fastify-nx-review](../research/nestjs-fastify-nx-review.md) 借鉴 checklist 中「health probe 分层」挂账。
 
@@ -54,9 +54,9 @@ apps/api/src/common/health/
 
 - [x] `/api/v1/health` 返回 200 + `{status:'ok'}`（单测/元数据测坐实；实机 curl 佐证：**200**，体经全局 TransformInterceptor 包裹为 `{data:{status:'ok',info:{},error:{},details:{}},statusCode:200,message:'Success'}`——Docker `wget --spider` 只看状态码，不破探针语义）。
 - [x] 旁路表口径统一（`/health`），`/healthcheck` 陈旧字样全仓清零（p1b 测试夹具同步改真实路径 `/api/v1/health`）。
-- [ ] boot 冒烟绿·CI 全绿且新基线入账。
-- [ ] docs/docker-deployment.md 健康检查小节与实况一致（如已准确则仅在演变记录记「承诺面兑现」）。
-- [ ] plans/README 本行结项式更新（待验收时翻状态）。
+- [x] boot 冒烟绿·CI 全绿且新基线入账（**297 passed/13 skipped**·TSC 0·Biome 0 修复）。
+- [x] docs/docker-deployment.md 健康检查小节与实况一致（`docker inspect` 叙述自本片起才真实成立·演变记录记「承诺面兑现」）。
+- [x] plans/README 本行结项式更新（已随验收翻「已验收·结项」）。
 
 ## 5. 里程碑对照（P1 端口倒置等）
 
@@ -80,3 +80,4 @@ apps/api/src/common/health/
 - 2026-10-14 v0.1: 立项起草。取证链：Dockerfile L35 探针声明 / auth.constant 陈旧 `/healthcheck` / 全 src 无实现 / research checklist「health probe 分层」呼应 / terminus 12.1.0 兼容版实查。§6 甲乙丙丁待裁。
 - 2026-10-14 v0.2: 人「同意」过门——甲乙丙丁照建议（含借鉴清单其余两项处置：#2 分页契约不混装、#3 分类学观察项随片挂账 global-tenancy）。
 - 2026-10-14 v0.3: 实现期三项如实登记：① **terminus 12.1.0 已移除 `PingHealthIndicator`**（plan 假设安装面失效，装后实查 dist 坐实）——liveness 等价实现改 `health.check([])` 空指示器数组，标准机器/响应形状/后续扩展性全保留，甲丙裁决语义不破；② `@Get()` 无参的 handler PATH 元数据实为 `'/'` 非 `''`（元数据测据实钉住）；`RequestMethod` 自 `@nestjs/common` 根导出（`RequestEnum` 非公共面）。③ 响应体经全局 TransformInterceptor 包裹（探针语义只看 200 状态码，事实登记不改机制）。实机 curl 佐证 200（dev 直跑真库）；单测 +3（元数据×2 + ping-only 指纹断言），p1b 夹具同步换新路径。
+- 2026-10-14 v0.4: 人「同意」验收 → **结项**（commit `e958add`·CI 新基线 **297/13**）。Dockerfile HEALTHCHECK 承诺面自声明以来首次接通；research checklist「health probe 分层」liveness 半兑现（readiness 丁裁缓行留登记）；借鉴 #3 分类学观察项已随片挂账 global-tenancy；借鉴 #2 分页契约留候选待裁。
