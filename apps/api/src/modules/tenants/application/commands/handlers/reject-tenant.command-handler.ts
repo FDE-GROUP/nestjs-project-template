@@ -2,6 +2,7 @@ import {
   DOMAIN_EVENT_PUBLISHER,
   type DomainEventPublisher,
 } from '@core/shared-kernel/domain/event-publisher.port';
+import { currentRequestId } from '@core/shared-kernel/request-context';
 import { TenantRejectedEvent } from '@core/tenancy/lifecycle/events/tenant-rejected.event';
 import { TENANT_STATUS } from '@core/tenancy/lifecycle/tenant-lifecycle';
 import { TenantStatusService } from '@core/tenancy/lifecycle/tenant-status.service';
@@ -50,6 +51,8 @@ export class RejectTenantCommandHandler implements ICommandHandler<RejectTenantC
       await this.events.publishAll([
         new TenantRejectedEvent({
           aggregateId: command.organizationId,
+          // 关联 id 统一链（FR-4）：请求内非空，后台/脚本场景 undefined → 持久化仍落 null。
+          correlationId: currentRequestId(),
           payload: { actorId: command.operatorId },
         }),
       ]);

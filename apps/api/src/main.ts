@@ -14,6 +14,7 @@ import type { FastifyInstance } from 'fastify';
 import * as yaml from 'js-yaml';
 import { I18nValidationPipe } from 'nestjs-i18n';
 import { AppModule } from './app.module';
+import { requestIdHook } from './common/request-id.hook';
 import { ConfigService } from './config/config.service';
 import { assertDataResidency, resolveEnforceMode } from './config/data-residency';
 
@@ -98,9 +99,17 @@ async function bootstrap() {
   // cause fastify update, temp adapt
   const fastifyInstance = app.getHttpAdapter().getInstance() as unknown as FastifyInstance;
 
+  // 请求关联 id 统一链（module-common-request-correlation）：onRequest 先于全部 Nest 层，
+  // 定 id + 回写响应头 + ALS 包裹全链（含 /health 旁路面）。
+  fastifyInstance.addHook('onRequest', requestIdHook);
+
   await fastifyInstance.register(compression as any);
   await fastifyInstance.register(helmet as any);
-  await fastifyInstance.register(fastifyCors as any, configService.getCorsConfig());
+  await fastifyInstance.register(fastifyCors as any, {
+    ...configService.getCorsConfig(),
+    // 前端可读回关联 id（FR-2）；registry 配置无 exposedHeaders，此处只增不改。
+    exposedHeaders: ['x-request-id'],
+  });
 
   // Register multipart plugin for file uploads with configuration from storage settings
   await fastifyInstance.register(fastifyMultipart as any, {

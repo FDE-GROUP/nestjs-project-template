@@ -3,6 +3,7 @@ import {
   DOMAIN_EVENT_PUBLISHER,
   type DomainEventPublisher,
 } from '../../shared-kernel/domain/event-publisher.port';
+import { currentRequestId } from '../../shared-kernel/request-context';
 import { TenantStatusTransitionedEvent } from './events/tenant-status-transitioned.event';
 import {
   canTransition,
@@ -80,6 +81,8 @@ export class TenantStatusService {
     await this.events.publishAll([
       new TenantStatusTransitionedEvent({
         aggregateId: organizationId,
+        // 关联 id 统一链（FR-4）：治理动作均在 HTTP 请求内，后台调用允许 undefined。
+        correlationId: currentRequestId(),
         payload: {
           from: previous ?? null,
           to,

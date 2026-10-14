@@ -1,4 +1,5 @@
 import { AggregateRoot } from '@core/shared-kernel/domain/aggregate-root';
+import { currentRequestId } from '@core/shared-kernel/request-context';
 import { UserRegisteredEvent } from '../events/user-registered.event';
 import { Email } from '../value-objects/email';
 
@@ -62,6 +63,8 @@ export class User extends AggregateRoot<string> {
     user.recordEvent(
       new UserRegisteredEvent({
         aggregateId: state.id,
+        // 关联 id 统一链（FR-4）：注册经 HTTP 请求时携带，种子/脚本场景 undefined。
+        correlationId: currentRequestId(),
         payload: {
           id: state.id,
           email: state.email,

@@ -3,6 +3,7 @@ import {
   DOMAIN_EVENT_PUBLISHER,
   type DomainEventPublisher,
 } from '../../shared-kernel/domain/event-publisher.port';
+import { currentRequestId } from '../../shared-kernel/request-context';
 import { UserStatusTransitionedEvent } from './events/user-status-transitioned.event';
 import { canTransition, TENANT_STATUS, type TenantStatus } from './tenant-lifecycle';
 import { USER_STATUS_STORE, type UserStatusStore } from './user-status.store';
@@ -70,6 +71,8 @@ export class UserStatusService {
     await this.events.publishAll([
       new UserStatusTransitionedEvent({
         aggregateId: userId,
+        // 关联 id 统一链（FR-4）：治理动作均在 HTTP 请求内，后台调用允许 undefined。
+        correlationId: currentRequestId(),
         payload: {
           from: previous ?? null,
           to,

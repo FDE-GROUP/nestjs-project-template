@@ -1,4 +1,5 @@
 import { LoggerService } from '@app/logger/logger.service';
+import { currentRequestId } from '@core/shared-kernel/request-context';
 import {
   type CallHandler,
   type ExecutionContext,
@@ -20,8 +21,9 @@ export class LoggingInterceptor implements NestInterceptor {
     const ip = this.getClientIp(request);
 
     const now = Date.now();
-    const requestId =
-      headers['x-request-id'] || `req-${now}-${Math.random().toString(36).substring(2, 15)}`;
+    // 关联 id 统一链（FR-5）：读 onRequest hook 写入的 ALS 源，与响应头/event 表同 id；
+    // 弃旧自造 `req-${now}-${Math.random()}` 孤岛。
+    const requestId = currentRequestId() ?? String(request.id ?? 'req-unknown');
 
     this.loggerService.log(
       `Request [${requestId}]: ${method} ${url} - ${ip} - ${userAgent} ${body && Object.keys(body).length ? JSON.stringify(body) : ''}`,
