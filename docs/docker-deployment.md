@@ -85,6 +85,10 @@ read `.npmrc`), and `pnpm run build` compiles `libs/core` before the app. The ru
 link + `exports` map. It deliberately carries **no pnpm and no `drizzle.config.ts`** — that config points
 at TS sources absent from the runtime stage, so migrations run outside the image (ops machine / CI).
 
+> If the build dies inside the dependency stage with `getaddrinfo ENOTFOUND registry.npmmirror.com`,
+> the base image pull succeeded but the `RUN` steps cannot resolve names — see
+> [Build-time DNS resolution (WSL / Docker Desktop)](#build-time-dns-resolution-wsl--docker-desktop).
+
 ### Running with Docker Compose
 
 ```bash
@@ -198,6 +202,76 @@ docker exec -i postgres sh -c 'psql -U postgres -d nestjs_practice' < postgres-b
 3. **Permission issues**: If you encounter permission errors with volumes, you might need to run Docker commands with sudo or adjust the file permissions.
 
 4. **`i18n 资产根解析失败` at startup (fail-closed)**: the i18n loader and the mailer resolve a single assets root and **refuse to boot** when the translation data (`zh/en/ja` + `emails/*.mjml`) is missing from the image — this is intentional (the alternative was silently returning raw keys and failing only when sending mail). It means the build did not copy the assets: check the `nest-cli.json` `assets` entries, rebuild with `pnpm run build`, and verify with `pnpm run verify:i18n-assets` (expects `i18n assets PASSED`).
+
+5. **`docker build` fails on a working host (`getaddrinfo ENOTFOUND registry.npmmirror.com`)**: the build itself never started resolving — see [Build-time DNS resolution (WSL / Docker Desktop)](#build-time-dns-resolution-wsl--docker-desktop) below.
+
+### Build-time DNS resolution (WSL / Docker Desktop)
+
+Symptom: `docker build` dies inside the dependency stage with
+`Error when performing the request to https://registry.npmmirror.com/pnpm/<version>` →
+`getaddrinfo ENOTFOUND`, even though `docker pull` and a host-side `pnpm install` both work. This is
+**not** a Dockerfile defect and **not** “no internet”: there are three separate network stacks in play
+and only one of them is broken.
+
+| Layer | What it covers | Typical state on a broken WSL box |
+|-------|----------------|-----------------------------------|
+| Docker **daemon** (VM) | `docker pull`, image resolution | Works — Docker Desktop injects a hub proxy + registry mirrors of its own |
+| Build **`RUN` steps** | `corepack` fetching the pnpm tarball (`COREPACK_NPM_REGISTRY`), `pnpm install` (`.npmrc`) | **Broken** — these containers use the VM's DNS, which does not benefit from the daemon's hub proxy or mirrors |
+| Host shell (WSL) | `pnpm install`, `curl` | Works **misleadingly** — often via a local HTTP proxy in `http_proxy`/`https_proxy`, which resolves names remotely, while the WSL nameserver itself is dead |
+
+Probe each layer separately before changing anything (a successful `curl` on the host proves nothing
+about a container):
+
+```bash
+# 1) host: is the configured nameserver answering at all?
+node -e "require('dns').lookup('registry.npmmirror.com',(e,a)=>console.log(e?e.code:a))"
+# 2) VM/container side: can a build step resolve it?
+docker run --rm node:22-slim node -e "require('dns').lookup('registry.npmmirror.com',(e,a)=>console.log(e?e.code:a))"
+# 3) daemon: image pulls are a different path and may succeed while 2) fails
+docker pull docker.m.daocloud.io/library/node:22-slim
+```
+
+Three ways forward, in order of preference:
+
+1. **Fix the VM DNS (permanent, no repository change).** Docker Desktop → Settings → Docker Engine,
+   add to `daemon.json`:
+
+   ```json
+   { "dns": ["223.5.5.5", "114.114.114.114"] }
+   ```
+
+   Outbound connectivity from the VM is usually already fine — only resolution is broken, so this alone
+   makes a plain `docker build` work. Fixing WSL's own resolver (`[dns] generateResolvConf=false` in
+   `/etc/wsl.conf` plus an explicit `nameserver`) helps the host but **does not** help build steps.
+
+2. **Throwaway buildkit with its own DNS (no machine config at all).**
+
+   ```bash
+   docker run -d --name buildkit --privileged --dns 223.5.5.5 --dns 114.114.114.114 \
+     -p 12345:1234 moby/buildkit:latest --addr tcp://0.0.0.0:1234
+   docker buildx create --name bypass --driver remote tcp://127.0.0.1:12345 --use
+   docker buildx build --output type=docker,dest=/tmp/app.tar -t nestjs-app .
+   docker load -i /tmp/app.tar
+   ```
+
+   Use `type=docker`, **not** `type=tar`: the latter is a filesystem tar which `docker load` rejects
+   (`invalid archive: does not contain a manifest.json`) and which `docker import` degrades by dropping
+   `HEALTHCHECK` / `ENV` / `CMD`. Note the remote driver accepts only a URL — `name:/run/buildkit/buildkitd.sock`
+   fails with “unrecognized url scheme”. Teardown order matters: remove the containers that are still
+   attached before `docker network rm`, otherwise the removal fails silently.
+
+3. **Route the build through an existing local proxy (one-off verification only).** Node's global
+   `fetch` ignores proxy variables unless told otherwise, so both pieces are required:
+
+   ```bash
+   docker build --build-arg HTTPS_PROXY=http://host.docker.internal:<proxy-port> ...
+   # plus, inside the build environment: ENV NODE_USE_ENV_PROXY=1
+   ```
+
+   (`pnpm` itself reads `https_proxy`; only the Corepack fetch needs the flag.) This is deliberately
+   **not** baked into the `Dockerfile`: it encodes the machine-specific fact that a proxy is listening
+   locally, which a template must not assume — consistent with `docs/specs/tooling-standards.md` §4.10,
+   where the acceptance criterion is a real run of the shipped declarations, not a per-workstation workaround.
 
 ### Viewing Container Logs for Debugging
 

@@ -135,6 +135,14 @@
 
 **临时设施与宿主状态**：buildkit 容器 `buildkit-dcv` / builder `dcvb` / 网络 `deployverify` / pg 容器 `dcv-pg` / app 容器 `dcv-app`·`dcv-app-neg` / compose 项目 `ncdcv` / 镜像 `ncp-app-dcv:verify` / `/tmp/ncp-dcv.tar` 与两份含密钥 env 副本、两份 override、构建日志——**全部清零复核为 0**。本轮**未触碰系统 DNS**（构建经容器自钉 `--dns`），`/etc/resolv.conf` md5 `ccd28ae0776549eb3926db2148a50bff` 与改前值一致。
 
+**追加勘察：本机 `docker build` 为何仍会失败（人问·2026-10-15）**——结论：**与本片无关的独立网络根因**，但必须成文否则下一个人照 §4.10 实跑必错。实跑三层各自取证：
+
+- **构建失败复现（默认 builder·未改任何仓库文件）**：`docker build` 在 `Dockerfile:22` 的 `pnpm install` 阶段死亡，报 `Error when performing the request to https://registry.npmmirror.com/pnpm/11.7.0` → `getaddrinfo ENOTFOUND`。
+- **为何“拉镜像能、构建不能”**：`docker info` 显示 daemon 自配 `HTTP(S)Proxy=http.docker.internal:3128`（Docker Desktop hubproxy）+ `RegistryMirrors=[docker.1ms.run, docker.xuanyuan.me]`——**只覆盖镜像拉取**（实测 `docker pull docker.m.daocloud.io/library/node:22-slim` 成功），**不传递到 `RUN` 步骤**；容器内 `dns.lookup('registry.npmmirror.com')` 实测 `EAI_AGAIN`。
+- **为何“宿主能、容器不能”**：宿主 `curl` 命中 npmmirror **200** 但 `dns.lookup` `EAI_AGAIN` / 直查 nameserver `ETIME`（`10.255.255.254` 不应答）——宿主是靠 `https_proxy=http://127.0.0.1:7897` 由**代理解析**，所以「宿主装得上依赖」不是容器可达的证据。
+- **三条可用路**：① 已验证的 buildkit `--dns` 绕行（本片 §4.1 所用）；② **免绕行新实测**：`--build-arg HTTPS_PROXY=http://host.docker.internal:<port>` **配合构建环境内 `NODE_USE_ENV_PROXY=1`**（Node 22 的 global `fetch` 默认不吃代理变量，仅 `pnpm` 本体原生读 `https_proxy`）——按此实跑出镜像 `sha256:8cb0aa60…` 整链跑通；**不入仓库**（把「本机有代理监听」烧进通用模板属机器特化噪声）；③ **永久修（归人做一次机器配置）**：Docker Desktop → Docker Engine → `daemon.json` 加 `"dns": ["223.5.5.5","114.114.114.114"]`（VM 出网本就通，只有解析坏·由①的成功反证）。`/etc/wsl.conf` 的 `generateResolvConf=false` 只修宿主、不修 `RUN` 步骤。
+- 以上已写进 `docs/docker-deployment.md`（Troubleshooting 第 5 条 + 新小节「Build-time DNS resolution (WSL / Docker Desktop)」含分层表/探针命令/三条路，另在「Building the Docker Image」加一句跳转），**未改 `Dockerfile`**。顺手产物：daocloud `node:22-slim` 已拉到本地（今后构建第一步免联网拉基础镜像）。
+
 ## 5. 完成判据（可核验 + 穷尽）
 
 - [x] 切片 A：`docker build` 产物镜像在**不传 `-e HOST`** 的 `docker run -p` 下命中 `/api/v1/health` **200** + `docker inspect` 健康态 `healthy`、Dockerfile 同款探针 **EXIT=0**（D1 症状消失·宪法 §4.10 那条链按其字面即可跑通）；负向 `-e HOST=localhost` 复现发布端口不可达（RST）——详见 §4.1
@@ -150,10 +158,11 @@
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
+| 2026-10-15 | 0.2.1 | 人问「是否还有网络原因导致 docker 构建问题」→ 三层各自实测并成文 | 坐实 plain `docker build` 仍失败且与本片无关：`Dockerfile:22` `pnpm install` 报 `getaddrinfo ENOTFOUND registry.npmmirror.com`；daemon 靠 Docker Desktop hubproxy+mirror 能 `docker pull`，但**不传递到 `RUN` 步骤**；宿主 `curl` 200 是靠 `https_proxy`（127.0.0.1:7897）代理解析，而 nameserver `10.255.255.254` 不应答。三条路：`daemon.json` 加 `dns`（永久·归人）／buildkit `--dns` 绕行（本片所用）／`HTTPS_PROXY`+`NODE_USE_ENV_PROXY=1`（实测整链跑通 `sha256:8cb0aa60…`·机器特化**不入库**）。落 `docker-deployment.md` Troubleshooting 第 5 条 + 新小节（分层表/探针命令/三条路）+ 构建节跳转，**未改 `Dockerfile`**；临时探针镜像/`/tmp` 副本已清零 |
 | 2026-10-15 | 0.2.0 | 人签核「A+B+C+D 全做 / compose 删 `HOST` / plan 随实现同 commit」→ 四切片落地 + 实跑取证 | 落地：`Dockerfile` 加 `ENV HOST=0.0.0.0`（四条注释载理由）·`docker-compose.yml` 删 `HOST` 并接 `DATA_RESIDENCY_DB_HOST_ALLOWLIST=postgres`（含「不得改用 `ENFORCE=false` 整闸关闭」）·`docker-deployment.md` 监听/驻留两段重写·tooling §4.10 两条纪律成文 + 对拍口径改「裸 `docker run` 不补 `-e HOST`」·新增 `scripts/verify-compose-contract.ts` + `verify:compose-contract` script（不进 `ci` 链）。取证（§4.1）：静态正/负向 ×4 全非零·Biome 307 files·**ci PASSED 基线 346 零掉**·`verify:prod-boot` 200；镜像层 `--output type=docker` + `docker load` 保留 HEALTHCHECK/ENV/CMD，裸 `docker run`（不传 `-e HOST`）**/api/v1/health 200 + healthy + 探针 EXIT=0**，负向 `-e HOST=localhost` 发布端口 RST；compose 全图 **strict 不关守卫** Up (healthy) + 宿主 200，负向删窄放行复现 `outside mainland allowlist`。另据实登记 **D4**（compose 挂载宿主 `.env` 使驻留结论系于未追踪文件·另案）与**判据措辞订正**（「不带任何 `-e`」→「不传 `-e HOST`」·Joi required 使前者不可行）；临时设施清零、系统 DNS 本轮未触 |
 | 2026-10-15 | 0.1.0 | 人裁「2」把 i18n 片 §4.2 的两条部署面观察立项收口 | 首版（零代码·只读勘察）：三条缺陷 D1（镜像无 `HOST` 默认→裸 `docker run` 恒 502，且 tooling §4.10 自身规定的对拍链必失败）/ D2（出厂 compose `NODE_ENV=production` + DB 裸容器名 `postgres` 与驻留白名单互斥→strict 下必拒启；逃生阀 `DATA_RESIDENCY_DB_HOST_ALLOWLIST` 代码与 `.env.example` 皆有、编排未接线；上轮 compose 绿是靠 `ENFORCE=false` 关守卫绕过）/ D3（`docker-deployment.md:116` 把失败归给模板并不存在的 `s3/us-east-1` 默认，实际 `.env.example` 默认段 alioss/oss-cn-hangzhou 本就合规，掩盖了 D2 真因）；方案 = 切片 A 镜像 `ENV HOST`／切片 B compose 窄放行／切片 C 文档 + §4.10 两条纪律成文／切片 D 可选静态门禁；缓行另案：`/health` 依赖外网 IP 查询、DB 端口对外暴露、`envs/` 文档漂移 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.2.0 变更（四切片落地 + §4.1 实跑取证 + D4 登记），以当前正文内容为准。
+正文已于 2026-10-15 / v0.2.1 变更（§4.1 追加本机 Docker 构建网络三层勘察与三条路），以当前正文内容为准。
