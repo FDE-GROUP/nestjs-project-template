@@ -104,7 +104,7 @@ i18n assets PASSED — 产物译文/模板/fail-closed 三面全绿      EXIT=0
 
 ### 4.2 镜像层重建对拍（2026-10-15·承接 `global-runtime-node-pnpm` 结项残留观察的验证位）
 
-境内 DNS 污染本轮复现（Docker VM 网络栈解析 `registry.npmmirror.com` ENOTFOUND，`docker build --network=host` 仍不通——其「host」指 VM 而非宿主）。绕行：**buildkit 容器自钉 `--dns 223.5.5.5` + TCP 暴露 + buildx remote driver** 构建，`--output type=tar` 导出后 `docker import` 成镜像，跑真容器对产物（临时设施验毕已清零；系统 DNS 尚待宿主 `sudo` 还原——原 md5 `ccd28ae0…` 已留档比对）：
+境内 DNS 污染本轮复现（Docker VM 网络栈解析 `registry.npmmirror.com` ENOTFOUND，`docker build --network=host` 仍不通——其「host」指 VM 而非宿主）。绕行：**buildkit 容器自钉 `--dns 223.5.5.5` + TCP 暴露 + buildx remote driver** 构建，`--output type=tar` 导出后 `docker import` 成镜像，跑真容器对产物（临时设施验毕已清零；系统 DNS 已还原并 md5 与原值 `ccd28ae0…` 比对一致）：
 
 - **镜像内资产布局**：`dist/i18n/{zh,en,ja}` 各 3 JSON + `emails` 3 MJML；`find dist -name '*.ts' -not -name '*.d.ts'` = **0**（切片 B 在镜像层同样生效）
 - **镜像内解析**：编译后的 `resolveI18nAssetsRoot()` → `/app/dist/i18n`，`resolveEmailsDir()` → `/app/dist/i18n/emails`（切片 A 在产物布局下命中上溯分支）
@@ -131,9 +131,10 @@ i18n assets PASSED — 产物译文/模板/fail-closed 三面全绿      EXIT=0
 |------|------|----------|----------|
 | 2026-10-15 | 0.1.0 | 运行时修宪结项残留观察→人裁「同意，继续」立项取证 | 首版：实机坐实生产译文全回退 key（`hit:false`）+ 邮件模板目录 MISSING（ENOENT）；根因定为「编译保留 `apps/api/src` 前缀 vs nest-cli assets 剥前缀落 `dist/i18n`」两套语义不一致，且锚点在编译侧目录；溯源 `62a5293` 目录搬迁引入的潜伏债（同 R-δ 型）；方案 = 切片 A 资产根 helper + fail-closed／切片 B assets glob 收紧消 `.ts` 泄漏／切片 C 探针门禁化；`rootDir` 扁平化为缓行方案 A′（触部署契约·需独立 spike） |
 | 2026-10-15 | 0.2.0 | 人签核「三切片开工 + 独立 script + plan 不单独提交」·实现完成实证全绿 | 新增 §4.1 落地实证：切片 A `assets-root.ts`（向上探测 + fail-closed·两消费方同源）/ 切片 B 两份 `nest-cli.json` 收窄为 `*.json`+`*.mjml`（产物内 `.ts` 泄归零）/ 切片 C `scripts/verify-i18n-assets.ts` + `verify:i18n-assets`（不进 ci 链）；产物面 `hit:false`→**三面翻绿**（zh/en 译文命中 + 3 份 mjml 可读 + fail-closed 生效）；**负向实证 EXIT=1**（移走 dist/i18n）后恢复 EXIT=0；`pnpm run ci` PASSED · **基线 343→346（330/16）**·新测 +3·旧基线零掉；`verify:prod-boot` 200；文档订正（mailer-en 重写资产段 + docker-deployment 排障第 4 条 + mailer 失实注释）；§5 判据逐项勾选（带会话 HTTP 存照一项据实留 `[~]`） |
-| 2026-10-15 | 0.3.0 | 人择「① 补镜像层重建对拍」| 新增 §4.2 镜像层对拍：buildkit `--dns` 绕行构建（VM DNS 污染复现·`--network=host` 不足以绕过）+ tar 导出 `docker import` + 真容器；镜像内四项实测全绿（资产布局含游离 `.ts`=0 / 资产根解析 `/app/dist/i18n` / health 探针 exit 0 / fail-closed 拦 boot）；临时设施（容器·builder·网络·镜像·含密钥 env 副本）已清零；系统 DNS 待宿主 `sudo` 还原（原 md5 `ccd28ae0…` 已留档比对），不阻断本拍结论；顺带登两条非本片范围的部署面事实（`HOST=localhost` 默认致发布端口 502 / 驻留守卫对容器名主机与非境内 region 的 boot 门槛）；§5 新增镜像层对拍判据一条（带会话 HTTP 存照仍 `[~]`）|
+| 2026-10-15 | 0.3.0 | 人择「① 补镜像层重建对拍」| 新增 §4.2 镜像层对拍：buildkit `--dns` 绕行构建（VM DNS 污染复现·`--network=host` 不足以绕过）+ tar 导出 `docker import` + 真容器；镜像内四项实测全绿（资产布局含游离 `.ts`=0 / 资产根解析 `/app/dist/i18n` / health 探针 exit 0 / fail-closed 拦 boot）；临时设施（容器·builder·网络·镜像·含密钥 env 副本）已清零；系统 DNS 已还原（宿主 `sudo`·md5 与原值一致）；不阻断本拍结论；顺带登两条非本片范围的部署面事实（`HOST=localhost` 默认致发布端口 502 / 驻留守卫对容器名主机与非境内 region 的 boot 门槛）；§5 新增镜像层对拍判据一条（带会话 HTTP 存照仍 `[~]`）|
+| 2026-10-15 | 0.3.1 | 宿主 `sudo` 完成系统 DNS 还原 | 仅状态订正：§4.2 与索引行的「DNS 待还原」→「已还原·md5 与原值一致」；对拍结论与判据无变动 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.3.0 变更，以当前正文内容为准。
+正文已于 2026-10-15 / v0.3.1 变更，以当前正文内容为准。
