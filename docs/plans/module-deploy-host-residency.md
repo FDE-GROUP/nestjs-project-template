@@ -151,13 +151,14 @@
 - [x] 切片 C：`docker-deployment.md` 失实归因订正（与 `.env.example` 实际默认段一致·并据实登记 D4 的挂载路径）；`DATA_RESIDENCY_DB_HOST_ALLOWLIST` 在该文「Environment Variables」节成文（该文无独立变量表，以该节为落点）；tooling §4.10 两条纪律成文 + 对拍口径订正为「裸 `docker run` 不补 `-e HOST`」
 - [x] 切片 D：`scripts/verify-compose-contract.ts` 就位，复用 `data-residency` 判定函数（不另写白名单），正跑 PASSED + **人造违规 ×4 全非零退出**
 - [x] `pnpm run ci` **Local CI PASSED**（基线 **346（330/16）** 零掉）+ `verify:prod-boot` /health 200 + Biome 307 files 净
-- [x] 临时设施清零（容器 / builder / 自建网络 / 产物镜像 / 含密钥 env 副本全部删除并复核为 0）；系统 DNS 本轮未改，md5 与原值一致存照
+- [x] 临时设施清零（容器 / builder / 自建网络 / 产物镜像 / 含密钥 env 副本全部删除并复核为 0）；系统 DNS 本轮未改，md5 与原值一致存照——**据实注记**：v0.2.2 那轮曾暂留 `bkdns` / `vm-dns` / `buildkit-dnsnet`（当时作为免重启的可用产物）；2026-10-15 路① 永久修实测生效后，经人裁示已全部撤除，并复核残留 0（`docker ps -a` / `network ls` / `buildx ls` / `images` 四项均为 0；`default` builder 未动、其它项目 9 个容器未受影响）；改前 `daemon.json` 副本作为回滚件保留
 - [ ] 本 plan 回写实证 + 索引状态翻面；**人类验收（签核结项）**
 
 ## 6. 演变记录
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
+| 2026-10-15 | 0.2.5 | 人就常驻设施 / 验收镜像 / `daemon.json` 三事裁示 | 路① 已生效⇒ 免重启绕行设施对本仓不再必需：**经人签核撤除** `bkdns` 容器 + remote builder `vm-dns` + 自建网络 `buildkit-dnsnet`，并删验收镜像 `ncp-app-dcv:verify`（四手按依赖序：buildx rm → rm -f → network rm → rmi·残留复核 0）；`daemon.json` 的 `dns` 经人确认**长期保留**（改前副本留作回滚件）；其它项目容器与 `default` builder 均未触。§5 「临时设施清零」那条由带尾巴的 `[x]` 真正结清（本仓零仓库文件变动） |
 | 2026-10-15 | 0.2.4 | 人重启 Docker Desktop → 结清本片挂账的构建存照 | **永久修（路③）实测闭环**：重启后容器内 `/etc/resolv.conf` = `223.5.5.5` / `114.114.114.114`（daemon.json 下发·`docker info` 不打印 DNS 段，故以容器内文件与解析结果为准），`registry.npmmirror.com` 解得 `103.228.211.160`；**plain `docker build`（默认 builder·未加任何绕行参数）全链 `BUILD_EXIT=0`**（镜像 `d596c8edbe1b`·669MB）⇒ v0.2.3 登记的「一次 `EXIT=0` 完整构建存照」至此**结清**；上一轮新暴露的 `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` / `aborted due to timeout` **本次 0 复发**（进一步佐证那是上游延迟、非解析，与路①/②无关）。**设施自愈预期已得到验证**：`bkdns`（`--restart unless-stopped`）随引擎启动回到 `Up`、remote builder `vm-dns` 仍在 `buildx ls`（`tcp://127.0.0.1:12345`·v0.34.0）、`default` 未被改动。另：路①既已生效，常驻设施对**本仓**构建不再必需（撤除与否归人）；本轮仓库内只动文档（`docker-deployment.md` 路① 补实测结论）与两片 plan 回写，**未再触 `Dockerfile` / `docker-compose.yml`**；真容器四态取证见 [module-deploy-env-mount-boundary.md](./module-deploy-env-mount-boundary.md) v0.2.1 |
 | 2026-10-15 | 0.2.3 | 人签核「写 `daemon.json`（不重启）+ D4 取 A0+A2」后的环境留痕 | **永久修已落盘但未生效**：本机 `%USERPROFILE%\.docker\daemon.json` 已**合并**写入 `dns: ["223.5.5.5","114.114.114.114"]`（原 `registry-mirrors` 两项无损·改前已存副本）；引擎重启权在人，故 plain `docker build` 本轮仍不可用。另：本轮勘察时发现 Docker Desktop 引擎**未运行**（`/mnt/wsl/docker-desktop` 与 `/var/run/docker.sock` 均不在）⇒ 本片挂账的「一次 `EXIT=0` 完整构建存照」继续待补；常驻设施 `bkdns` 带 `--restart unless-stopped`、builder 注册在 `~/.docker/buildx`，预期随引擎启动自愈（**引擎停机期间未实测**）。副产 **D4 已过审计门并落地**（人签核 A0+A2）→ 见 [module-deploy-env-mount-boundary.md](./module-deploy-env-mount-boundary.md) v0.2.0 |
 | 2026-10-15 | 0.2.2 | 人同意「先记备忘再执行」→ 免重启路线实测 + D4 立案 | **免重启实测**：`buildx create --builder-arg dns` 在 v0.35 不存在（unknown flag），改用常驻方案：buildkit 容器 `--restart unless-stopped --dns` + 持久 remote builder `vm-dns`（`default` 未被动）；`-t` 单用**不入本地镜像库**（remote driver 告警），**必须 `--load`**（探针已验：入库存活 + `probe-ok`）。拿本仓真实 `Dockerfile` 跑全链：corepack 取回 pnpm 11.7.0、`pnpm install` 正常解析 ⇒ **`ENOTFOUND` 死点已越**；但本次因 npmmirror 元数据超时（单请求 60s+）**新暴露第二失败模式** `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`——策略在“取不到元数据”时 **fail-closed** 却报成“lockfile 过期/被绕过”，极易诱导人去重生 lockfile（已成文为 `docker-deployment.md` 新小节 + 两条可签名区分：`ENOTFOUND`=解析 / `aborted due to timeout`=延迟）；`daemon.json` 加 `dns` 仍需人重启 Docker Desktop（会打断其它项目容器，**未代做**）。**D4 已另案立案** [`module-deploy-env-mount-boundary.md`](./module-deploy-env-mount-boundary.md)；临时探针镜像与 `/tmp` 副本已清零，仅保留 `bkdns`/`vm-dns`/`buildkit-dnsnet` 供后续构建使用 |
@@ -168,4 +169,4 @@
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.2.4 变更（`daemon.json` 的 dns 重启后实测生效 · plain `docker build` 全链 `EXIT=0` 存照结清 · 常驻设施自愈已验证），以当前正文内容为准。
+正文已于 2026-10-15 / v0.2.5 变更（免重启常驻设施与验收镜像经人裁示已撤除·残留复核 0 · `daemon.json` 的 dns 长期保留），以当前正文内容为准。

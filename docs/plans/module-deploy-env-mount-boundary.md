@@ -120,7 +120,7 @@ environment:
 另补 fail-fast 在真实 `up` 上的存照（上轮只验了 `config`）：抽掉 `STORAGE_REGION` 后 `docker compose up -d` 真实退出码 **1**、错误行为该插值提示、且 `docker ps -a` 计数 **0**（未创建任何容器）；复原后 `config` 退出码 0。
 
 **适配登记**（不改变被验语义）：临时图取自 `21f28a9`（修后）与 `1c0ddfb`（修前）两份逐字文件，仅三处适配——① 删 `postgres` 的 `5432:5432` 发布（宿主该端口正被开发库 `nestjs-pg-dev` 占）；② app 端口改 `17009:7009`；③ 叠一个 `image: ncp-app-dcv:verify` + `build: !reset null` 的 override 以复用已构建镜像。`environment` 与 `volumes` 逐字未改；项目名隔离（`-p d4new`/`-p d4old`）。四份夹具均为合成假密钥，全程只读写 `/tmp/d4g*/.env`，仓库真实 `.env` 未被读写。
-**清理**：`down -v --remove-orphans` 后 `nestjs-app`/`postgres` 容器计数归 0；`/tmp` 夹具与日志已删（残留 0）；仅保留 `ncp-app-dcv:verify` 作验收产物。
+**清理**：`down -v --remove-orphans` 后 `nestjs-app`/`postgres` 容器计数归 0；`/tmp` 夹具与日志已删（残留 0）。验收镜像 `ncp-app-dcv:verify` 曾暂留作产物，2026-10-15 经人裁示已删（与免重启常驻设施 `bkdns`/`vm-dns`/`buildkit-dnsnet` 一并撤除·残留复核 0：路①永久修已生效，绕行设施对本仓不再必需）。
 **旁枝观察（非本片范围·据实登记）**：(c) 那次 boot 日志同时报 `AUTH_TRUSTED_PROXIES 未配置` 与 BA `baseURL`/`BETTER_AUTH_SECRET` 偏弱告警——属已登记的 `module-auth-ip-trust` 另案，不由本片处置。
 
 ### 回归
