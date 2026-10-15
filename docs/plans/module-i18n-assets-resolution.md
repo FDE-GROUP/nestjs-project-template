@@ -113,6 +113,22 @@ i18n assets PASSED — 产物译文/模板/fail-closed 三面全绿      EXIT=0
 
 **对拍顺带坐实两条部署面事实**（**不属于本片修复范围**，据实登记待人裁）：① `.env` 默认 `HOST=localhost` → 容器内只绑回环，不加 `-e HOST=0.0.0.0` 则发布端口永远 502（来自 Docker 代理、不进应用）——Dockerfile 未内嵌该默认，属 `docs/docker-deployment.md` / 模板层待补；② PIPL 驻留守卫按设计拒绝容器名主机与非境内 storage region，本轮回拍需改用容器 IP + `STORAGE_REGION=cn-north-1` 才能 boot——行为正确但排障门槛高，建议文档加一句提示。
 
+### 4.3 带会话的真实 HTTP 校验失败存照（2026-10-15·补 §5 那一条 `[~]` 欠账）
+
+**被验对象与环境**：编译产物真进程（`pnpm run build` 后 `node dist/apps/api/src/main.js`·`PORT=7099`·`HOST=127.0.0.1`·`NODE_ENV=development`）+ 真 Postgres（dev 库）+ **真 Better Auth 会话**（HTTP `POST /api/v1/auth/sign-up/email` 200 → `sign-in/email` 取 BA 自签 `better-auth.session_token` cookie·全程无认证桩）。选 `POST /api/v1/tenants/applications` 作被测路由——它带 `@UseGuards(SessionGuard)` 且类级 `@TenantExempt()`，即**只需会话、不需 active organization**（避开建租/审批链路），其 `CreateTenantApplicationDto` 携 `validate.name.*` / `validate.slug.*` 键。
+
+| # | 请求 | 结果 |
+|---|------|------|
+| ① | 无 cookie + `Accept-Language: zh-CN` + 非法体 | **401** `Missing or invalid session` ⇒ 会话墙先于校验管道（即“带会话”确为必要条件·非可省） |
+| ② | 真会话 + `zh-CN` | **400** `message: ["请输入名称","标识符仅可包含小写字母、数字和连字符"]` |
+| ③ | 真会话 + `en-US` | **400** `["Please enter a name","Slug may only contain lowercase letters, digits and hyphens"]` |
+| ④ | 真会话 + 无 `Accept-Language` | **400** 中文（兜底 `zh` 与 `main.ts:86` 注释一致） |
+| ⑤ | 真会话 + `ja-JP` | **400** `["名前を入力してください",…]` ⇒ `dist/i18n/{zh,en,ja}` 三语集在产物布局下均可读 |
+
+响应外形未变（`statusCode/message/error/timestamp/path/requestId`），只 `message` 由译文给出——即 §3 R-α 的预期变化已在真链路上得到正例。**修前 HTTP 态未复现**（需 revert 重构建·不作已验声称）；“回退为 key”那一面已由 §4.1 立项前探针 `hit:false` 与修复后翻绿存照。
+
+**取证不污染现场**：未改任何仓库文件（取证全程 `git status` 空）；夹具已清—dev 库 `session` 删 2 / `account` 1 / `user` 1（`consent` 0）、`verification` 无孤儿行（两面计数均 0）；`/tmp` 探针文件（cookie/响应体/启动日志）已删净（残留 0）；服务进程已停、端口 7099 已释放。附带坐实一条与本片无关的路由事实：BA `basePath=/api/v1/auth` 按字面注册、不被全局前缀二次叠加（`/api/api/v1/auth/*` 为 404）。
+
 ## 5. 完成判据（可核验 + 穷尽）
 
 - [x] 切片 A：产物语义探针 `hit: true`（`validate.email.required` → `请输入邮箱`，`en` 命中真实英文）；源码语义 `validation-i18n.e2e.test.ts` 4 测不回归
@@ -120,7 +136,7 @@ i18n assets PASSED — 产物译文/模板/fail-closed 三面全绿      EXIT=0
 - [x] 切片 A：`mailer` 模板根与 i18n loader 根**同源于一处 helper**（grep 确认无第二套 `dirname/../i18n` 硬拼）
 - [x] 切片 B：`find dist -name '*.ts'` 无 i18n 源/测试泄漏；`pnpm run build` 产物内含 `dist/i18n/{zh,en,ja}` 与 `emails/*.mjml`
 - [x] 切片 C：`scripts/verify-i18n-assets.ts` 就位（独立 script·人裁）；改坏资产布局可使其非零退出（**负向实证 EXIT=1 已做**）
-- [~] 实机：产物面已存照（探针三面翻绿）；**带会话的真实 HTTP 校验失败存照未做**（需真登录链路·本片不登录不外发）→ 登记为遗留观察，不声称已验
+- [x] 实机：产物面已存照（探针三面翻绿）；**带会话的真实 HTTP 校验失败存照已补（§4.3）**——编译产物真进程 + 真 BA 会话 + 真 HTTP：无会话 401（墙先于管道）·zh/en/ja 三语译文命中·无头兜底中文·响应外形不变；修前 HTTP 态未 revert 复现（据实登记·机制面已由 §4.1 存照）
 - [x] `pnpm run ci` 全绿（基线 **343 → 346（330/16）**·新增 3 测）+ `verify:prod-boot` /health 200
 - [x] 文档：`docs/mailer-en.md` 资产解析口径重写 + `docs/docker-deployment.md` 排障条目（含 `mailer.service.ts:37` 失实注释订正）；本 plan 回写实证；索引状态翻面
 - [x] 镜像层重建对拍（§4.2）：产物镜像内**四项实测全绿**（资产布局含游离 `.ts`=0 / `resolveI18nAssetsRoot()` → `/app/dist/i18n` / health 探针 exit 0 / fail-closed 拦 boot）——`global-runtime-node-pnpm` 结项残留观察的镜像面验证位由此闭环
@@ -133,8 +149,9 @@ i18n assets PASSED — 产物译文/模板/fail-closed 三面全绿      EXIT=0
 | 2026-10-15 | 0.2.0 | 人签核「三切片开工 + 独立 script + plan 不单独提交」·实现完成实证全绿 | 新增 §4.1 落地实证：切片 A `assets-root.ts`（向上探测 + fail-closed·两消费方同源）/ 切片 B 两份 `nest-cli.json` 收窄为 `*.json`+`*.mjml`（产物内 `.ts` 泄归零）/ 切片 C `scripts/verify-i18n-assets.ts` + `verify:i18n-assets`（不进 ci 链）；产物面 `hit:false`→**三面翻绿**（zh/en 译文命中 + 3 份 mjml 可读 + fail-closed 生效）；**负向实证 EXIT=1**（移走 dist/i18n）后恢复 EXIT=0；`pnpm run ci` PASSED · **基线 343→346（330/16）**·新测 +3·旧基线零掉；`verify:prod-boot` 200；文档订正（mailer-en 重写资产段 + docker-deployment 排障第 4 条 + mailer 失实注释）；§5 判据逐项勾选（带会话 HTTP 存照一项据实留 `[~]`） |
 | 2026-10-15 | 0.3.0 | 人择「① 补镜像层重建对拍」| 新增 §4.2 镜像层对拍：buildkit `--dns` 绕行构建（VM DNS 污染复现·`--network=host` 不足以绕过）+ tar 导出 `docker import` + 真容器；镜像内四项实测全绿（资产布局含游离 `.ts`=0 / 资产根解析 `/app/dist/i18n` / health 探针 exit 0 / fail-closed 拦 boot）；临时设施（容器·builder·网络·镜像·含密钥 env 副本）已清零；系统 DNS 已还原（宿主 `sudo`·md5 与原值一致）；不阻断本拍结论；顺带登两条非本片范围的部署面事实（`HOST=localhost` 默认致发布端口 502 / 驻留守卫对容器名主机与非境内 region 的 boot 门槛）；§5 新增镜像层对拍判据一条（带会话 HTTP 存照仍 `[~]`）|
 | 2026-10-15 | 0.3.1 | 宿主 `sudo` 完成系统 DNS 还原 | 仅状态订正：§4.2 与索引行的「DNS 待还原」→「已还原·md5 与原值一致」；对拍结论与判据无变动 |
+| 2026-10-15 | 0.3.2 | 人「继续」→ 结清本片最后一个 `[~]` 欠账（带会话真实 HTTP 存照） | 新增 §4.3：编译产物真进程（`node dist/apps/api/src/main.js`·7099·dev 库）+ **真 BA 会话**（HTTP sign-up→sign-in 自签 cookie·无认证桩）打 `POST /api/v1/tenants/applications`（`SessionGuard`+`@TenantExempt`·只需会话不需 active org）五态全如预期：**① 无会话 401（会话墙先于校验管道）·② zh-CN → 「请输入名称/标识符仅可包含…」（400）·③ en-US → 英文 ·④ 无 `Accept-Language` → 兜底中文 ·⑤ ja-JP → 日文**（⇒ 三语集在产物布局下均可读·`message` 已非裸 key）；响应外形未变（R-α 止于 `message`）。取证零仓库变更（`git status` 空）、夹具已清（dev 库 user/account/session 1/1/2 删除・consent 0・verification 无孤儿・/tmp 归零・端口释放）；修前 HTTP 态未 revert 复现（据实登记）。§5 该条由 `[~]` 翻 `[x]`⇒**本片判据无开放项**（缓行方案 A′ 仍另案） |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.3.1 变更，以当前正文内容为准。
+正文已于 2026-10-15 / v0.3.2 变更（§4.3 带会话真实 HTTP 校验失败存照已补·§5 末条 `[~]` 翻 `[x]`），以当前正文内容为准。
