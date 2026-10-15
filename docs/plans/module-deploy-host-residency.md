@@ -35,7 +35,7 @@
 
 逃生阀其实**早已实现且已写进模板**，只是没在编排接线：
 - `main.ts:42` `DATA_RESIDENCY_DB_HOST_ALLOWLIST`（逗号分隔窄放行）
-- `.env.example:19-20` 有该开关的成文示例
+- `.env.example` 的 `# DATA_RESIDENCY_ENFORCE=` / `# DATA_RESIDENCY_DB_HOST_ALLOWLIST=` 两行 有该开关的成文示例
 - `docker-compose.yml` **未设**（`grep` 确认）
 
 **上一轮的「补验」是绕过而非修复**：`global-runtime-node-pnpm.md:176` 自陈 compose 全图 `Up (healthy)` 是靠临时覆盖 `DATA_RESIDENCY_ENFORCE=false` 跑通的，且当时写「主 compose 文件与 fail-closed 默认未动」。以**关掉整个合规守卫**换取部署可用，与 §4.10「不留跑不通的死面 / 不加看起来能用的兼容配置」的精神相反——正确解是用**窄白名单**放行图内 DB 主机，守卫其余部分继续生效。
@@ -43,7 +43,7 @@
 **D3 · `docker-deployment.md:116` 把失败原因归给了模板里不存在的默认值**
 
 文档原文称：「The placeholder `.env` shipped with the template (`STORAGE_PROVIDER=s3`, `STORAGE_REGION=us-east-1`, `s3.us-east-1.amazonaws.com`) therefore makes `docker compose up -d` exit with `Data residency violation`」。
-实据：仓库**只追踪 `.env.example`**（`git ls-files | grep '^\.env'` → 仅 `.env.example`），而其 storage 默认段是 **`alioss` + `oss-cn-hangzhou` + `oss-cn-hangzhou.aliyuncs.com`（本就境内合规）**；`s3` / `us-east-1` 只是**注释掉的备选段**（`.env.example:49-51`）。
+实据：仓库**只追踪 `.env.example`**（`git ls-files | grep '^\.env'` → 仅 `.env.example`），而其 storage 默认段是 **`alioss` + `oss-cn-hangzhou` + `oss-cn-hangzhou.aliyuncs.com`（本就境内合规）**；`s3` / `us-east-1` 只是**注释掉的备选段**（`.env.example` 的 S3 注释备选段）。
 ⇒ 该句把 compose 起不来的原因归给了一个模板并不存在的默认值，**掩盖了 D2 这个必然失败的真正根因**（DB host）。按此文档排障的人会去改 storage，而改完照样起不来。
 
 ### 目标

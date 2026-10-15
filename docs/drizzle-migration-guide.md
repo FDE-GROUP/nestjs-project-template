@@ -59,6 +59,9 @@ pnpm run db:seed -- --users 5 --posts 10
 ```
 
 ### Environment Variables
+`seed.ts` calls `dotenv.config()` first, so all three keys below can live in your `.env`
+instead of being prefixed on every command line (`.env.example` documents them, commented out).
+
 ```bash
 # Custom admin password
 ADMIN_PASSWORD=your_secure_password pnpm run db:seed
@@ -69,6 +72,15 @@ USER_PASSWORD=user_secure_password pnpm run db:seed
 # Clean database before seeding
 SEED_CLEANUP=true pnpm run db:seed
 ```
+
+⚠️ **Two silent behaviours worth knowing before you seed anything shared:**
+
+- If `ADMIN_PASSWORD` / `USER_PASSWORD` are unset, the seed **falls back to hardcoded
+  credentials** (`admin123` for the platform operator account resolved from
+  `PLATFORM_OPERATOR_EMAIL`, `user123` for the `user{i}@example.com` demo users). No warning is
+  printed. Set them explicitly on any database reachable by others.
+- `SEED_CLEANUP=true` is **destructive**: it deletes every row of the `post` and `user` tables
+  before re-seeding. Never enable it against a shared or production database.
 
 ## PostgreSQL Specific Notes
 

@@ -36,7 +36,7 @@ keys.forEach(key => { process.env[key] = value; });
 本项目 `configModuleOptions`（`apps/api/src/config/config.module.ts:55-67`）**未设 `override`，也未设 `ignoreEnvVars`** ⇒ 文件对 `process.env` 的语义是「**可补缺、不可覆有**」。结合 `main.ts:41` 直接读 `process.env.DATA_RESIDENCY_ENFORCE`：
 
 - 挂载文件里的 `HOST=localhost` **覆不动**镜像 `ENV HOST`（已在 `process.env`）→ §4.1 已实证；
-- 挂载文件里的 `DATA_RESIDENCY_ENFORCE=false` **能生效**（compose **未声明**此键 → 属"补缺"）⇒ 生产容器的 PIPL 硬闸可被开发机上一行注释（`.env.example:18` 正是这条逃生阀）静默降为 warn（只打日志、继续 boot）。
+- 挂载文件里的 `DATA_RESIDENCY_ENFORCE=false` **能生效**（compose **未声明**此键 → 属"补缺"）⇒ 生产容器的 PIPL 硬闸可被开发机上一行注释（`.env.example` 的 `# DATA_RESIDENCY_ENFORCE=` 注释行 正是这条逃生阀）静默降为 warn（只打日志、继续 boot）。
 
 ⇒ D4 不是"结论不确定"的描述性问题，而是**逃生阀在图外**：一行未追踪文件即可关闸。运行时取证已两面闭合：纯 Node 走**库自身生产代码路径**（§落地取证 A）+ **真容器四态**（§落地取证 C·引擎重启后补跑），结论均为本条所述。
 
