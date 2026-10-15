@@ -38,7 +38,7 @@
 - 消费面：全仓（含 `apps/api` / `libs/core` / `scripts` / 文档）**`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` 零消费方**，而 `.env.example:91-92`（段头还写着「# OAuth Providers - Google (example)」）与开发机 `.env:90-91` 都摆着这两行——**给了「可配」的假象**（且两文件的 `OAUTH_PROVIDERS` 默认行分别是 `github,apple` / 代码兜底 `github`，均未列 google——即使列了也没有槽位）。
 - `auth.constant.ts` 的 `OAuthProviderType` 里 `GOOGLE='google'` 在枚举中（故不会被类型过滤掉），进一步说明失败点是**缺 secrets 槽位**而非类型不认识。
 
-⇒ 与 D3（`docker-deployment.md:116` 把拒启归给模板并不存在的默认值）**同型的「声明有、实现无」**，且与已收口的 i18n 片（邮件资产根在产物布局下不存在·注释与实际不符）构成同一类先例；但本处更严：落在**宪法承诺 + 入门文档**上，失效路径是**静默跳过**——使用者照文档配完，Google 登录不可用，日志零线索。
+⇒ 与 D3（`docker-deployment.md:116` 把拒启归给模板并不存在的默认值）**同型的「声明有、实现无」**，且与已收口的 i18n 片（邮件资产根在产物布局下不存在·注释与实际不符）构成同一类先例；但本处更严：落在**宪法承诺 + 入门文档**上。已于 §4.1 实机坐实：**boot 期对本仓代码而言零提示**（静默 `continue`），唯一可见痕迹是用户真去点 Google 登录时由 **BA 自己**报的一条 error——而其措辞「Make sure to add the provider in your auth config」**会把人引向去改 `OAUTH_PROVIDERS`**（而该处早已列了 google），真正的缺口在 `envs/default.ts` 的 secrets 槽位——**运行期版的失实归因**。
 
 **F4 · 代码读取、两份文件都未声明的 9 个键**
 
@@ -103,13 +103,28 @@ F4 的 6 个应用/守卫面键上样例（`AUTH_TRUSTED_PROXIES` / `DATA_RESIDE
 ## 4. 取证计划（判据的执行口径）
 
 1. **四角对拍存照**：把本轮的比对脚本口径固化并输出四组集合（仅真实有 / 仅样例有 / 代码读两文件皆无 / 文件有两代码不读），作为 F1–F4 的**可复核存照**（切片 B/C 的基线）。
-2. **F3 双向实证**：落地前——`OAUTH_PROVIDERS=github,google` + 填 `GOOGLE_CLIENT_ID/SECRET` 起产物服，断言 `auth.service` 暴露的 provider 列表**不含 google** 且日志零线索（存照「静默」）；落地后（A-1 + warn）——同一输入下 google 出现在列表中，或（故意不填凭证）日志给出可定位的 warn。A-2 则改为「文档/样例/代码三处均不再出现 google」的 grep 存照。
+2. **F3 双向实证**：落地前——**已执行（见 §4.1）**。（口径订正：原计划走 `auth.service` 的 provider 列表，直查发现 `getOauthProviders()` **无任何 HTTP 暴露面**（全仓无调用方），故改用 BA 自身端点 `POST /api/v1/auth/sign-in/social` 做四探，并加两组对照以证明生效的 `OAUTH_PROVIDERS` 确为注入值。）落地后（A-1 + boot 期告警）——同一输入下 google 应能拿到 authorize URL（与 github 齐平），或（故意不填凭证）boot 日志给出可定位告警；若走 A-2，则改为「文档/样例/代码三处均不再出现 google」的 grep 存照。
 3. **回归**：`pnpm run ci` 基线 **346（330/16）** 零掉；`verify:prod-boot` /health 200；若批准切片 C，则新增脚本正跑 PASSED + **人造违规 ×3**（样例塞死键 / 代码读键不上样例 / required 键不上编排）各非零退出。
 4. **样例可用性**：以 `cp .env.example .env` 的洁净夹具跑一次 `docker compose config` 与产物起服冒烟，证明样例本身不缺口（合成假密钥·验毕清零）。
+
+### 4.1 落地前存照（v0.1.1 已执行·零仓库文件改动）
+
+按本节第 2 条的「落地前」一半已实机坐实。手法：**不碰 `.env`**（高危面），而用**进程环境注入** `OAUTH_PROVIDERS=github,google` + `GOOGLE_CLIENT_ID/SECRET=probe_fake_*`（dotenv「不覆盖已有 env」语义→注入值胜出），跑 `pnpm run build` 后的**产物真进程**（`PORT=7099`·`/api/v1/health` 200），对 `POST /api/v1/auth/sign-in/social` 做四探：
+
+| # | provider | 列入声明 | 代码有槽位 | env 有凭证 | 结果 |
+|---|----------|----------|------------|------------|------|
+| ① | `github` | ✓ | ✓ | ✓（`.env` 占位假值） | **200** + `https://github.com/login/oauth/authorize?...` ⇒ 机制可用、探针方法有效 |
+| ② | **`google`** | **✓** | **✗** | **✓**（本次注入非空） | **404 `Provider not found` / `PROVIDER_NOT_FOUND`** ⇒ F3 坐实：唯一变量就是「无槽位」 |
+| ③ | `apple` | ✗（被我注入值顶掉） | ✓ | ✓（`.env:86-87`） | 404 ⇒ **对照组**：证明生效的 `OAUTH_PROVIDERS` 确为 `github,google`（否则 apple 应像 github 一样 200） |
+| ④ | `facebook` | ✗ | ✗ | ✗ | 404 ⇒ 噪声基线（未声明也未实现） |
+
+日志侧（据实订正 F3 原「零线索」说法）：92 行 boot 日志里本仓代码**未就 google 给过一行提示**（无 warn 无 error）；直到用户真去调该渠道，才出现 `ERROR [Better Auth]: Provider not found. Make sure to add the provider in your auth config { provider: 'google' }`。**⇒ 切片 A 的「可见化」底线不能只是“有日志就行”**：已有一条属于 BA 的运行期 error，真正缺的是 **boot 期就点名「哪个已启用渠道无配置槽位」** 的本仓自有告警（且不得沿用 BA 那句误导性措辞）。
+清理：进程已 kill、端口 7099 已释放、`/tmp` 探针文件残留 0、**全程零仓库文件改动**（未读写 `.env` 内容入库·注入值为合成假凭证）。
 
 ## 5. 完成判据（可核验 + 穷尽）
 
 - [ ] F3 定性闭合：Google 渠道走 A-1 或 A-2 之一（人裁），且 `buildSocialProviders` 的静默跳过已可见化（warn/fail-loud·二择由人裁）
+- [x] F3 已实机坐实（§4.1 落地前存照·四探含两组对照·零仓库文件改动）
 - [ ] F1/F2/F4 四角对拍集合已存照，且（若批准切片 C）由 `verify-config-contract` 持有
 - [ ] F4 的 6 个应用/守卫面键已在样例成文并带「未配后果」注释；F5 两处默认语义矛盾已消（写明或统一）
 - [ ] F6 样例的 `DATA_RESIDENCY_ENFORCE` 注释文案已改口径（生产严禁·compose 已钉 true）
@@ -124,8 +139,9 @@ F4 的 6 个应用/守卫面键上样例（`AUTH_TRUSTED_PROXIES` / `DATA_RESIDE
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
 | 2026-10-15 | 0.1.0 | 人「继续」→ 对前片遗留的缓行/挂账逐项只读勘察并立案（**零代码**） | 首版八条事实：F1 四份配置契约（`.env` 50 键 / `.env.example` 51 键 / Joi 27 键 / 消费合集 58 键）互不校验且 `allowUnknown: true` 使错位静默通过·F2 双文件分叉（仅真实有 4 个 **已移除的 DATADOG_\***、仅样例有 5 键）·**F3 本片定级依据：`vision.md:65`/`tooling-standards.md:56`/`glossary.md:40`/`README.md:43` 四处承诺「保留 Google/GitHub」+ `oauth-guide-en.md:72` 教用户写 `OAUTH_PROVIDERS=github,google`，而 `envs/default.ts` 的 `oauth.secrets` 只有 github/apple/feishu，`auth.bootstrap.ts:95` 对无槽位者 `continue` 静默跳过，`GOOGLE_CLIENT_ID/SECRET`（`.env.example:91-92`）全仓零消费方**·F4 代码读而两文件皆无的 9 键（前三者在样例里均为注释态·`AUTH_TRUSTED_PROXIES` 的 warn 已在 D4 真容器日志实测）·F5 同键默认语义相反（样例 `EVENT_STORE_ENABLED=false` vs `development.ts` 的 `?? 'true'` ⇒ 不写即开；`PLATFORM_OPERATOR_EMAIL` 与兜底字面相同互相掩盖）·F6 D4 只封 compose，非编排路径仍以文件为唯一源（`.env.example:18` 注释态逃生阀无说明）·F7 `architecture.md:10/:64` + `architecture-zh.md:8/:62` + `oauth-guide-en.md:85` 仍用 `src/…` 旧路径（实为 `apps/api/src` + `libs/core/src`）；**AGENTS.md §5 已合规**（本轮初判取自 agent 旧快照、直查磁盘后推翻）；`envs/.env.development` 漂移在 AGENTS/specs 零命中、仅 `.qoder/repowiki/` 生成物残留·**F8 经人工二次核验销账三条旧账**（`StorageService.uploadFile` 门面已于 2026-10-14 quota-member-wiring 人签删·`global-tenancy.md:242` 已自记；`TenantStatus`/`PlatformUserRow` 各唯一定义、26 处统一 `@core/saas-kit` 值导入；`/health` 已为 ping-only `check([])`、`external-ip-check` 全仓零命中→host-residency §5 首条缓行自然结清）。方案：切片 A（A-1 补 google 槽位 / A-2 撤承诺·**互斥归人**·共同底线是静默跳过必须可见化）／B 样例↔代码对齐（`.env.example` 单点）／C 门禁化 `verify-config-contract`（高危·可选·判据三条含承接 D4）／D 文档路径口径归零（触宪法·高危）；另案：compose `5432` 对外发布、逃生阀在非编排路径是否彻底移除（策略面） |
+| 2026-10-16 | 0.1.1 | 人取消四问答复后说「继续」→ 只执行**不需新签核**的那一格（§4-2 「落地前存照」） | 新增 §4.1：产物真进程 + 进程环境注入（**不碰 `.env`**·零仓库文件改动）对 `POST /api/v1/auth/sign-in/social` 四探——`github` **200 + authorize URL**（机制可用）、**`google` 404 `PROVIDER_NOT_FOUND`**（已列入声明 + env 已给非空凭证·唯一变量是无 secrets 槽位）、`apple` 404 作**对照证明生效的 `OAUTH_PROVIDERS` 确为注入值**（否则 apple 应 200）、`facebook` 404 噪声基线。据此**订正 F3 原「日志零线索」说法**（不据实订正就是本片自己的失实）：boot 期本仓代码零提示，但用户真点登录时 BA 会报一条 `Provider not found. Make sure to add the provider in your auth config`——该措辞把人引向改 `OAUTH_PROVIDERS`（早已列了 google）而找不到真因，属**运行期版的失实归因**；因此切片 A 的「可见化」底线收敛为：**boot 期就点名「哪个已启用渠道无配置槽位」的本仓自有告警，不得沿用 BA 那句措辞**。§5 新增一条 `[x]`（仅指“已坐实”，A-1/A-2 方向仍归人）。清理：进程 kill·端口释放·/tmp 归零。同时订正 §4-2 口径（原拟走 `auth.service` 列表，直查发现 `getOauthProviders()` 无 HTTP 暴露面→改 BA 端点四探）。切片 C/D 属高危未动码 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.1.0 变更（首版·零代码只读勘察立案·待审计门），以当前正文内容为准。
+正文已于 2026-10-16 / v0.1.1 变更（§4.1 落地前存照已执行：F3 实机四探坐实 + 「日志零线索」据实订正），以当前正文内容为准。
