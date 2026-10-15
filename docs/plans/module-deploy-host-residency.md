@@ -82,10 +82,10 @@
 
 ### 缓行 / 另案（不在本片）
 
-- **`/health` 依赖外网 IP 查询**：`external-ip-check` 使存活探针受容器 DNS 影响（本轮就因它拿过一次假阴性 502）。属探针设计问题，另案评估（不宜与本案混做，因其需改健康检查契约面）。
+- **`/health` 依赖外网 IP 查询**：`external-ip-check` 使存活探针受容器 DNS 影响（本轮就因它拿过一次假阴性 502）。属探针设计问题，另案评估（不宜与本案混做，因其需改健康检查契约面）。→ **v0.2.6 复核：已自然结清、无需另案**——现 HEAD 的 `apps/api/src/common/health/health.controller.ts` 为 **ping-only**（`this.health.check([])` 空指示器），全仓 `external-ip` / `ipify` / `checkip` 零命中⇒ 探针不再受容器 DNS 影响（登记于 [module-config-env-surface-contract](./module-config-env-surface-contract.md) F8-③）。
 - **D4 · compose 把宿主 `.env` 整份挂载进生产容器**（§4.1 实证：本机 `.env` 的 `s3/us-east-1` 使同一张图以 storage 理由拒启）：生产容器的驻留结论系于未被追踪的开发机文件，须另案决定「关键项显式入 `environment`」还是「文档写明挂载 `.env` 必须自身合规」。→ **已立案** [`module-deploy-env-mount-boundary.md`](./module-deploy-env-mount-boundary.md)（该案勘察后定级升级：挂载不仅是“结论不确定”，而是图外一行即可关闸；且因 8 项 Joi required 中编排只供到 1 项，挂载属 load-bearing不可直删）。
 - `compose` 把 `5432:5432` 暴露到宿主（DB 端口对外），安全默认问题，另案。
-- `AGENTS.md` §3 / repowiki 仍称 `envs/.env.development` 分层，实仓为根 `.env`——文档漂移另单归零。
+- `AGENTS.md` §3 / repowiki 仍称 `envs/.env.development` 分层，实仓为根 `.env`——文档漂移另单归零。→ **v0.2.6 复核：漂移面已收窄**——`AGENTS.md` 与 `docs/specs/*` 现对该口径**零命中**（§5 目录地图已写成 `libs/core/src` + `apps/api/src` 双包），仅 `.qoder/repowiki/` 三份自动生成卡仍如此描述（生成物·非人维手 SSOT）；仍开放的是另一类**旧路径口径**（`architecture.md(±zh)` / `oauth-guide-en.md:85` 的 `src/…`），**已归入** [module-config-env-surface-contract](./module-config-env-surface-contract.md) F7 / 切片 D（待审计）。
 
 ## 3. 影响面与风险
 
@@ -158,6 +158,7 @@
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
+| 2026-10-15 | 0.2.6 | 人「继续」→ 对 §5 缓行清单做只读复核并交叉回写（零代码） | 三条缓行项状态更新（均**只动本节文档**·未触代码/编排）：① `external-ip-check` **自然结清**（`health.controller.ts` 已为 ping-only `check([])`、全仓零命中）·③ `envs/.env.development` 口径在 `AGENTS.md`/`docs/specs` **已零命中**（§5 目录地图已合规），仅 repowiki 生成物残留；仍开放的旧路径口径（`architecture.md:10/:64` + `architecture-zh.md:8/:62` + `oauth-guide-en.md:85` 的 `src/…`）**已另片立案** [module-config-env-surface-contract.md](./module-config-env-surface-contract.md)（含另查出的 F3：宪法四处承诺保留 Google OAuth，而 `envs/default.ts` 无 google 槽位、`auth.bootstrap.ts:95` 静默 `continue`）·② DB `5432` 对外发布**仍为开放另案**（安全面·本片不动）。D1–D3 的已完成取证与本片的实现内容未变（仍待人类验收） |
 | 2026-10-15 | 0.2.5 | 人就常驻设施 / 验收镜像 / `daemon.json` 三事裁示 | 路① 已生效⇒ 免重启绕行设施对本仓不再必需：**经人签核撤除** `bkdns` 容器 + remote builder `vm-dns` + 自建网络 `buildkit-dnsnet`，并删验收镜像 `ncp-app-dcv:verify`（四手按依赖序：buildx rm → rm -f → network rm → rmi·残留复核 0）；`daemon.json` 的 `dns` 经人确认**长期保留**（改前副本留作回滚件）；其它项目容器与 `default` builder 均未触。§5 「临时设施清零」那条由带尾巴的 `[x]` 真正结清（本仓零仓库文件变动） |
 | 2026-10-15 | 0.2.4 | 人重启 Docker Desktop → 结清本片挂账的构建存照 | **永久修（路③）实测闭环**：重启后容器内 `/etc/resolv.conf` = `223.5.5.5` / `114.114.114.114`（daemon.json 下发·`docker info` 不打印 DNS 段，故以容器内文件与解析结果为准），`registry.npmmirror.com` 解得 `103.228.211.160`；**plain `docker build`（默认 builder·未加任何绕行参数）全链 `BUILD_EXIT=0`**（镜像 `d596c8edbe1b`·669MB）⇒ v0.2.3 登记的「一次 `EXIT=0` 完整构建存照」至此**结清**；上一轮新暴露的 `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` / `aborted due to timeout` **本次 0 复发**（进一步佐证那是上游延迟、非解析，与路①/②无关）。**设施自愈预期已得到验证**：`bkdns`（`--restart unless-stopped`）随引擎启动回到 `Up`、remote builder `vm-dns` 仍在 `buildx ls`（`tcp://127.0.0.1:12345`·v0.34.0）、`default` 未被改动。另：路①既已生效，常驻设施对**本仓**构建不再必需（撤除与否归人）；本轮仓库内只动文档（`docker-deployment.md` 路① 补实测结论）与两片 plan 回写，**未再触 `Dockerfile` / `docker-compose.yml`**；真容器四态取证见 [module-deploy-env-mount-boundary.md](./module-deploy-env-mount-boundary.md) v0.2.1 |
 | 2026-10-15 | 0.2.3 | 人签核「写 `daemon.json`（不重启）+ D4 取 A0+A2」后的环境留痕 | **永久修已落盘但未生效**：本机 `%USERPROFILE%\.docker\daemon.json` 已**合并**写入 `dns: ["223.5.5.5","114.114.114.114"]`（原 `registry-mirrors` 两项无损·改前已存副本）；引擎重启权在人，故 plain `docker build` 本轮仍不可用。另：本轮勘察时发现 Docker Desktop 引擎**未运行**（`/mnt/wsl/docker-desktop` 与 `/var/run/docker.sock` 均不在）⇒ 本片挂账的「一次 `EXIT=0` 完整构建存照」继续待补；常驻设施 `bkdns` 带 `--restart unless-stopped`、builder 注册在 `~/.docker/buildx`，预期随引擎启动自愈（**引擎停机期间未实测**）。副产 **D4 已过审计门并落地**（人签核 A0+A2）→ 见 [module-deploy-env-mount-boundary.md](./module-deploy-env-mount-boundary.md) v0.2.0 |
@@ -169,4 +170,4 @@
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.2.5 变更（免重启常驻设施与验收镜像经人裁示已撤除·残留复核 0 · `daemon.json` 的 dns 长期保留），以当前正文内容为准。
+正文已于 2026-10-15 / v0.2.6 变更（§5 缓行清单只读复核：`external-ip-check` 与 `envs/` 口径自然结清、旧路径漂移另片立案、DB 5432 仍开放），以当前正文内容为准。
