@@ -12,7 +12,7 @@ pnpm run db:setup
 
 ### Development Workflow
 ```bash
-# 1. Make changes to src/database/schema.ts
+# 1. Make changes to apps/api/src/database/schema.ts
 # 2. Generate SQL migration files from schema diff
 pnpm run drizzle:generate
 
@@ -82,7 +82,7 @@ Unlike MongoDB, PostgreSQL is a strongly-typed relational database, so schema ch
 
 ```
 drizzle.config.ts          # Drizzle Kit configuration (dialect, schema path, output)
-src/database/
+apps/api/src/database/
 ├── schema.ts              # Table & enum definitions (source of truth)
 ├── drizzle.service.ts     # NestJS provider wrapping the Drizzle client
 ├── database.module.ts     # Global module exporting DrizzleService

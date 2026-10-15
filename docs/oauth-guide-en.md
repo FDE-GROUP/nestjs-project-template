@@ -78,11 +78,19 @@ OAUTH_COOKIE_SECURE=false
 # Provider credentials
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
+
+> **A channel needs two things, not one.** Listing it in `OAUTH_PROVIDERS` is not enough: the
+> same channel must also have a slot under `oauth.secrets` in `apps/api/src/config/envs/default.ts`
+> **and** non-empty credentials. Dropping the slot silently disabled the channel in the past;
+> since `module-config-env-surface-contract` slice A, such a mismatch produces a boot-time
+> warning outside production and **refuses to boot in production** (fail-loud).
 
 ### Provider Configuration
 
-Update your configuration in `src/config/envs/default.ts`:
+Update your configuration in `apps/api/src/config/envs/default.ts`:
 
 ```typescript
 export default {
@@ -103,11 +111,15 @@ export default {
       cookieMaxAge: parseInt(process.env.OAUTH_COOKIE_MAX_AGE || '2592000', 10), // 30 days
       cookieSecure: process.env.OAUTH_COOKIE_SECURE === 'true',
     },
-    // Provider configurations
+    // Provider configurations (a slot is required per enabled channel)
     secrets: {
       github: {
         clientId: process.env.GITHUB_CLIENT_ID || '',
         clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+      },
+      google: {
+        clientId: process.env.GOOGLE_CLIENT_ID || '',
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
       },
       // Add more providers as needed https://github.com/better-auth/better-auth
     },

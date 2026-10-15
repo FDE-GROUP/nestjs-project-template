@@ -54,8 +54,11 @@ export default {
   payment: {
     provider: process.env.PAYMENT_PROVIDER || 'stripe',
   },
-  // ES 首切片：dev 默认启用影子追加（前提：本地库已 migrate 0009；显式置 false 可关）。
+  // ES 双模开关（module-config-env-surface-contract F5）：兜底方向与 default.ts / production.ts
+  // 统一为「未显式置 true 即关」。旧写法 `?? 'true'` 使 dev 下**不写这行就默认开影子追加**，
+  // 与 `.env.example`（显式 false）意图相反；且开启的前提仍是目标库已 apply 0009 event 表。
+  // 本地要验 ES：显式置 EVENT_STORE_ENABLED=true（误开 = append fail-loud）。
   eventStore: {
-    enabled: (process.env.EVENT_STORE_ENABLED ?? 'true') === 'true',
+    enabled: process.env.EVENT_STORE_ENABLED === 'true',
   },
 };

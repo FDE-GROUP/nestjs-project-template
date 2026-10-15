@@ -5,7 +5,7 @@
 - **整洁架构（Clean Architecture）**：每个限界上下文内部划分为四层，依赖方向严格向内：`api → application → domain ← infrastructure`。domain 层除共享内核外不依赖任何框架。
 - **领域驱动设计（DDD）**：业务逻辑封装在零框架依赖的聚合根中，配合值对象、领域事件与仓储端口（port）；infrastructure 层提供端口的适配器（Drizzle）。
 - **CQRS**：写操作走 `Command → CommandHandler`，读操作走 `Query → QueryHandler`，经由 `@nestjs/cqrs` 的总线分发。Controller 绝不直接调用 service。
-- **垂直切片（Vertical Slice）**：按功能而非技术分层组织（`src/modules/<context>`）。上下文之间只能通过领域事件耦合，禁止 import 另一个上下文的 `domain/` 或 `infrastructure/`。
+- **垂直切片（Vertical Slice）**：按功能而非技术分层组织（`apps/api/src/modules/<context>`；共享契约侧居 `libs/core/src/modules/<context>`）。上下文之间只能通过领域事件耦合，禁止 import 另一个上下文的 `domain/` 或 `infrastructure/`。
 - **Event Sourcing（确定采纳·分期递进）**：人澄清 2026-10-14——ES 为确定的架构目标，不再以「某上下文真需要才做」为前提；分期节奏与审计/迁移门禁维持。当前阶段（Phase A）领域事件仅进程内派发；Command→Handler 写路径、聚合的 `recordEvent/pullDomainEvents` 钩子与事件信封字段均已按 ES 形态预留。详见 [event-sourcing-roadmap.md](../plans/event-sourcing-roadmap.md)。
 - **EDA（事件驱动架构·确定采纳）**：领域事件是上下文间**唯一**集成机制；演进路径 = 进程内派发（已落地）→ 同事务 outbox 耐久发布（Phase B）→ 跨进程 broker 订阅（仅微服务触发器成立后，见 [microservice-readiness.md](../plans/microservice-readiness.md)）。
 
@@ -59,8 +59,10 @@ POST /users
 | `infrastructure/` | `domain`（端口）、Drizzle、Nest | —（它是适配器边界） |
 | `api/` | `application`（命令/查询）、DTO | 把 `domain` 实体当传输对象 |
 
-Domain 纯净性由一个测试锁定：扫描 `src/modules/users/domain/**` 是否出现
-`@nestjs/*`、`drizzle-orm`、`@app/database` 的 import。
+Domain 纯净性由 `pnpm run ci` 里的 **fallow 架构边界佐证**守住（`scripts/ci.ts`，advisory 不
+阻断；其结论需二次人工核验，见 [tooling-standards.md §4.7](./tooling-standards.md)）。**不存在**
+任何扫描 `apps/api/src/modules/users/domain/**` 检查 `@nestjs/*`、`drizzle-orm`、
+`@app/database` import 的测试——层级方向另由上表逐层 import 矩阵与代码评审守住。
 
 ## 上下文间通信
 

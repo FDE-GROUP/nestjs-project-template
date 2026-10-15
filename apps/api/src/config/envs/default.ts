@@ -98,6 +98,14 @@ export default {
         clientId: process.env.APPLE_CLIENT_ID || '',
         clientSecret: process.env.APPLE_CLIENT_SECRET || '',
       },
+      // Google（module-config-env-surface-contract F3 · 切片 A-1）：四处宪法/README 承诺
+      // 「保留 Google/GitHub」且 oauth-guide 教用户写 OAUTH_PROVIDERS=github,google，
+      // 但此槽位曾不存在 ⇒ buildSocialProviders 对无槽位渠道静默跳过、渠道不可用。
+      // 新增渠道必须同时在此给出槽位，否则光在 .env 里放 *_CLIENT_ID/*_CLIENT_SECRET 无效。
+      google: {
+        clientId: process.env.GOOGLE_CLIENT_ID || '',
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      },
       // 飞书 / Lark（境内 genericOAuth 渠道，A1）：App ID / App Secret
       feishu: {
         clientId: process.env.FEISHU_APP_ID || '',

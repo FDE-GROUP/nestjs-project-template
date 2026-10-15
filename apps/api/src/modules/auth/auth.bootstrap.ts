@@ -6,10 +6,11 @@ import { QuotaService } from '@core/saas-kit/tenancy/quota/quota.service';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import type { BetterAuthOptions } from 'better-auth';
-import { AuthInstanceInjectKey, OAuthProviderType } from './auth.constant';
+import { AuthInstanceInjectKey } from './auth.constant';
 import { CreateAuth } from './auth.implement';
 import type { InjectAuthInstance } from './auth.interface';
 import { buildGenericOAuthConfigs } from './generic-oauth-channels';
+import { planProviderDiagnostics, resolveSocialProviders } from './social-provider-registration';
 
 /** 接线所需的最小 Fastify 实例面（避免全类型依赖 fastify 导入面）。 */
 interface FastifyLike {
@@ -84,21 +85,31 @@ export class AuthBootstrapService implements OnApplicationBootstrap {
     return buildGenericOAuthConfigs(oauth.genericProviders ?? [], oauth.secrets);
   }
 
+  /**
+   * 社交渠道装配（module-config-env-surface-contract 切片 A）：旧写法对三条不满足分支直接
+   * `continue`（不在枚举 / 无 secrets 槽位 / 槽位无凭证），导致「文档承诺已接、实际静默未注册」
+   * 且 boot 日志零线索（F3 实机存照）。现裁决下沉为纯函数，本层只按强度执行：
+   * 生产 fail-loud 拒启（配置错位不得静默降级）、非生产给一条自述真因的 warn。
+   */
   private buildSocialProviders(): BetterAuthOptions['socialProviders'] {
     const oauth = this.configService.getOAuthConfig();
+    const enabledTypes = oauth.providers.filter((p) => p.enabled).map((p) => p.type);
+    const { registered, drops } = resolveSocialProviders(enabledTypes, oauth.secrets ?? {});
+    const plan = planProviderDiagnostics(drops, process.env.NODE_ENV === 'production');
+    if (plan.mode === 'throw') {
+      throw new Error(
+        `生产环境不得静默弃用已启用的 OAuth 社交渠道（fail-loud，修好再启动）：\n${plan.message}`,
+      );
+    }
+    if (plan.mode === 'warn') {
+      this.logger.warn(plan.message);
+    }
     const providers = {} as NonNullable<BetterAuthOptions['socialProviders']>;
-    for (const providerType of oauth.providers.filter((p) => p.enabled)) {
-      if (!Object.values(OAuthProviderType).includes(providerType.type as OAuthProviderType)) {
-        continue;
-      }
-      const config = oauth.secrets[providerType.type];
-      if (!config?.clientId || !config.clientSecret) continue;
-      (providers as Record<string, unknown>)[providerType.type] = {
-        clientId: config.clientId,
-        clientSecret: config.clientSecret,
-        ...Object.entries(config)
-          .filter(([key]) => key !== 'clientId' && key !== 'clientSecret')
-          .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {}),
+    for (const r of registered) {
+      (providers as Record<string, unknown>)[r.type] = {
+        clientId: r.clientId,
+        clientSecret: r.clientSecret,
+        ...r.extras,
       };
     }
     return providers;

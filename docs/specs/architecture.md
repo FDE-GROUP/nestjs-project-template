@@ -7,7 +7,7 @@
 - **Clean Architecture (CA)**: every bounded context is split into four layers with a strict inward dependency direction: `api → application → domain ← infrastructure`. The domain depends on nothing but the shared kernel.
 - **Domain-Driven Design (DDD)**: business logic lives in framework-free aggregates with value objects, domain events and repository ports. Infrastructure supplies adapters (Drizzle) for those ports.
 - **CQRS**: writes go through `Command → CommandHandler`, reads through `Query → QueryHandler`, dispatched over `@nestjs/cqrs` buses. Controllers never call a service directly.
-- **Vertical slices**: contexts are packaged by feature (`src/modules/<context>`), not by technical tier. Cross-context coupling only happens through domain events, never by importing another context's `domain/` or `infrastructure/`.
+- **Vertical slices**: contexts are packaged by feature (`apps/api/src/modules/<context>`; shared-contract contexts live under `libs/core/src/modules/<context>`), not by technical tier. Cross-context coupling only happens through domain events, never by importing another context's `domain/` or `infrastructure/`.
 - **Event Sourcing (committed, phased)**: confirmed architectural goal (human clarification 2026-10-14) — no longer gated on "a context actually needs it", while phasing and audit/migration gates stand. This phase (A) dispatches domain events in-process only. The command handler + aggregate `recordEvent/pullDomainEvents` seam and the event envelope are already ES-shaped. See [event-sourcing-roadmap.md](../plans/event-sourcing-roadmap.md).
 - **EDA (event-driven architecture, committed)**: domain events are the **only** cross-context integration mechanism; evolution path = in-process dispatch (landed) → transactional outbox for durable publish (Phase B) → cross-process broker subscription (only after microservice triggers fire, see [microservice-readiness.md](../plans/microservice-readiness.md)).
 
@@ -61,8 +61,12 @@ directly via `DrizzleService` (pragmatic CQRS read side, bypasses the domain).
 | `infrastructure/` | `domain` (ports), Drizzle, Nest | — (it is the adapter boundary) |
 | `api/` | `application` (commands/queries), DTOs | `domain` entities used as transport |
 
-Domain purity is enforced by a test that scans `src/modules/users/domain/**` for
-`@nestjs/*`, `drizzle-orm` and `@app/database` imports.
+Domain purity is guarded by the **fallow architecture-boundary advisory** in `pnpm run ci`
+(`scripts/ci.ts`, non-blocking; its findings require a second human check per
+[tooling-standards.md §4.7](./tooling-standards.md)). There is **no** test that scans
+`apps/api/src/modules/users/domain/**` for `@nestjs/*`, `drizzle-orm` or `@app/database`
+imports — layer direction is additionally held by the per-layer import matrix above and by
+code review.
 
 ## Cross-Context Communication
 

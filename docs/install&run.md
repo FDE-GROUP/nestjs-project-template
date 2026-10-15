@@ -54,7 +54,7 @@ pnpm run drizzle:migrate
 仓库内 `drizzle/` 迁移链（SQL + `meta/_journal.json`）是 **schema 的唯一真相（SSOT）**。
 
 - **空库 / CI / 生产**：`pnpm run drizzle:migrate`（按 0000→000N 顺序应用，并在库内 `drizzle.__drizzle_migrations` 记账），再 `pnpm run db:seed`。可复现、与 journal 一致。
-- **本地增量开发**：改 `src/database/schema.ts` 后 `pnpm run drizzle:generate` 产新迁移片，再 `pnpm run drizzle:migrate` 落库——保持库内 journal 与文件链同步。
+- **本地增量开发**：改 `apps/api/src/database/schema.ts` 后 `pnpm run drizzle:generate` 产新迁移片，再 `pnpm run drizzle:migrate` 落库——保持库内 journal 与文件链同步。
 - `pnpm run drizzle:push` / `pnpm run db:reset`（= `drizzle:push --force` + seed）**不写库内 journal**，仅适合一次性把本地库强行对齐 schema；`push` 会直接执行 diff，破坏性变更前务必先看预览。
 - ⚠️ 混用后果：若库由 push 建立（库内 journal 为空）后再跑 `drizzle:migrate`，会重跑已存在的建表语句而失败且错误不清。此时要么继续用 push 同步，要么**清库重建走 migrate**（`DROP SCHEMA public CASCADE; CREATE SCHEMA public;` → `drizzle:migrate` → `db:seed`）以得到 journal 一致的规范态。
 

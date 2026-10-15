@@ -52,7 +52,7 @@
 
 | 能力域 | 选型 | 状态 | 说明 / 关联 |
 |--------|------|------|------------|
-| **支付通道** | Stripe（海外）+ 微信支付 + 支付宝（大陆） | **部分落地**：统一 `PaymentProvider` 端口 + Stripe 收敛已落地（P1，`src/modules/payment`）；微信/支付宝 **劣后暂缓**（D9，`PaymentProviderId` 接口位 `alipay`/`wechat_pay` 保留、实现待资质择机开发） | 与存储同构，`PaymentModule.register()` 依配置装配、未配即降级；周期扣款随资质（FR-1/FR-2 · D1 · D9） |
+| **支付通道** | Stripe（海外）+ 微信支付 + 支付宝（大陆） | **部分落地**：统一 `PaymentProvider` 端口 + Stripe 收敛已落地（P1，`apps/api/src/modules/payment`）；微信/支付宝 **劣后暂缓**（D9，`PaymentProviderId` 接口位 `alipay`/`wechat_pay` 保留、实现待资质择机开发） | 与存储同构，`PaymentModule.register()` 依配置装配、未配即降级；周期扣款随资质（FR-1/FR-2 · D1 · D9） |
 | **登录渠道** | Google/GitHub（保留）+ 微信 / 企业微信 / 钉钉 / 飞书 | 海外现行；**飞书已落地（A1，`genericOAuth`）**；微信/钉钉/企微 **仅留接口·劣后暂缓**（D8） | Better Auth `genericOAuth`；方案 C 邮箱为体、社交为用（`disableSignUp:true`）；**不做**手机验证码登录（FR-3/D2/D3） |
 | **依赖镜像** | npm→npmmirror（`.npmrc` + pnpm registry）+ Docker 国内基础镜像 | **已落地**（M1，commit `9e27d63`） | 纯配置；Dockerfile 基础镜像经 ARG 可覆盖（FR-4/D4）。**corepack 不吃 `.npmrc`**：拉 `pnpm` tarball 只认 `COREPACK_NPM_REGISTRY`，境内化须与该 ENV **分别注入**（见 §4.10） |
 | **默认语言** | i18n 默认 / fallback 置 `zh`（保留 en/ja）；`nestjs-i18n@10` | **已落地**（L1 分阶 A+B：全局单源 `AppI18nModule`、**邮件正文/主题 + 校验消息均按 locale 本地化**） | 文档中文为准（FR-5/D4）；locale 取 `accept-language`、回退 zh；校验保形由 `I18nValidationExceptionFilter`+`responseBodyFormatter`；无生成类型时 `translate` key 为 `never`、测试处断言松类型 |
@@ -93,13 +93,13 @@
 - 上述两类文件依赖 §5 的 Biome 豁免，防止 auto-fix 回滚。
 
 ### 4.4 数据库（Drizzle）
-- 迁移流程：改 `src/database/schema` → `pnpm run drizzle:generate` → 审 SQL → `pnpm run drizzle:migrate`。
+- 迁移流程：改 `apps/api/src/database/schema.ts`（路径以 `drizzle.config.ts` 的 `schema` 为准）→ `pnpm run drizzle:generate` → 审 SQL → `pnpm run drizzle:migrate`。
 - 本地快速同步可用 `pnpm run drizzle:push`（无 TTY 环境需 `--force`），**仅限 dev**。
 - `db:seed` / `db:reset` / `db:setup` 为数据准备入口；Postgres 由 `docker compose` 供给。
 
 ### 4.5 测试（Vitest）
 - 命令：`pnpm run test`（run）、`test:watch`、`test:cov`。
-- 用例放被测模块同级 `*.test.ts`；`include` = `src/**/*.test.ts`。
+- 用例放被测模块同级 `*.test.ts`；`include` = `['apps/**/*.test.ts', 'libs/**/*.test.ts']`（双包布局，以 `vitest.config.ts` 为准）。
 - 遵循既有规范：动态 `import` 必须 `await`；`env` 段提供最小必需环境变量；`testTimeout/hookTimeout` = 20s（全量 DI 图冷启动慢）。
 - DI/元数据相关改动须保留 `Reflect.getMetadata('design:paramtypes')` 回归测试与全图 `app.module.test.ts`。
 
