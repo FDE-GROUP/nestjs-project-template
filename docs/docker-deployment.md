@@ -273,6 +273,11 @@ Three ways forward, in order of preference:
    Fixing WSL's own resolver (`[dns] generateResolvConf=false` in
    `/etc/wsl.conf` plus an explicit `nameserver`) helps the host but **does not** help build steps.
 
+   Verified on this machine after the engine restart: containers inherit the two resolvers in
+   `/etc/resolv.conf`, `registry.npmmirror.com` resolves from inside a build, and a plain `docker build`
+   (default builder, no extra flags) runs this repository's `Dockerfile` end to end with exit code 0.
+   Option 2 is therefore only worth keeping where a restart would interrupt other projects' containers.
+
 2. **Persistent builder with its own DNS (no machine config, no restart — set up once, then plain builds).**
 
    ```bash
