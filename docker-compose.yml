@@ -20,12 +20,31 @@ services:
       # `DATA_RESIDENCY_ENFORCE=false` 整闸关闭换取可启动。
       # 境外自建 / 云主机部署：将其改为具体的境内 IDC 或云 DB 主机名，或在确认合规后删除本行。
       - DATA_RESIDENCY_DB_HOST_ALLOWLIST=postgres
+      # 策略开关必须由编排钉死为 true：`@nestjs/config` 会把「不存在于 process.env」的 .env 键
+      # 回填进 process.env（可补缺、不可覆有），本行若不声明，挂载文件里一行
+      # `DATA_RESIDENCY_ENFORCE=false` 即可把生产 strict 静默降为 warn。声明后文件覆不动它。
+      - DATA_RESIDENCY_ENFORCE=true
+      # 以下 8 项是 Joi required 或驻留判定的输入事实，过去只由挂载的宿主 `.env` 暗供
+      # （同一张图在不同开发机上合规结论相反）。改为编排显式插值：`docker compose config` 可见、
+      # 缺值在 up 前即失败（退出码 1）。插值源就是宿主项目目录的 `./.env` 或 shell 环境，
+      # 因此不引入新文件、不新增密钥副本。
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required by the deployment env}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required by the deployment env}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required by the deployment env}
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-alioss}
+      - STORAGE_REGION=${STORAGE_REGION:?STORAGE_REGION is required by the deployment env}
+      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:?STORAGE_ENDPOINT is required by the deployment env}
+      - STORAGE_ACCESS_KEY_ID=${STORAGE_ACCESS_KEY_ID:?STORAGE_ACCESS_KEY_ID is required by the deployment env}
+      - STORAGE_ACCESS_KEY_SECRET=${STORAGE_ACCESS_KEY_SECRET:?STORAGE_ACCESS_KEY_SECRET is required by the deployment env}
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - nestjs-network
     volumes:
+      # 挂载保留，但从此只负责「非决策性」键的补缺（mailer / oauth / stripe / 应用元数据等）：
+      # 策略开关与驻留判定输入已全部上到上面的 environment，文件再也覆不动它们。
+      # 生产部署应改用自身的 env 来源，不要把开发机 .env 挂进生产容器。
       - ./.env:/app/.env
       - app-logs:/app/logs
 

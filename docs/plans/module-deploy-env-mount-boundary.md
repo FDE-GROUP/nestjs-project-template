@@ -1,6 +1,6 @@
 # 部署面 env 供给边界：compose 挂载宿主 `.env` 使生产合规结论系于未追踪文件（D4 收口）
 
-> 适用范围: `部署面(docker-compose.yml + scripts/verify-compose-contract.ts + docs/docker-deployment.md)` ← blast radius：**不触业务代码 / 不触 DB schema / 不触 CI 门禁链**（切片 B 若批准才延伸既有门禁；是否触 `docker-compose.yml` 由人签核决定）
+> 适用范围: `部署面(docker-compose.yml + docs/docker-deployment.md)` ← blast radius：**不触业务代码 / 不触 DB schema / 不触 CI 门禁链 / 不触 `scripts/verify-compose-contract.ts`**（切片 B 未经签核，本片不延伸门禁）
 > 关联: `specs/tooling-standards.md` §4.10（部署声明对拍）· `plans/module-deploy-host-residency.md` §4.1（本案由其镜像层对拍**副产 D4** 立项）· 同型先例 **D1/D2/D3**（出厂部署契约内部自相矛盾 / 文档失实）
 > 性质: 缺陷收口（部署契约的供给面完整性），机制单点修、不逐处特判
 > 状态**不在此**：审计 / 执行状态单源于 [`README.md`](./README.md) 索引表
@@ -38,7 +38,7 @@ keys.forEach(key => { process.env[key] = value; });
 - 挂载文件里的 `HOST=localhost` **覆不动**镜像 `ENV HOST`（已在 `process.env`）→ §4.1 已实证；
 - 挂载文件里的 `DATA_RESIDENCY_ENFORCE=false` **能生效**（compose **未声明**此键 → 属"补缺"）⇒ 生产容器的 PIPL 硬闸可被开发机上一行注释（`.env.example:18` 正是这条逃生阀）静默降为 warn（只打日志、继续 boot）。
 
-⇒ D4 不是"结论不确定"的描述性问题，而是**逃生阀在图外**：一行未追踪文件即可关闸。`[ ] 运行时取证列 §5`（源码已证，但按纪律补一次真容器 A/B）。
+⇒ D4 不是"结论不确定"的描述性问题，而是**逃生阀在图外**：一行未追踪文件即可关闸。运行时取证已走**库自身生产代码路径**完成（`ConfigModule.assignVariablesToProcess`，见 §4 第 1 条）；真容器 A/B 因引擎停机待补。
 
 **F4 · 静态门禁按设计看不见图外半边**
 `scripts/verify-compose-contract.ts` 只解析 `docker-compose.yml` + `Dockerfile` 文本，判据覆盖镜像监听默认、DB 主机在 strict 下合规、compose 未声明 `ENFORCE=false`——**对"storage 事实由图外文件提供"无可断言**。即当前绿门并不保证部署合规性来自编排自身。
@@ -57,11 +57,13 @@ environment:
 
 ## 2. 方案（切片，含必须归人的权衡点）
 
+> **审计门记录（2026-10-15）**：人就本片签核 **A0 + A2**（含触 `docker-compose.yml` 的高危授权）；**切片 B 未选**（门禁不延伸），**A1 / A3 明确不取**，切片 C 仍另案。以下为签核前的原始候选谱，保留以记录取舍依据。
+
 **切片 A · 编排层把 7 项 required 与 storage 事实显性化**——三个互斥变体，**不替人裁**：
 
 - **A0（最小机制修·推荐首选）在编排层钉死策略开关**：compose `environment` 显式加一行 `- DATA_RESIDENCY_ENFORCE=true`。利用 F3 的「不可覆有」语义，开发机文件里的 `=false` 从此失效（已在 `process.env` 且值为 `true`），strict 不再可被图外按入；`resolveEnforceMode('production','true')` 返 strict。**不删挂载、不改代码、一行改动**，且可被切片 B 断言。代价：该图失去本地临时降级能力（要降级应另开 override 文件，而非静默改开发机 `.env`——这正是应要的行为）。
 - **A1 `env_file:`**：去掉 bind mount，改 compose `env_file: [.env]`。挂载消失、`docker compose config` 可见、可在 up 前校存在。注：与现状在“文件能否影响策略开关”上**语义等价**（`environment:` 仍胜过 `env_file`），故 A1 **不是**安全修复，只是供给面显性化；必须与 A0 配套，否则单做 A1 仍留着图外关闸通道。
-- **A2 显式插值 `${VAR:?}`**：只对 F1 的 7 项 required + F2 的 storage 事实写插值，其余不动。fail-fast（F5 实测退出码 1）、编排可见、切片 B 可断言；**代价**是 `docker compose config` 会把密钥渲染进明文输出（与 bind mount 同等暴露面，需据实说明）。前置待验：容器内不再有 `/app/.env` 时 `ConfigModule.forRoot({envFilePath:'.env'})` 是否容忍缺失（`[ ] 待实测`）。
+- **A2 显式插值 `${VAR:?}`**：只对 F1 的 7 项 required + F2 的 storage 事实写插值，其余不动。fail-fast（F5 实测退出码 1）、编排可见、切片 B 可断言；**代价**是 `docker compose config` 会把密钥渲染进明文输出（与 bind mount 同等暴露面，需据实说明）。前置待验：容器内不再有 `/app/.env` 时 `ConfigModule.forRoot({envFilePath:'.env'})` 是否容忍缺失（`[ ] 待实测`）——**本片实际落地未触发该前置**：A0+A2 保留挂载（A1 未取），文件仍为非决策键的补缺源，故无需证明"无 `/app/.env` 可启动"。落地时另加 `STORAGE_PROVIDER`（`${…:-alioss}`，与样例默认一致），使守卫读取的 storage 四项事实**全部**上图。
 - **A3 仅文档**：不改结构，在 `docker-deployment.md` 把"出厂图依赖宿主 `.env`、生产须替换 env 来源"写成已知限制（把 D4 降级为文档承诺，风险留在使用方——鉴于 F3 可关闸，**不推荐**）。
 
 **切片 B · 门禁延伸（可选，依赖 A 的取舍）**：`verify:compose-contract.ts` 增加一条判据——**影响驻留判定的输入（storage provider/region/endpoint 与 DB 主机）必须在编排层可见**（显式声明或插值占位），否则 FAIL；使 F4 的盲区闭合在 CI 之前而非运行时。
@@ -82,25 +84,45 @@ environment:
 3. 变体落地后正/负向：正向全图 `Up (healthy)` + 宿主 `/api/v1/health` 200；负向把 storage 事实改非境内 → 拒启（证明合规结论已回到编排自身）。
 4. 回归：`pnpm run verify:compose-contract` 仍绿、`pnpm run ci` 基线 **346（330/16）** 零掉、`pnpm run verify:prod-boot` 200。
 
+### 落地取证 A · 机制层（库自身代码路径·非重实现）
+
+探针直调 `ConfigModule.assignVariablesToProcess(cfg, options.override)`（即 F3 引的那段实现本身），文件内容固定为 `DATA_RESIDENCY_ENFORCE=false`：
+
+| 态 | 编排（compose environment）注入 | 装载后 `process.env` | `resolveEnforceMode('production', …)` |
+|----|------|------|------|
+| A 修前 | （未声明此键） | `false`（文件**补缺**成功） | **`warn`** ← 图外关闸坐实 |
+| B 修后（A0） | `true` | `true`（文件**覆不动**） | **`strict`** ← 通道关闭 |
+
+旁证：两态下 `JWT_SECRET=file-supplied` 均被补缺→说明保留挂载对其他键仍照常工作（与 A0+A2 不删挂载的设计一致）。另因 `validate` 走 Joi 且 `allowUnknown: true`，逃生阀键不会被校验层丢弃，故风险为真。
+
+### 落地取证 B · 插值层（compose CLI·无需 daemon）
+
+- 正向：`docker compose config` 渲染出 `DATA_RESIDENCY_ENFORCE: "true"` 及 8 项插值值（退出码 **0**）；
+- 负向：抽掉 `STORAGE_REGION` → `error while interpolating services.app.environment.[]: required variable STORAGE_REGION is missing a value: …`，退出码 **1**；再抽 `JWT_SECRET` 同样拦住，**`up` 与 `config` 均在连接 daemon 之前失败**；
+- 静态门禁：`pnpm run verify:compose-contract` 四面全绿（`ENFORCE=true` 使判据② 由“推断 strict”变“显式 strict”）。
+
+> 取证环境说明：本轮 `Docker Desktop` 引擎**未运行**（`/mnt/wsl/docker-desktop` 与 `/var/run/docker.sock` 均不在），因此上面只拿到无需 daemon 的部分；上面计划中的第 1、第 3 条（真容器四态 / 全图 `Up`）与一次 `EXIT=0` 的完整 `docker build` 仍挂账。临时探件（`/tmp/a0.env`、`/tmp/a0check.mjs`、Windows 侧合成目录）已清零，**未将真实 `.env` 复制出工作区**。
+
 ## 5. 完成判据（可核验 + 穷尽）
 
-- [ ] F2/F3 已用**真容器 A/B** 取证（(a)-(d) 四态），结论回填本文
-- [ ] 切片 A 变体由人签核（A0 作为下限要求；A1/A2/A3 至少选一）
-- [ ] 编排层已可见地提供 F1 的 7 项 required 与 F2 的 storage 事实（或经签核明确选择 A3 并在文档写成限制）
-- [ ] 缺变量 fail-fast 实证退出码非零
-- [ ] 正向 `Up (healthy)` + `/api/v1/health` 200；负向非境内 storage 拒启
-- [ ] 若批准切片 B：门禁人造违规 EXIT≠0 一次，还原后 md5 一致
-- [ ] 采纳 A0 后：挂载含 `DATA_RESIDENCY_ENFORCE=false` 的 `.env` 仍为 strict（图外关闸通道关闭）
-- [ ] `verify:compose-contract` 绿 + `ci` 基线 346 零掉 + `verify:prod-boot` 200
+- [~] F2/F3 已取证：**机制层已走库自身生产代码路径实证**（上文「落地取证 A」的 A/B 两态）；**真容器四态 (a)-(d) 待 Docker 引擎恢复**
+- [x] 切片 A 变体由人签核：**A0 + A2**（2026-10-15 审计门），A1/A3 不取，切片 B 未选
+- [x] 编排层已可见地提供 F1 的 7 项 required 与 F2 的 storage 事实（另加 `STORAGE_PROVIDER`，共 8 项插值）
+- [x] 缺变量 fail-fast 实证退出码非零（「落地取证 B」）
+- [ ] 正向 `Up (healthy)` + `/api/v1/health` 200；负向非境内 storage 拒启（**引擎未运行，待补**）
+- [x] ~~若批准切片 B~~ → **未批准**，`scripts/verify-compose-contract.ts` 本片零改动
+- [~] 采纳 A0 后：挂载含 `DATA_RESIDENCY_ENFORCE=false` 的 `.env` 仍为 strict（「落地取证 A」B 态已在库路径上证；真容器内重复待补）
+- [~] `verify:compose-contract` 绿（已实跑）+ `ci` 基线 346 零掉 + `verify:prod-boot` 200（后两项待补/待跑）
 - [ ] 人类验收
 
 ## 6. 演变
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
+| 2026-10-15 | 0.2.0 | 审计门签核 A0+A2 后的实现与取证回写 | 人在两选中签核 **A0 + A2**（含触 `docker-compose.yml` 的高危授权），A1/A3 不取、**切片 B 未选** ⇒ 门禁脚本零改动。落地：compose `environment` 新增 `DATA_RESIDENCY_ENFORCE=true`（封图外关闸）+ 8 项 `${VAR:?…}` / `${…:-alioss}` 插值（`JWT_SECRET`/`JWT_REFRESH_SECRET`/`ALLOWED_ORIGINS`/`STORAGE_PROVIDER`/`STORAGE_REGION`/`STORAGE_ENDPOINT`/`STORAGE_ACCESS_KEY_ID`/`STORAGE_ACCESS_KEY_SECRET`）⇒ 守卫读取的 storage 四项事实全部上图；挂载**保留**且注释改口径（只负责非决策键补缺）。取证：§4.1 机制层 A/B（库自身 `assignVariablesToProcess` 路径：修前 `false→warn`，修后 `true→strict`）、§4.2 插值 fail-fast（缺变量退出码 1）、`verify:compose-contract` 绿；**真容器四态与完整 `docker build` 因 Docker Desktop 未运行而挂账**。文档：`docs/docker-deployment.md` Environment Variables 重写为“两通道”表 + 钉死理由 + `docker compose config` 核看法，Common Issues 新增插值失败条目，DNS 路① 补“合并写、需重启”说明（本机 `daemon.json` 已写入 `dns` 两项，`registry-mirrors` 无损，**待引擎重启生效**） |
 | 2026-10-15 | 0.1.0 | `module-deploy-host-residency` §4.1 副产 D4 依约另案立案 | 首版（零代码·只读勘察 + 多项实测）：F1 挂载 load-bearing（7 项 required 只由图外文件供）·F2 守卫输入事实半边在图外（上轮实跑已证）·**F3 经源码直查推翻初判方向**（`config.module.js:166-182` 在 `override` 为假时把「不存在于 `process.env`」的键回填 ⇒ 图外一行 `DATA_RESIDENCY_ENFORCE=false` 即可把生产 strict 静默降为 warn · D4 由「结论不确定」升级为「逃生阀在图外」）·F4 静态门禁盲区·**F5 compose 插值源即宿主 `./.env`（实测：渲染成功 / 缺变量退出码 1）⇒ 改插值不引入新文件**·F6 `.env` 与样例已分叉（订正「样例合规≠生产合规」）；方案新增 **A0（编排层钉死 `DATA_RESIDENCY_ENFORCE=true`·一行·下限要求）**并把 A1 从「安全修复」降为「仅显性化」；切片 B 门禁延伸可选，切片 C 键位对齐另案 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.1.0 变更（D4 另案立案·零代码勘察），以当前正文内容为准。
+正文已于 2026-10-15 / v0.2.0 变更（审计门签核 A0+A2 · 编排层落地与无需 daemon 侧取证），以当前正文内容为准。

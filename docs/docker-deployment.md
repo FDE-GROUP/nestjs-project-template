@@ -113,7 +113,27 @@ When deploying with Docker, the database connection string should be:
 DATABASE_URL=postgres://postgres:postgres@postgres:5432/nestjs_practice
 ```
 
-Other environment variables can be set in `.env` file or configured in the `docker-compose.yml` file.
+The shipped `docker-compose.yml` splits environment input into **two deliberately different channels**:
+
+| 通道 | 内容 | 为何这样分 |
+|---|---|---|
+| `services.app.environment`（编排声明） | `DATA_RESIDENCY_ENFORCE=true`、`NODE_ENV`、`DATABASE_URL`、`PORT`、`DATA_RESIDENCY_DB_HOST_ALLOWLIST`，以及 8 项 `${VAR:?…}` 插值（`JWT_SECRET` / `JWT_REFRESH_SECRET` / `ALLOWED_ORIGINS` / `STORAGE_PROVIDER` / `STORAGE_REGION` / `STORAGE_ENDPOINT` / `STORAGE_ACCESS_KEY_ID` / `STORAGE_ACCESS_KEY_SECRET`） | 这些是 **Joi required** 或**驻留判定的输入事实**。它们必须在图上可见，否则同一张图在不同开发机上会得出相反的合规结论 |
+| 挂载的 `./.env:/app/.env`（文件补缺） | 其余非决策键（mailer / OAuth / Stripe / 应用元数据等） | 仍由文件提供，但它们**改变不了**合规判定 |
+
+Why the split matters: `@nestjs/config` assigns loaded `.env` keys into `process.env` **only when the key is not already set** ("可补缺、不可覆有"; the project does not enable `override`). So anything the compose file declares wins over the mounted file, and anything it *forgets* can be silently supplied — or overridden in the policy direction — by that file. Pinning `DATA_RESIDENCY_ENFORCE=true` in the orchestration is what keeps a stray `DATA_RESIDENCY_ENFORCE=false` in a developer's `.env` from downgrading a production `strict` boot to `warn`.
+
+The `${VAR:?message}` values are interpolated by Compose from **the host project directory's own `./.env`** (loaded automatically) or your shell environment — no extra file is introduced and no extra copy of the secrets is made. Missing values fail **before** any container starts:
+
+```bash
+error while interpolating services.app.environment.[]: required variable STORAGE_REGION is missing a value: STORAGE_REGION is required by the deployment env
+# exit code 1 —— up 之前就被拦住
+```
+
+Inspect what the graph will actually receive (renders the interpolation, no daemon needed):
+
+```bash
+docker compose config
+```
 
 **Reverse proxy (rate-limit trust chain):** when the app runs behind a reverse proxy (nginx, SLB, …), set `AUTH_TRUSTED_PROXIES` to the comma-separated CIDR list of the proxy network segment (e.g. `172.16.0.0/12,127.0.0.1`). Without it, Better Auth cannot resolve a trusted client IP in production and all users share a single rate-limit bucket, causing site-wide false lockouts on sign-in (see `docs/plans/module-auth-ip-trust.md`).
 
@@ -125,7 +145,7 @@ One consequence is specific to this compose graph: the in-network database is ad
 
 The template's `.env.example` ships a mainland-compliant storage block by default (`STORAGE_PROVIDER=alioss`, `STORAGE_REGION=oss-cn-hangzhou`, `oss-cn-hangzhou.aliyuncs.com`); the `s3` / `us-east-1` lines exist only as commented alternatives. If you uncomment them, `docker compose up -d` exits with `Data residency violation, refusing to boot` — that is intended behaviour, not a broken image. Point storage at a mainland-resident endpoint instead.
 
-Do **not** use `DATA_RESIDENCY_ENFORCE=false` as a routine way to make the graph start: it disables the whole compliance guard rather than the one host that needs allowing. Reserve it for a genuinely local, throw-away verification run, and never ship it in `docker-compose.yml` (also enforced by `pnpm run verify:compose-contract`).
+Do **not** use `DATA_RESIDENCY_ENFORCE=false` as a routine way to make the graph start: it disables the whole compliance guard rather than the one host that needs allowing. The shipped `docker-compose.yml` pins `DATA_RESIDENCY_ENFORCE=true` precisely so that no mounted file can turn the guard off; leave that line in place. Reserve `false` for a genuinely local, throw-away verification run passed on the command line (`docker run -e DATA_RESIDENCY_ENFORCE=false …`), and never ship it in `docker-compose.yml` (also enforced by `pnpm run verify:compose-contract`).
 
 **Health check:** the image `HEALTHCHECK` probes `GET /api/v1/health` with Node's built-in `fetch` — `node:*-slim` ships **neither `wget` nor `curl`**, so a shell-probe style check would keep the container permanently `unhealthy`.
 
@@ -205,6 +225,8 @@ docker exec -i postgres sh -c 'psql -U postgres -d nestjs_practice' < postgres-b
 
 5. **`docker build` fails on a working host (`getaddrinfo ENOTFOUND registry.npmmirror.com`)**: the build itself never started resolving — see [Build-time DNS resolution (WSL / Docker Desktop)](#build-time-dns-resolution-wsl--docker-desktop) below.
 
+6. **`error while interpolating …: required variable X is missing a value`**: Compose fails **before** any container starts, so this is neither an image nor an application problem. `X` must come from the host project directory's own `./.env` (loaded automatically for interpolation) or your shell environment. Check the rendered graph with `docker compose config`, and do not push these keys back into the mounted file — see [Environment Variables](#environment-variables) for the two-channel split.
+
 ### Build-time DNS resolution (WSL / Docker Desktop)
 
 Symptom: `docker build` dies inside the dependency stage with
@@ -240,6 +262,11 @@ Three ways forward, in order of preference:
    { "dns": ["223.5.5.5", "114.114.114.114"] }
    ```
 
+   The Settings editor writes this into the daemon.json next to the CLI config (on Windows:
+   `%USERPROFILE%\.docker\daemon.json`), which normally already holds `registry-mirrors` — **merge** the
+   `dns` key, do not overwrite the file. The change only takes effect after the engine restarts, and
+   restarting it interrupts every running container, so plan for it rather than doing it mid-task.
+
    Outbound connectivity from the VM is usually already fine — only resolution is broken, so this alone
    makes a plain `docker build` get **past the `ENOTFOUND` dead end**. It does not immunise the build from
    registry latency: see [`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` on a healthy lockfile](#err_pnpm_minimum_release_age_violation-on-a-healthy-lockfile).
@@ -261,7 +288,9 @@ Three ways forward, in order of preference:
    ```
 
    This leaves the `default` (docker) builder untouched, so anything not needing network at build time
-   keeps its normal behaviour. Verified on this repository's own `Dockerfile`: Corepack fetched the pinned
+   keeps its normal behaviour. `--restart unless-stopped` plus the buildx registration in
+   `~/.docker/buildx` survive an engine restart, so the one-time block really is one-time.
+   Verified on this repository's own `Dockerfile`: Corepack fetched the pinned
    pnpm tarball and `pnpm install` started resolving against npmmirror — i.e. the previously fatal step was
    cleared — and the remaining failures came from registry latency, not from resolution.
 
