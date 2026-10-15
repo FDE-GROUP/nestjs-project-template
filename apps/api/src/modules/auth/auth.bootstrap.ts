@@ -9,7 +9,7 @@ import type { BetterAuthOptions } from 'better-auth';
 import { AuthInstanceInjectKey } from './auth.constant';
 import { CreateAuth } from './auth.implement';
 import type { InjectAuthInstance } from './auth.interface';
-import { buildGenericOAuthConfigs } from './generic-oauth-channels';
+import { formatGenericChannelDiagnostics, resolveGenericChannels } from './generic-oauth-channels';
 import { planProviderDiagnostics, resolveSocialProviders } from './social-provider-registration';
 
 /** 接线所需的最小 Fastify 实例面（避免全类型依赖 fastify 导入面）。 */
@@ -80,9 +80,22 @@ export class AuthBootstrapService implements OnApplicationBootstrap {
     this.logger.log(`Better Auth HTTP surface mounted at ${pattern} (Fastify instance-level)`);
   }
 
+  /**
+   * 境内渠道装配（与上方 social 面同一口径）：旧写法对无构建器 / 无凭证两条分支静默 `continue`。
+   * 强度区别在于：generic 面的既有契约明确保证「不配凭证可正常启动」（`.env.example` 的
+   * OAUTH_GENERIC_PROVIDERS 段 + D8/NFR-2「未配即降级」人裁）⇒ 本层只补可见化，
+   * **一律 warn（含生产）而不拒启**；是否升级为 fail-loud 归人（已登记 plan 缓行）。
+   */
   private buildGenericConfigs() {
     const oauth = this.configService.getOAuthConfig();
-    return buildGenericOAuthConfigs(oauth.genericProviders ?? [], oauth.secrets);
+    const { configs, drops } = resolveGenericChannels(
+      oauth.genericProviders ?? [],
+      oauth.secrets ?? {},
+    );
+    if (drops.length > 0) {
+      this.logger.warn(formatGenericChannelDiagnostics(drops));
+    }
+    return configs;
   }
 
   /**

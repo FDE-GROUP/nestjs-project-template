@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildGenericOAuthConfigs, KNOWN_GENERIC_CHANNELS } from './generic-oauth-channels';
+import {
+  buildGenericOAuthConfigs,
+  formatGenericChannelDiagnostics,
+  KNOWN_GENERIC_CHANNELS,
+  resolveGenericChannels,
+} from './generic-oauth-channels';
 
 const feishuSecrets = { feishu: { clientId: 'cli_x', clientSecret: 'sec_y' } };
 
@@ -93,5 +98,43 @@ describe('buildGenericOAuthConfigs', () => {
     if (!getUserInfo) throw new Error('feishu getUserInfo missing');
     const profile = await getUserInfo({ accessToken: 'at' } as any);
     expect(profile).toMatchObject({ open_id: 'o1', name: '张三', emailVerified: false });
+  });
+});
+
+describe('resolveGenericChannels 未注册归因（切片 A 对称半边·generic 面）', () => {
+  it('一次遍历同时给出可注册配置与被弃清单', () => {
+    const { configs, drops } = resolveGenericChannels(['feishu', 'wechat', 'dingding'], {
+      ...feishuSecrets,
+      wechat: { clientId: 'a', clientSecret: 'b' },
+    });
+    expect(configs.map((c) => c.providerId)).toEqual(['feishu']);
+    expect(drops).toEqual([
+      { id: 'wechat', reason: 'builder-pending' },
+      { id: 'dingding', reason: 'unknown-id' },
+    ]);
+  });
+
+  it('缺凭证仍按 NFR-2 降级不注册，但给出归因而非静默消失', () => {
+    const { configs, drops } = resolveGenericChannels(['feishu'], {
+      feishu: { clientId: '', clientSecret: '' },
+    });
+    expect(configs).toEqual([]);
+    expect(drops).toEqual([{ id: 'feishu', reason: 'missing-credentials' }]);
+  });
+
+  it('warn 文案点名接口位与拼错两类真因', () => {
+    const report = formatGenericChannelDiagnostics(
+      resolveGenericChannels(['wechat', 'dingding'], {}).drops,
+    );
+    expect(report).toContain('2 个已声明的境内 OAuth 渠道');
+    expect(report).toContain('- wechat：');
+    expect(report).toContain('接口位');
+    expect(report).toContain('- dingding：');
+    expect(report).toContain('拼错 providerId');
+  });
+
+  it('buildGenericOAuthConfigs 仍为薄封装（既有契约不变·不拒启）', () => {
+    expect(buildGenericOAuthConfigs(['feishu'], feishuSecrets)).toHaveLength(1);
+    expect(buildGenericOAuthConfigs(['wechat'], {})).toEqual([]);
   });
 });

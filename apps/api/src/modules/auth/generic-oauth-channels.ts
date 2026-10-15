@@ -120,14 +120,78 @@ export function buildGenericOAuthConfigs(
   genericProviders: readonly string[],
   secrets: Record<string, Record<string, string>>,
 ): GenericOAuthConfig[] {
-  const configs: GenericOAuthConfig[] = [];
-  for (const rawId of genericProviders) {
-    const id = rawId as GenericChannelId;
-    const builder = CHANNEL_BUILDERS[id];
-    if (!builder) continue; // 接口位但未实现 → 跳过
-    const secret = secrets[id];
-    if (!secret?.clientId || !secret?.clientSecret) continue; // 未配凭证 → 降级
-    configs.push(builder({ clientId: secret.clientId, clientSecret: secret.clientSecret }));
+  return resolveGenericChannels(genericProviders, secrets).configs;
+}
+
+/**
+ * 未注册归因（module-config-env-surface-contract 切片 A 的对称半边）：旧写法这里也是两条静默
+ * `continue`，与 social 面同构。本片只补**可见化**，不改启动语义——`.env.example` 对 generic 面
+ * 明示「未列即不注册（不配凭证可正常启动）」，且 D8/NFR-2「未配即降级」为既有人裁，
+ * 因此强度取「一律 warn（含生产）」；是否升级为生产 fail-loud 已登记归人。
+ */
+export type GenericChannelDropReason = 'unknown-id' | 'builder-pending' | 'missing-credentials';
+
+export interface GenericChannelDrop {
+  /** `OAUTH_GENERIC_PROVIDERS` 里声明的 providerId（原样保留，便于定位配置行）。 */
+  id: string;
+  reason: GenericChannelDropReason;
+}
+
+export interface GenericChannelResolution {
+  configs: GenericOAuthConfig[];
+  drops: GenericChannelDrop[];
+}
+
+type ClassifiedChannel = { id: string; config: GenericOAuthConfig } | GenericChannelDrop;
+
+/** 单渠道裁决：social 面与 generic 面共用同一「已声明但未注册必须归因」口径。 */
+function classifyGenericChannel(
+  rawId: string,
+  secrets: Record<string, Record<string, string>>,
+): ClassifiedChannel {
+  if (!(KNOWN_GENERIC_CHANNELS as readonly string[]).includes(rawId)) {
+    return { id: rawId, reason: 'unknown-id' };
   }
-  return configs;
+  const id = rawId as GenericChannelId;
+  const builder = CHANNEL_BUILDERS[id];
+  if (!builder) {
+    return { id, reason: 'builder-pending' };
+  }
+  const secret = secrets[id];
+  if (!secret?.clientId || !secret?.clientSecret) {
+    return { id, reason: 'missing-credentials' };
+  }
+  return { id, config: builder({ clientId: secret.clientId, clientSecret: secret.clientSecret }) };
+}
+
+/** 一次遍历同时得出可注册配置与被弃清单（避免两处判定条件漂移）。 */
+export function resolveGenericChannels(
+  genericProviders: readonly string[],
+  secrets: Record<string, Record<string, string>>,
+): GenericChannelResolution {
+  const configs: GenericOAuthConfig[] = [];
+  const drops: GenericChannelDrop[] = [];
+  for (const rawId of genericProviders) {
+    const result = classifyGenericChannel(rawId, secrets ?? {});
+    if ('config' in result) configs.push(result.config);
+    else drops.push(result);
+  }
+  return { configs, drops };
+}
+
+const GENERIC_DROP_HINTS: Record<GenericChannelDropReason, string> = {
+  'unknown-id': '不在 KNOWN_GENERIC_CHANNELS 登记面内——拼错 providerId 或该渠道不属境内设计范围',
+  'builder-pending':
+    '系 D8 登记的**接口位**（wechat / dingtalk / wecom 实现劣后暂缓），本期无构建器——列入 OAUTH_GENERIC_PROVIDERS 也不会注册，请勿在此启用',
+  'missing-credentials':
+    '已实现但 secrets 的 clientId / clientSecret 为空——按 NFR-2「未配即降级」不注册（该渠道不会出现在登录面），可正常启动',
+};
+
+/** 汇成一条自述真因的诊断文案（供 boot 期 warn）。 */
+export function formatGenericChannelDiagnostics(drops: GenericChannelDrop[]): string {
+  const lines = drops.map((d) => `  - ${d.id}：${GENERIC_DROP_HINTS[d.reason]}`);
+  return [
+    `${drops.length} 个已声明的境内 OAuth 渠道（OAUTH_GENERIC_PROVIDERS）未被注册，逐条原因：`,
+    ...lines,
+  ].join('\n');
 }

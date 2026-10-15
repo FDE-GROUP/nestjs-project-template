@@ -78,6 +78,8 @@ D4 落地后，编排里 `DATA_RESIDENCY_ENFORCE=true` 使挂载文件覆不动�
 - ✅ **共同底线（按人裁形式落地）**：三条静默 `continue` 下沉为纯函数面 `modules/auth/social-provider-registration.ts`（`resolveSocialProviders` 裁决 + `planProviderDiagnostics` 定强度）：三类弃用各自点名真因（`unknown-type` / `no-config-slot` / `missing-credentials`）；**非生产 boot 期一条 warn、生产直接 throw 拒启**（fail-loud）。`auth.bootstrap.ts` 只保留装配与强度执行，不再逐 provider 特判。
 - 单测配套：`social-provider-registration.test.ts` 8 例（含三分支归因区分、extras 透传、文案含「光放 `*_CLIENT_ID` 不生效」、warn/throw 强度升级）。
 - 可见化的目的：阻断同类「文档教了、代码没接」再犯（机制修·不逐 provider 特判），且不得沿用 BA 那句误导措辞（§4.1 已证）。
+- ✅ **对称半边（v0.2.1 补齐·同一机制）**：`generic-oauth-channels.ts` 的 `buildGenericOAuthConfigs()` 原来也是**两条静默 `continue`**（无构建器 / 缺凭证），与 social 面同构——只修 social 面就是只做到一半。现抽出单一裁决点 `classifyGenericChannel` + `resolveGenericChannels`（一次遍历同时给 `configs` 与 `drops`，避免两处判定条件漂移），三类归因 `unknown-id` / `builder-pending` / `missing-credentials`；`buildGenericOAuthConfigs` 降为薄封装 ⇒ **既有 7 条契约测全部不变**。
+- ⚠️ **强度刻意不同（依既有契约、不自行升级）**：generic 面取**一律 warn（含生产）而不拒启**——`.env.example` 的 `OAUTH_GENERIC_PROVIDERS` 段明示「未列即不注册（**不配凭证可正常启动**）」，且 NFR-2「未配即降级」/ D8「wechat / dingtalk / wecom 仅留接口位」为**既有人裁**；给它们加生产 fail-loud 会直接违反该契约（尤其接口位被声明时）。是否升级（或只对 `unknown-id` / `missing-credentials` 两类升级、`builder-pending` 永远 warn）已列入本节末尾「缓行 / 另案」待裁。
 
 **切片 B · 样例↔代码对齐（✅ 已落地·唯一落点 `.env.example`）**
 实际改法与口径订正：
@@ -94,7 +96,7 @@ D4 落地后，编排里 `DATA_RESIDENCY_ENFORCE=true` 使挂载文件覆不动�
 实测旧口径共 12 处命中，按同类缺陷一次改完（不逐文件特判）——**范围扩张（超出本切片字面列举的 `architecture(±zh)` + `oauth-guide`三份）**：额外含 `tooling-standards.md:55/:96/:102`（含 vitest `include` 从失实的 `src/**/*.test.ts` 订正为实值 `['apps/**/*.test.ts', 'libs/**/*.test.ts']`）、`drizzle-migration-guide.md:15/:85`、`install&run.md:57`；其余：`architecture.md:10/:64` + `architecture-zh.md:8/:62` → `apps/api/src/modules/<context>`（并注明共享契约侧居 `libs/core/src/modules/<context>`）；`oauth-guide-en.md:85` 并补「渠道要同时有槽位 + 凭证」的说明与 `google` 槽位示例。
 **范围与性质说明（均已显式登记待人复核/可回退）**：除上方「文件面从字面列举的三份扩到五份」外，还有**一处性质不同的修正（超出「只改路径」裁示）**：`architecture.md:64-65` / `architecture-zh.md:62-63` 声称「Domain 纯净性由一个测试锁定」——直查发现**全仓不存在**扫描 domain 禁依赖的测试（仅 `user.aggregate.test.ts` 与 `table-ownership.guard.test.ts` 用 fs），边界实际由 `scripts/ci.ts:50-58` 的 **fallow 佐证（advisory·不阻断）**承担。若只把路径改对，就是给不存活的测试指一具新的不存在的路径⇒ 因此改为如实描述“fallow 佐证 + 逐层 import 矩阵 + 代码评审”。`.qoder/repowiki/` 属生成物，未手改（如需订正走重生流程）。
 
-**缓行 / 另案（不在本片并案）**：compose 把 `5432` 连同弱口令 `postgres/postgres` 发布到宿主（安全面·范围独立）；`DATA_RESIDENCY_ENFORCE` 逃生阀是否应在非编排部署路径也彻底移除（策略面·归人）；F8 三项已销账、不再列。
+**缓行 / 另案（不在本片并案）**：compose 把 `5432` 连同弱口令 `postgres/postgres` 发布到宿主（安全面·范围独立）；`DATA_RESIDENCY_ENFORCE` 逃生阀是否应在非编排部署路径也彻底移除（策略面·归人）；**generic 面是否从「一律 warn」升级为生产 fail-loud**（与 `.env.example` 现行文案 + NFR-2/D8 相抵触，属契约变更·归人）；F8 三项已销账、不再列。
 
 ## 3. 影响面与风险
 
@@ -151,18 +153,28 @@ D4 落地后，编排里 `DATA_RESIDENCY_ENFORCE=true` 使挂载文件覆不动�
 ### 4.4 门禁与工具链存照
 
 `pnpm run build`：TSC **0 issues**、SWC **151 files**（+1 新模块）；`biome check`：**309 files** 净（+2 新文件）；`pnpm run test`：**338 passed / 16 skipped = 354**（原基线 346·+8 新例·**零回归零掉**）；`pnpm run ci`：**Local CI PASSED**；`verify:prod-boot`：PASSED。**如实记录**：本机 `@fallow-cli/linux-x64-gnu` 二进制缺失，fallow 佐证本轮**未产出结论**（脚本按设计不阻断），故本轮不引 fallow 任何断言（亦不拿“边界 0 违规”当证据）。
-清理：探针进程全 kill、端口 7097/7098/7099 监听计数 **0**、`/tmp/p{1,2,3}.log` 已 rm。
+清理：探针进程全 kill、端口 7097/7098/7099 监听计数 **0**、`/tmp/p{1,2,3}.log` 已 rm；v0.2.1 的探针（7095/7096）同样 kill、监听计数 **0**、`/tmp/g{1,2}.log` 已 rm。
+
+### 4.5 generic（境内）面可见化存照（v0.2.1 已执行·同一环境注入口径）
+
+| # | 场景 | 结果 |
+|---|------|------|
+| G1 | dev·`OAUTH_GENERIC_PROVIDERS=feishu,wechat,dingding` | boot 日志一条 `WARN [AuthBootstrapService] 3 个已声明的境内 OAuth 渠道未被注册`，**三类真因各自点名**：`feishu` 缺凭证（开发机 `.env` 确实无 `FEISHU_*`）、`wechat` 系 D8 接口位、`dingding` 拼错不在登记面；`/health` **200** 照常启动 |
+| G2 | production·同样输入（另注入合规 residency 与 `OAUTH_PROVIDERS=github,apple`） | `/health` **200**、warn 计数 **1**、`Failed to start application` 计数 **0** ⇒ 「不配凭证可正常启动」的既有契约在生产侧**未被破坏**（与 social 面 P3 的退出码 1 形成受控差异） |
+
+单测：`generic-oauth-channels.test.ts` +4（三类归因一次给出、缺凭证仍不注册、文案点名接口位与拼错、`buildGenericOAuthConfigs` 仍为薄封装）；全量基线 **358（342/16）**。
 
 ## 5. 完成判据（可核验 + 穷尽）
 
 - [x] F3 定性闭合：人裁取 **A-1**（`envs/default.ts` 补 `google` 槽位），且 `buildSocialProviders` 的静默跳过已可见化（人裁定强度 = **非生产 boot warn + 生产 throw 拒启**·§4.2 P1/P2/P3 已实机拍到）
 - [x] F3 已实机坐实（§4.1 落地前存照·四探含两组对照·零仓库文件改动）
+- [x] **机制不逐模块特判**：social 面的同一缺陷在 generic（境内）面也已可见化（§4.5 G1），强度差异按既有契约取舍并显式登记归人（不自行升级 NFR-2/D8）
 - [x] F1/F2/F4 四角对拍集合已存照（§4.3）；切片 C **人裁不做** ⇒「仓库内仍无门禁持有该对拍」已显式列为遗留·不再假装已闭
 - [x] F4 的 6 个应用/守卫面键已在样例成文并带「未配后果」注释（新上图 4 键·其余 2 键原已注释态·本轮只补口径）；F5 两处默认语义矛盾已消（`development.ts` 兜底改回「不写即关」与 default/production 同口径·样例文案同步·`PLATFORM_OPERATOR_EMAIL` 归位）
 - [x] F6 样例的 `DATA_RESIDENCY_ENFORCE` 注释文案已改口径（不填 = 按 NODE_ENV 自动·境内地址优先走白名单而不是关守卫）
 - [x] F7 路径口径已归零（旧口径 12 处命中全部改完：`architecture.md(±zh)` / `tooling-standards.md` / `oauth-guide-en.md` / `drizzle-migration-guide.md` / `install&run.md`·`AGENTS.md` §5 本就合规）且无残留 `src/modules` 式旧口径；**附带一处超出字面裁示的修正（Domain 纯净性「由测试锁定」系失实 → 改为如实的 fallow 佐证口径）见切片 D 末段·待人复核或回退**
 - [x] F8 三条旧挂账的销账结论已交叉回写（`global-tenancy.md:241-242` 已自记①②的处置记录与人签覆盖行；`module-deploy-host-residency` §5 已于 v0.2.6 标③「已自然结清·无需另案」）·不动任何代码
-- [x] `pnpm run ci` 基线零掉 + `verify:prod-boot` 200（新基线 **354**·+8 例·§4.4；切片 C 未批准故无 `verify-config-contract` 人造违规项）
+- [x] `pnpm run ci` 基线零掉 + `verify:prod-boot` 200（新基线 **358**（342/16）·v0.2.0 时 354・累计 +12 例·§4.4/§4.5；切片 C 未批准故无 `verify-config-contract` 人造违规项）
 - [x] 临时夹具（探针日志 + 进程）清零·**全程未读写开发机 `.env`**（改用进程环境注入）；§4-4 的 `cp .env.example .env` 夹具未执行（原因已在该条记明）
 - [ ] 人类验收
 
@@ -173,8 +185,9 @@ D4 落地后，编排里 `DATA_RESIDENCY_ENFORCE=true` 使挂载文件覆不动�
 | 2026-10-15 | 0.1.0 | 人「继续」→ 对前片遗留的缓行/挂账逐项只读勘察并立案（**零代码**） | 首版八条事实：F1 四份配置契约（`.env` 50 键 / `.env.example` 51 键 / Joi 27 键 / 消费合集 58 键）互不校验且 `allowUnknown: true` 使错位静默通过·F2 双文件分叉（仅真实有 4 个 **已移除的 DATADOG_\***、仅样例有 5 键）·**F3 本片定级依据：`vision.md:65`/`tooling-standards.md:56`/`glossary.md:40`/`README.md:43` 四处承诺「保留 Google/GitHub」+ `oauth-guide-en.md:72` 教用户写 `OAUTH_PROVIDERS=github,google`，而 `envs/default.ts` 的 `oauth.secrets` 只有 github/apple/feishu，`auth.bootstrap.ts:95` 对无槽位者 `continue` 静默跳过，`GOOGLE_CLIENT_ID/SECRET`（`.env.example:91-92`）全仓零消费方**·F4 代码读而两文件皆无的 9 键（前三者在样例里均为注释态·`AUTH_TRUSTED_PROXIES` 的 warn 已在 D4 真容器日志实测）·F5 同键默认语义相反（样例 `EVENT_STORE_ENABLED=false` vs `development.ts` 的 `?? 'true'` ⇒ 不写即开；`PLATFORM_OPERATOR_EMAIL` 与兜底字面相同互相掩盖）·F6 D4 只封 compose，非编排路径仍以文件为唯一源（`.env.example:18` 注释态逃生阀无说明）·F7 `architecture.md:10/:64` + `architecture-zh.md:8/:62` + `oauth-guide-en.md:85` 仍用 `src/…` 旧路径（实为 `apps/api/src` + `libs/core/src`）；**AGENTS.md §5 已合规**（本轮初判取自 agent 旧快照、直查磁盘后推翻）；`envs/.env.development` 漂移在 AGENTS/specs 零命中、仅 `.qoder/repowiki/` 生成物残留·**F8 经人工二次核验销账三条旧账**（`StorageService.uploadFile` 门面已于 2026-10-14 quota-member-wiring 人签删·`global-tenancy.md:242` 已自记；`TenantStatus`/`PlatformUserRow` 各唯一定义、26 处统一 `@core/saas-kit` 值导入；`/health` 已为 ping-only `check([])`、`external-ip-check` 全仓零命中→host-residency §5 首条缓行自然结清）。方案：切片 A（A-1 补 google 槽位 / A-2 撤承诺·**互斥归人**·共同底线是静默跳过必须可见化）／B 样例↔代码对齐（`.env.example` 单点）／C 门禁化 `verify-config-contract`（高危·可选·判据三条含承接 D4）／D 文档路径口径归零（触宪法·高危）；另案：compose `5432` 对外发布、逃生阀在非编排路径是否彻底移除（策略面） |
 | 2026-10-16 | 0.1.1 | 人取消四问答复后说「继续」→ 只执行**不需新签核**的那一格（§4-2 「落地前存照」） | 新增 §4.1：产物真进程 + 进程环境注入（**不碰 `.env`**·零仓库文件改动）对 `POST /api/v1/auth/sign-in/social` 四探——`github` **200 + authorize URL**（机制可用）、**`google` 404 `PROVIDER_NOT_FOUND`**（已列入声明 + env 已给非空凭证·唯一变量是无 secrets 槽位）、`apple` 404 作**对照证明生效的 `OAUTH_PROVIDERS` 确为注入值**（否则 apple 应 200）、`facebook` 404 噪声基线。据此**订正 F3 原「日志零线索」说法**（不据实订正就是本片自己的失实）：boot 期本仓代码零提示，但用户真点登录时 BA 会报一条 `Provider not found. Make sure to add the provider in your auth config`——该措辞把人引向改 `OAUTH_PROVIDERS`（早已列了 google）而找不到真因，属**运行期版的失实归因**；因此切片 A 的「可见化」底线收敛为：**boot 期就点名「哪个已启用渠道无配置槽位」的本仓自有告警，不得沿用 BA 那句措辞**。§5 新增一条 `[x]`（仅指“已坐实”，A-1/A-2 方向仍归人）。清理：进程 kill·端口释放·/tmp 归零。同时订正 §4-2 口径（原拟走 `auth.service` 列表，直查发现 `getOauthProviders()` 无 HTTP 暴露面→改 BA 端点四探）。切片 C/D 属高危未动码 |
 | 2026-10-16 | 0.2.0 | 人「同意」= 采纳我上一轮给出的推荐组合裁示（**A-1 + 非生产 warn / 生产 fail-loud + 切片 B、D 做、切片 C 不做 + ES 兜底改回 `false`**）→ 本片由立案转实现 | **切片 A-1 落地**：`envs/default.ts` 的 `oauth.secrets` 补 `google` 槽位（interface 侧 `secrets: Record<string, Record<string,string>>` 无需改）。**共同底线落地**：新建纯函数面 `modules/auth/social-provider-registration.ts`（`resolveSocialProviders` 把三条静默 `continue` 拆成 `unknown-type`/`no-config-slot`/`missing-credentials` 三类归因 + `planProviderDiagnostics` 定强度），`auth.bootstrap.ts` 的 `buildSocialProviders()` 只保留装配与「非生产 warn / 生产 throw」执行（不再直读枚举逐 provider 特判）；新单测 8 例。**切片 B**：`.env.example` 新上图 `AUTH_TRUSTED_PROXIES`（并段 Auth 区·合并尾部重复项与 compose 「172.16.0.0/12 只解拿到 IP」口径）、`LOG_LEVEL`/`LOG_FILE`（新 Logging 段）、`PAYMENT_PROVIDER`（Stripe 区·注明 alipay 填了也不启用）；**四键均取注释态**以免改变新克隆者默认行为；F6 文案改口径；F5 的 `development.ts` `?? 'true'` 改为与 default/production 同口径（不写即关）+ 样例文案同步；`PLATFORM_OPERATOR_EMAIL` 从 ES 注释块下**归位**。**切片 D**：旧 `src/…` 口径 12 处命中改完（`architecture.md(±zh)`、`tooling-standards.md:55/:96/:102`（含 vitest `include` 失实订正为实值）、`drizzle-migration-guide.md:15/:85`、`install&run.md:57`、`oauth-guide-en.md:85` 并补「槽位 + 凭证」双要件说明与 `google` 示例）。**两处范围说明（均已显式登记待人复核/可回退）**：其一，切片 D 的文件面从字面列举的三份扩到五份（同类旧口径不逐文件特判）；其二，`architecture.md(±zh)` 宣称的「Domain 纯净性由一个测试锁定」直查发现**全仓不存在**此类测试（fs 扫描仅 `user.aggregate.test.ts` 与 `table-ownership.guard.test.ts`），边界实由 `scripts/ci.ts:50-58` 的 fallow 佐证（advisory·不阻断）承担→改为如实描述（只改路径会给不存在的测试指一条新路径）。**切片 C 人裁不做**⇒ 四角对拍仍无门禁持有，显式列为遗留。**新增 §4.2 落地后存照**：P1 同输入下 `google` 已 **200 + accounts.google.com authorize URL**（与 §4.1 的 404 形成直接对比·F3 失效面闭合）且 boot 告警计数 0；P2 `github,facebook` 在 dev 拿到 `WARN [AuthBootstrapService]` 点名真因且服务照常 boot；P3 生产同输入**退出码 1 拒启**（另注入合规 residency 以排除干扰因素）；P4 `.env:75` 的 `github,apple` 均有槽位·`verify:prod-boot` PASSED ⇒ 存量部署零影响。**§4.3 四角复算口径订正**：上一轮脚本把注释行混计入「样例有」致 `ex-env` 错报为空，本轮拆「生效 / 注释态」两集重算（`.env` 生效 50·样例生效 51 + 注释态 15·仅开发机有仍为 `DATADOG_*`×4）。**§4.4 门禁存照**：TSC 0 issues、SWC 151 files、Biome 309 files 净、测试 **354（338/16）** 较基线 346 **+8 零掉**、`pnpm run ci` PASSED；**如实记录本机 `@fallow-cli/linux-x64-gnu` 缺失 ⇒ fallow 佐证本轮未产出结论**，故不引其任何断言。未做：§4-4 的 `cp .env.example .env` 洁净夹具（需覆写开发机 `.env`·高危未得授权）；compose `5432` 与逃生阀策略仍另案 |
+| 2026-10-16 | 0.2.1 | 人「继续」→ 先盘点本片**范围内尚未闭合的一格**（不摆矩阵·不再请示）：机制修只做了一半 | **补齐对称半边**：`generic-oauth-channels.ts` 的 `buildGenericOAuthConfigs()` 与 social 面同构地带着两条静默 `continue`（无构建器 / 缺凭证），AGENTS §2「机制修复不逐模块特判」要求同一口径可见化。做法：抽 `classifyGenericChannel`（单渠道裁决）+ `resolveGenericChannels`（一次遍历同时出 `configs` 与 `drops`，避免两处判定条件漂移），三类归因 `unknown-id` / `builder-pending` / `missing-credentials`；`buildGenericOAuthConfigs` 降为薄封装 ⇒ 既有 7 条契约测零改动全绿；`auth.bootstrap.ts` 的 `buildGenericConfigs()` 只加一条 warn。**强度刻意与 social 面不同**（一律 warn・含生产也**不拒启**）：因 `.env.example` 的 `OAUTH_GENERIC_PROVIDERS` 段明示「不配凭证可正常启动」+ NFR-2「未配即降级」/ D8 接口位为既有人裁，升级即违反既有契约 ⇒ 作为**新的待裁项登记归人**（已入「缓行 / 另案」），而不是替人拍。样例文案同步一句「会 warn 但不拒启」。**新增 §4.5 存照**：G1（dev·`feishu,wechat,dingding`）一条 warn **三类真因各自点名**（feishu 缺凭证·wechat 系 D8 接口位·dingding 拼错不在登记面）且 `/health` 200；G2（生产同样输入）`/health` **200**·warn 计数 1·`Failed to start application` 计数 **0** ⇒ 「不配凭证可正常启动」契约在生产侧未被破坏（与 P3 退出码 1 形成受控差异）。单测 +4（`generic-oauth-channels.test.ts`）；基线 **354→358（342/16）**·`pnpm run ci` PASSED·Biome 309 files 净（中途 2 处格式由 `check --write` 归零）；探针进程 kill、端口 7095/7096 计数 0、`/tmp/g*.log` 已 rm。**本片判据除「人类验收」外全部 [x]，未开新任务面** |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-16 / v0.2.0 变更（人「同意」后切片 A-1 + 可见化 + B + D 已落地并实机取证（§4.2–§4.4）；切片 C 人裁不做），以当前正文内容为准。
+正文已于 2026-10-16 / v0.2.1 变更（人「继续」后补齐 generic 面的可见化对称半边・§4.5 实机存照・强度差异已登记归人），以当前正文内容为准。
