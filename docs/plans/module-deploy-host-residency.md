@@ -83,7 +83,7 @@
 ### 缓行 / 另案（不在本片）
 
 - **`/health` 依赖外网 IP 查询**：`external-ip-check` 使存活探针受容器 DNS 影响（本轮就因它拿过一次假阴性 502）。属探针设计问题，另案评估（不宜与本案混做，因其需改健康检查契约面）。
-- **D4 · compose 把宿主 `.env` 整份挂载进生产容器**（§4.1 实证：本机 `.env` 的 `s3/us-east-1` 使同一张图以 storage 理由拒启）：生产容器的驻留结论系于未被追踪的开发机文件，须另案决定「关键项显式入 `environment`」还是「文档写明挂载 `.env` 必须自身合规」。
+- **D4 · compose 把宿主 `.env` 整份挂载进生产容器**（§4.1 实证：本机 `.env` 的 `s3/us-east-1` 使同一张图以 storage 理由拒启）：生产容器的驻留结论系于未被追踪的开发机文件，须另案决定「关键项显式入 `environment`」还是「文档写明挂载 `.env` 必须自身合规」。→ **已立案** [`module-deploy-env-mount-boundary.md`](./module-deploy-env-mount-boundary.md)（该案勘察后定级升级：挂载不仅是“结论不确定”，而是图外一行即可关闸；且因 8 项 Joi required 中编排只供到 1 项，挂载属 load-bearing不可直删）。
 - `compose` 把 `5432:5432` 暴露到宿主（DB 端口对外），安全默认问题，另案。
 - `AGENTS.md` §3 / repowiki 仍称 `envs/.env.development` 分层，实仓为根 `.env`——文档漂移另单归零。
 
@@ -130,7 +130,7 @@
 
 **副产发现 D4（据实登记·另案待人裁，本片未改）**
 
-- 把挂载源换成本机**真实** `.env`（storage 段为 `s3` + `us-east-1`）后，同一张图的拒启原因变成 `storage region "us-east-1" for provider "s3" is outside mainland allowlist` ⇒ 出厂 compose 的 `./.env:/app/.env` 挂载把**生产容器的驻留结论系于未被追踪的开发机文件**（`.env.example` 默认合规，用户实机常不合规——`docker-deployment.md` 旧句描述的其实是这条路径，只是错把它归给 `.env.example` 的默认值，并因此掩盖了 D2 这个必然失败的根因）。建议另案：compose 的 storage 关键项显式声明于 `environment`，或至少在文档写明「挂载的 `.env` 必须自身合规」——高危触编排，未签核不动。
+- 把挂载源换成本机**真实** `.env`（storage 段为 `s3` + `us-east-1`）后，同一张图的拒启原因变成 `storage region "us-east-1" for provider "s3" is outside mainland allowlist` ⇒ 出厂 compose 的 `./.env:/app/.env` 挂载把**生产容器的驻留结论系于未被追踪的开发机文件**（`.env.example` 默认合规，用户实机常不合规——`docker-deployment.md` 旧句描述的其实是这条路径，只是错把它归给 `.env.example` 的默认值，并因此掩盖了 D2 这个必然失败的根因）。建议另案：compose 的 storage 关键项显式声明于 `environment`，或至少在文档写明「挂载的 `.env` 必须自身合规」——高危触编排，未签核不动。**→ 已于同日另案立案 [`module-deploy-env-mount-boundary.md`](./module-deploy-env-mount-boundary.md)（零代码勘察·待审计）。**
 - **判据措辞订正**：切片 A 原判据写「不带任何 `-e`」，实跑不可行（`DATABASE_URL` / `JWT_SECRET` / `STORAGE_*` 为 Joi required，而镜像内按 `.dockerignore` 不含 `.env`）；本片口径应为「**不传 `-e HOST`**」，其余 env 由 `--env-file` 提供（已按此实跑，上文明列）。
 
 **临时设施与宿主状态**：buildkit 容器 `buildkit-dcv` / builder `dcvb` / 网络 `deployverify` / pg 容器 `dcv-pg` / app 容器 `dcv-app`·`dcv-app-neg` / compose 项目 `ncdcv` / 镜像 `ncp-app-dcv:verify` / `/tmp/ncp-dcv.tar` 与两份含密钥 env 副本、两份 override、构建日志——**全部清零复核为 0**。本轮**未触碰系统 DNS**（构建经容器自钉 `--dns`），`/etc/resolv.conf` md5 `ccd28ae0776549eb3926db2148a50bff` 与改前值一致。
@@ -158,6 +158,7 @@
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
+| 2026-10-15 | 0.2.2 | 人同意「先记备忘再执行」→ 免重启路线实测 + D4 立案 | **免重启实测**：`buildx create --builder-arg dns` 在 v0.35 不存在（unknown flag），改用常驻方案：buildkit 容器 `--restart unless-stopped --dns` + 持久 remote builder `vm-dns`（`default` 未被动）；`-t` 单用**不入本地镜像库**（remote driver 告警），**必须 `--load`**（探针已验：入库存活 + `probe-ok`）。拿本仓真实 `Dockerfile` 跑全链：corepack 取回 pnpm 11.7.0、`pnpm install` 正常解析 ⇒ **`ENOTFOUND` 死点已越**；但本次因 npmmirror 元数据超时（单请求 60s+）**新暴露第二失败模式** `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`——策略在“取不到元数据”时 **fail-closed** 却报成“lockfile 过期/被绕过”，极易诱导人去重生 lockfile（已成文为 `docker-deployment.md` 新小节 + 两条可签名区分：`ENOTFOUND`=解析 / `aborted due to timeout`=延迟）；`daemon.json` 加 `dns` 仍需人重启 Docker Desktop（会打断其它项目容器，**未代做**）。**D4 已另案立案** [`module-deploy-env-mount-boundary.md`](./module-deploy-env-mount-boundary.md)；临时探针镜像与 `/tmp` 副本已清零，仅保留 `bkdns`/`vm-dns`/`buildkit-dnsnet` 供后续构建使用 |
 | 2026-10-15 | 0.2.1 | 人问「是否还有网络原因导致 docker 构建问题」→ 三层各自实测并成文 | 坐实 plain `docker build` 仍失败且与本片无关：`Dockerfile:22` `pnpm install` 报 `getaddrinfo ENOTFOUND registry.npmmirror.com`；daemon 靠 Docker Desktop hubproxy+mirror 能 `docker pull`，但**不传递到 `RUN` 步骤**；宿主 `curl` 200 是靠 `https_proxy`（127.0.0.1:7897）代理解析，而 nameserver `10.255.255.254` 不应答。三条路：`daemon.json` 加 `dns`（永久·归人）／buildkit `--dns` 绕行（本片所用）／`HTTPS_PROXY`+`NODE_USE_ENV_PROXY=1`（实测整链跑通 `sha256:8cb0aa60…`·机器特化**不入库**）。落 `docker-deployment.md` Troubleshooting 第 5 条 + 新小节（分层表/探针命令/三条路）+ 构建节跳转，**未改 `Dockerfile`**；临时探针镜像/`/tmp` 副本已清零 |
 | 2026-10-15 | 0.2.0 | 人签核「A+B+C+D 全做 / compose 删 `HOST` / plan 随实现同 commit」→ 四切片落地 + 实跑取证 | 落地：`Dockerfile` 加 `ENV HOST=0.0.0.0`（四条注释载理由）·`docker-compose.yml` 删 `HOST` 并接 `DATA_RESIDENCY_DB_HOST_ALLOWLIST=postgres`（含「不得改用 `ENFORCE=false` 整闸关闭」）·`docker-deployment.md` 监听/驻留两段重写·tooling §4.10 两条纪律成文 + 对拍口径改「裸 `docker run` 不补 `-e HOST`」·新增 `scripts/verify-compose-contract.ts` + `verify:compose-contract` script（不进 `ci` 链）。取证（§4.1）：静态正/负向 ×4 全非零·Biome 307 files·**ci PASSED 基线 346 零掉**·`verify:prod-boot` 200；镜像层 `--output type=docker` + `docker load` 保留 HEALTHCHECK/ENV/CMD，裸 `docker run`（不传 `-e HOST`）**/api/v1/health 200 + healthy + 探针 EXIT=0**，负向 `-e HOST=localhost` 发布端口 RST；compose 全图 **strict 不关守卫** Up (healthy) + 宿主 200，负向删窄放行复现 `outside mainland allowlist`。另据实登记 **D4**（compose 挂载宿主 `.env` 使驻留结论系于未追踪文件·另案）与**判据措辞订正**（「不带任何 `-e`」→「不传 `-e HOST`」·Joi required 使前者不可行）；临时设施清零、系统 DNS 本轮未触 |
 | 2026-10-15 | 0.1.0 | 人裁「2」把 i18n 片 §4.2 的两条部署面观察立项收口 | 首版（零代码·只读勘察）：三条缺陷 D1（镜像无 `HOST` 默认→裸 `docker run` 恒 502，且 tooling §4.10 自身规定的对拍链必失败）/ D2（出厂 compose `NODE_ENV=production` + DB 裸容器名 `postgres` 与驻留白名单互斥→strict 下必拒启；逃生阀 `DATA_RESIDENCY_DB_HOST_ALLOWLIST` 代码与 `.env.example` 皆有、编排未接线；上轮 compose 绿是靠 `ENFORCE=false` 关守卫绕过）/ D3（`docker-deployment.md:116` 把失败归给模板并不存在的 `s3/us-east-1` 默认，实际 `.env.example` 默认段 alioss/oss-cn-hangzhou 本就合规，掩盖了 D2 真因）；方案 = 切片 A 镜像 `ENV HOST`／切片 B compose 窄放行／切片 C 文档 + §4.10 两条纪律成文／切片 D 可选静态门禁；缓行另案：`/health` 依赖外网 IP 查询、DB 端口对外暴露、`envs/` 文档漂移 |
@@ -165,4 +166,4 @@
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-15 / v0.2.1 变更（§4.1 追加本机 Docker 构建网络三层勘察与三条路），以当前正文内容为准。
+正文已于 2026-10-15 / v0.2.2 变更（免重启构建路线实测 + 新失败模式成文 + D4 另案立案），以当前正文内容为准。

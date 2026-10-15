@@ -241,10 +241,31 @@ Three ways forward, in order of preference:
    ```
 
    Outbound connectivity from the VM is usually already fine — only resolution is broken, so this alone
-   makes a plain `docker build` work. Fixing WSL's own resolver (`[dns] generateResolvConf=false` in
+   makes a plain `docker build` get **past the `ENOTFOUND` dead end**. It does not immunise the build from
+   registry latency: see [`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` on a healthy lockfile](#err_pnpm_minimum_release_age_violation-on-a-healthy-lockfile).
+   Fixing WSL's own resolver (`[dns] generateResolvConf=false` in
    `/etc/wsl.conf` plus an explicit `nameserver`) helps the host but **does not** help build steps.
 
-2. **Throwaway buildkit with its own DNS (no machine config at all).**
+2. **Persistent builder with its own DNS (no machine config, no restart — set up once, then plain builds).**
+
+   ```bash
+   # one-time
+   docker network create buildkit-dnsnet
+   docker run -d --name bkdns --privileged --restart unless-stopped \
+     --dns 223.5.5.5 --dns 114.114.114.114 -p 12345:1234 \
+     --network buildkit-dnsnet moby/buildkit:latest --addr tcp://0.0.0.0:1234
+   docker buildx create --name vm-dns --driver remote tcp://127.0.0.1:12345
+
+   # day-to-day (note `--load`: a remote builder does not populate the local image store on `-t` alone)
+   docker build --builder vm-dns --load -t nestjs-app .
+   ```
+
+   This leaves the `default` (docker) builder untouched, so anything not needing network at build time
+   keeps its normal behaviour. Verified on this repository's own `Dockerfile`: Corepack fetched the pinned
+   pnpm tarball and `pnpm install` started resolving against npmmirror — i.e. the previously fatal step was
+   cleared — and the remaining failures came from registry latency, not from resolution.
+
+   If you prefer a throwaway run instead, keep these two facts in mind:
 
    ```bash
    docker run -d --name buildkit --privileged --dns 223.5.5.5 --dns 114.114.114.114 \
@@ -272,6 +293,35 @@ Three ways forward, in order of preference:
    **not** baked into the `Dockerfile`: it encodes the machine-specific fact that a proxy is listening
    locally, which a template must not assume — consistent with `docs/specs/tooling-standards.md` §4.10,
    where the acceptance criterion is a real run of the shipped declarations, not a per-workstation workaround.
+
+### `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` on a healthy lockfile
+
+Second, independent failure mode observed **after** resolution was fixed. The dependency stage dies with:
+
+```text
+✗ Lockfile failed supply-chain policy check (975 entries in 11m 36s)
+[ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION] 21 lockfile entries failed verification:
+  @babel/parser@7.29.9 could not be checked against minimumReleaseAge
+    (GET https://registry.npmmirror.com/@babel%2Fparser: The operation was aborted due to timeout)
+…
+The lockfile contains entries that the active policies reject. This can mean the lockfile is stale,
+or that someone committed a lockfile that bypassed the policy.
+```
+
+Read the last two lines as **misleading**: the operative words are `could not be checked … aborted due to
+timeout`. The repository sets no such policy (`minimumReleaseAge` appears in none of `pnpm-workspace.yaml` /
+`.npmrc` / `package.json`, and host-side `pnpm config get minimumReleaseAge` is `undefined`), so this is
+pnpm 11's built-in supply-chain check — and it **fails closed when registry metadata cannot be fetched**,
+reporting an unreachable registry as a rejected lockfile.
+
+**Do not "fix" this by regenerating `pnpm-lock.yaml`** — that would rewrite a healthy lockfile to appease
+a transient network error (and is a schema/supply-chain change requiring sign-off anyway). The check needs
+metadata for every entry, so a slow mirror (single requests observed at 60+ s) plus retries exhausts the
+timeout budget. Dispositions, in order: retry at a quieter hour or with a reachable registry
+(`--build-arg` is not enough — the registry comes from `.npmrc`); raise the fetch timeout budget
+(`fetchTimeout` / `fetchRetries`) for the build environment; or run the install outside the image and feed
+the store through the existing cache mount. The distinguishing signature is in the error text:
+`getaddrinfo ENOTFOUND` = resolution (previous section), `aborted due to timeout` = latency (this section).
 
 ### Viewing Container Logs for Debugging
 
