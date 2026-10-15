@@ -140,7 +140,9 @@
 ### 4.10 部署声明对拍（Docker / Compose / Actions）
 - **探针不得依赖镜像外工具**：容器 `HEALTHCHECK` / liveness 只能使用**镜像内实存**的能力。`node:*-slim` 既无 `wget` 也无 `curl`，沿用 shell 探针会使容器**永远 `unhealthy`**（静默失效·`build` 成功不报错）；统一用运行时自身探测，如 `node -e "fetch(url).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"`（零额外 apt 层）。
 - **境内化两条注入通道不同**：包管理器 registry 走 `.npmrc`，**corepack 拉 `pnpm` 本体走 `COREPACK_NPM_REGISTRY`**；只配前者会在境内首次构建即卡 `registry.npmjs.org` 解析失败。
-- **部署声明 = 可执行契约，必须真跑对拍**：改 `Dockerfile`/`docker-compose*.yml`/`.github/workflows/*` 后，验收口径为实跑结果（`docker build` EXIT=0 → `docker run` 真起服命中 `/api/v1/health` 200 → `docker inspect --format='{{.State.Health.Status}}'` 为 `healthy` → compose 全图 `Up (healthy)`），**不得以「配置就位」「构建通过」代替**；Actions 面以真实 run 结论为证。同型教训：声明的路由与代码实现脱节、探针工具不存在，均属「声明有、实现无」且静态门禁全绿无征兆。
+- **容器监听默认须与部署语义同源**：镜像不得依赖调用方补 `HOST` 才能对外可达。代码侧面向宿主开发的默认值（本项目 `HOST` 缺省 `localhost`）在容器内会只绑回环，使发布端口**不可达**（转发给代理时为 **502**，走 iptables 转发时为连接被拒 / 被重置——症状随链路而变，但**应用日志零请求记录**是共同特征），症状貌似「应用挂了」实则进程未监听对外接口——此类默认在**镜像层显式覆盖**（`Dockerfile` `ENV HOST=0.0.0.0`），并保持**单一真源**（编排不再双写同一变量）。
+- **合规/安全守卫不得以整闸关闭换取可启动**：编排与守卫互斥时，须用**最小逃生阀**表达（如 `DATA_RESIDENCY_DB_HOST_ALLOWLIST` 窄放行图内 DB 服务名），其余校验继续生效；「验证时顺手 `*_ENFORCE=false`」跑通的结果**不得作为该编排可用性的证据**，须以守卫开启态实跑存照。
+- **部署声明 = 可执行契约，必须真跑对拍**：改 `Dockerfile`/`docker-compose*.yml`/`.github/workflows/*` 后，验收口径为实跑结果（`docker build` EXIT=0 → **裸** `docker run`（不补 `-e HOST` 等纠正变量）真起服命中 `/api/v1/health` 200 → `docker inspect --format='{{.State.Health.Status}}'` 为 `healthy` → compose 全图 `Up (healthy)`），**不得以「配置就位」「构建通过」代替**；Actions 面以真实 run 结论为证。同型教训：声明的路由与代码实现脱节、探针工具不存在，均属「声明有、实现无」且静态门禁全绿无征兆。
 - **镜像内不留不可用死面**：若某声明隐含能力而产物实际不支持（如 runner 携 `drizzle.config.ts`，其 `schema` 指 TS 源而产物镜像无源文件 → 容器内迁移跑不通），**删净并在文档写明能力边界**（迁移归运维机/CI），不加「看起来能用」的兼容配置。
 
 ## 5. Biome 规范

@@ -31,6 +31,12 @@ RUN pnpm run build
 # 跑不通（迁移在运维机/CI 上跑）——留着只是不可用的死面，删净以免误导。
 FROM ${NODE_IMAGE} AS runner
 ENV NODE_ENV=production
+# 容器语义的监听默认：代码侧 `HOST` 缺省为 `localhost`（宿主开发语义），而容器内只绑回环会使
+# `-p` 发布端口无进程监听，对外不可达（经代理转发时为 502、经 iptables 转发时为连接被重置，
+# 且应用日志零请求记录）。镜像默认取 `0.0.0.0`——容器内的回环不具防护价值，对外边界由
+# 端口发布 / 网络策略决定。
+# 宿主 `pnpm run start:*` 不经本层，仍读 `.env` 的 `HOST=localhost`，两者互不影响。
+ENV HOST=0.0.0.0
 WORKDIR /app
 
 # 复制产物与依赖：
