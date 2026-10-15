@@ -199,7 +199,7 @@
 - 制品面：Git 追踪集 = `.npmrc` / `pnpm-lock.yaml` / `pnpm-workspace.yaml`（`bun.lock`/`bunfig.toml` 已删且不追踪）
 
 **残留观察（登记不阻断结项）**
-- prod i18n 资产 `dist/i18n/**` 与 `AppI18nModule` 期望路径历史失配（boot 非关键·本迁移未触发亦未修）→ 待下次 i18n 立项顺带收。
+- prod i18n 资产 `dist/i18n/**` 与 `AppI18nModule` 期望路径历史失配（boot 非关键·本迁移未触发亦未修）→ **已闭环**：另立 [module-i18n-assets-resolution](./module-i18n-assets-resolution.md) 于 2026-10-15 取证并修复（且证实比本登记更严重：产物译文全回退 key + 邮件模板 ENOENT）。
 - `.qoder/repowiki` 5 张知识卡仍为 Bun 口径——**IDE 生成物**，手工改会双源漂移，待触发一次重新生成收敛。
 - MikroORM v7（`research/mikro-orm-ddd-feasibility.md` §2.5）为**独立另案**，本案只裁工具链、未启动。
 - 开发机环境噪声（非仓库缺陷）：Docker Desktop VM 对 `registry.npmmirror.com` DNS 不可解析；为实跑曾临时改 WSL `/etc/resolv.conf`（备份 `/tmp/resolv.conf.bak`）并临时挂 buildkit remote builder（验毕已全清）。

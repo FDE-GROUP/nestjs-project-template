@@ -190,6 +190,8 @@ docker exec -i postgres sh -c 'psql -U postgres -d nestjs_practice' < postgres-b
 
 3. **Permission issues**: If you encounter permission errors with volumes, you might need to run Docker commands with sudo or adjust the file permissions.
 
+4. **`i18n 资产根解析失败` at startup (fail-closed)**: the i18n loader and the mailer resolve a single assets root and **refuse to boot** when the translation data (`zh/en/ja` + `emails/*.mjml`) is missing from the image — this is intentional (the alternative was silently returning raw keys and failing only when sending mail). It means the build did not copy the assets: check the `nest-cli.json` `assets` entries, rebuild with `pnpm run build`, and verify with `pnpm run verify:i18n-assets` (expects `i18n assets PASSED`).
+
 ### Viewing Container Logs for Debugging
 
 ```bash

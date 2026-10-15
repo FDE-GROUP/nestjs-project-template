@@ -25,6 +25,7 @@
     "ci": "node scripts/ci.ts",
     "ci:quick": "node scripts/ci.ts quick",
     "verify:prod-boot": "node scripts/verify-prod-boot.ts",
+    "verify:i18n-assets": "node scripts/verify-i18n-assets.ts",
     "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
@@ -6,9 +5,11 @@ import mjml from 'mjml';
 import { I18nService } from 'nestjs-i18n';
 import * as nodemailer from 'nodemailer';
 import * as path from 'path';
+import { resolveEmailsDir } from '../i18n/assets-root';
 
-// Node ESM 无 `__dirname`（Bun 静默注入，Node 不），以 `import.meta.url` 等价推导，跨运行时一致。
-const dirname = path.dirname(fileURLToPath(import.meta.url));
+// 邮件 MJML 模板目录经 i18n 资产根单点解析（与 loader 同源）；旧写法
+// `dirname(import.meta.url)/../i18n/emails` 在产物布局下指向不存在目录→ readFile ENOENT。
+const emailsDir = resolveEmailsDir();
 
 // Body translation keys per email template (matches src/i18n/<lang>/emails.json structure).
 const EMAIL_BODY_KEYS = ['title', 'greeting', 'message', 'button', 'footer'] as const;
@@ -34,7 +35,7 @@ export class MailerService {
   }
 
   // 默认入口语言置中文（依 global-cn-adaptation L1 / vision §6 地域约束）。
-  // I18nModule 已接线（MailerModule.forRoot），正文/主题按 lang 从 src/i18n/<lang>/emails.json 取。
+  // I18nService 由全局 AppI18nModule 提供，正文/主题按 lang 从资产根下 <lang>/emails.json 取。
   private async renderTemplate(
     templateName: string,
     context: Record<string, any>,
@@ -42,7 +43,7 @@ export class MailerService {
   ): Promise<string> {
     try {
       // Read MJML template
-      const templatePath = path.join(dirname, '..', 'i18n', 'emails', `${templateName}.mjml`);
+      const templatePath = path.join(emailsDir, `${templateName}.mjml`);
       let mjmlTemplate = await fs.readFile(templatePath, 'utf8');
 
       // Replace template variables with translations

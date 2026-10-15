@@ -59,16 +59,20 @@ APP_URL=https://your-app-url.com
 
 ## Email Templates
 
-The module uses MJML templates located in `src/i18n/emails/` for the following email types:
+The module uses MJML templates located in `apps/api/src/i18n/emails/` for the following email types:
 
 1. Verification Email (`verification.mjml`)
 2. Welcome Email (`welcome.mjml`)
 3. Forgot Password Email (`forgot-password.mjml`)
 
 Each template supports multiple languages with translations stored in:
-- `src/i18n/en/emails.json`
-- `src/i18n/zh/emails.json`
-- `src/i18n/ja/emails.json`
+- `apps/api/src/i18n/en/emails.json`
+- `apps/api/src/i18n/zh/emails.json`
+- `apps/api/src/i18n/ja/emails.json`
+
+**Asset path resolution (important).** At runtime neither the mailer nor the i18n loader hard-codes a path relative to its own module file. Both resolve a single **assets root** via `resolveI18nAssetsRoot()` (`apps/api/src/i18n/assets-root.ts`), which walks up from the running module's directory until it finds a directory containing `<lang>/` subfolders — this covers both layouts: the source tree (`apps/api/src/i18n`) and the compiled output (`dist/i18n`, where `nest-cli` `assets` lands after stripping the `sourceRoot` prefix, while compiled code stays under `dist/apps/api/src/…`). Email templates are read from `<assetsRoot>/emails`.
+
+If the assets were not copied into the build output, startup **fails loudly** (no silent fallback to raw keys). Guard: `pnpm run verify:i18n-assets` (run after `pnpm run build`) asserts translations resolve, templates are readable, and the fail-closed path throws.
 
 ## Usage
 
