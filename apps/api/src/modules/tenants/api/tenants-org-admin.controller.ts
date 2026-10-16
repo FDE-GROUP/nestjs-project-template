@@ -1,0 +1,160 @@
+import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
+import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
+import { Can } from '@core/saas-kit/tenancy/rbac/can.decorator';
+import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
+import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { mapBaError } from './ba-error.mapping';
+import {
+  CreateInvitationDto,
+  InvitationIdDto,
+  RemoveMemberDto,
+  UpdateMemberRoleDto,
+} from './dto/tenants-org.dto';
+
+/**
+ * 租户成员/邀请**管理门面**（module-rbac-casl §2.3.1·甲裁严格拆）。
+ *
+ * 新宪落点：授权裁决 = `@Can` + CASL（tenant-rules 单源·经 TenantPermissionGuard 判定），
+ * 数据操作 = BA `auth.api.*` **服务端直调**（认证·membership 数据域，不经被封堵的
+ * BA 内置 org HTTP 面）。BA 服务端调用仍过其 membership/数据校验与 seats 配额 hook——
+ * 门面是「授权在我、数据在 BA」的收口点，不是重实现。
+ *
+ * 租户作用域路由：不豁免（S11 全局墙 fail-closed），guard 组合沿用 workspaces 先例。
+ */
+
+/** BA org 管理面窄类型（服务端 API·非 HTTP）。 */
+interface TenantOrgApi {
+  listMembers(p: { headers: Record<string, unknown> }): Promise<unknown>;
+  updateMemberRole(p: { headers: Record<string, unknown>; body: unknown }): Promise<unknown>;
+  removeMember(p: { headers: Record<string, unknown>; body: unknown }): Promise<unknown>;
+  listInvitations(p: { headers: Record<string, unknown> }): Promise<unknown>;
+  createInvitation(p: {
+    headers: Record<string, unknown>;
+    body: { email: string; role: string };
+  }): Promise<unknown>;
+  cancelInvitation(p: { headers: Record<string, unknown>; body: unknown }): Promise<unknown>;
+}
+
+@ApiTags('tenants')
+@Controller('tenants')
+@UseGuards(TenantScopeGuard, TenantPermissionGuard)
+export class TenantsOrgAdminController {
+  constructor(@Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance) {}
+
+  private ba(): TenantOrgApi {
+    const auth = this.authInstance.get();
+    if (!auth)
+      throw new ForbiddenException('Auth instance not initialized', {
+        errorCode: ERROR_CODES.AUTH_PROVIDER_UNAVAILABLE,
+      });
+    return auth.api as unknown as TenantOrgApi;
+  }
+
+  @Get('members')
+  @Can('read', 'Member')
+  @ApiOperation({ summary: 'List members of the active tenant (all roles · CASL read)' })
+  @ApiResponse({ status: 200, description: 'Member list (membership data from Better Auth).' })
+  @ApiResponse({ status: 403, description: 'No active tenant / CASL deny / not a member.' })
+  async listMembers(@Headers() headers: Record<string, unknown>): Promise<unknown> {
+    try {
+      return await this.ba().listMembers({ headers });
+    } catch (err) {
+      return mapBaError(err);
+    }
+  }
+
+  @Post('members/role')
+  @Can('update', 'Member')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update a member role (owner/admin · CASL update)' })
+  @ApiResponse({ status: 200, description: 'Updated member.' })
+  @ApiResponse({ status: 403, description: 'CASL deny (member role) / last-owner guard (BA).' })
+  async updateMemberRole(
+    @Headers() headers: Record<string, unknown>,
+    @Body() dto: UpdateMemberRoleDto,
+  ): Promise<unknown> {
+    try {
+      return await this.ba().updateMemberRole({ headers, body: dto });
+    } catch (err) {
+      return mapBaError(err);
+    }
+  }
+
+  @Post('members/remove')
+  @Can('delete', 'Member')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove a member (owner/admin · CASL delete)' })
+  @ApiResponse({ status: 200, description: 'Removed member.' })
+  @ApiResponse({ status: 403, description: 'CASL deny (member role) / self-removal guard (BA).' })
+  async removeMember(
+    @Headers() headers: Record<string, unknown>,
+    @Body() dto: RemoveMemberDto,
+  ): Promise<unknown> {
+    try {
+      return await this.ba().removeMember({ headers, body: dto });
+    } catch (err) {
+      return mapBaError(err);
+    }
+  }
+
+  @Get('invitations')
+  @Can('read', 'Invitation')
+  @ApiOperation({ summary: 'List pending invitations of the active tenant (all roles)' })
+  @ApiResponse({ status: 200, description: 'Invitation list (data from Better Auth).' })
+  @ApiResponse({ status: 403, description: 'No active tenant / CASL deny / not a member.' })
+  async listInvitations(@Headers() headers: Record<string, unknown>): Promise<unknown> {
+    try {
+      return await this.ba().listInvitations({ headers });
+    } catch (err) {
+      return mapBaError(err);
+    }
+  }
+
+  @Post('invitations')
+  @Can('create', 'Invitation')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Invite a member to the active tenant (owner/admin · CASL create)' })
+  @ApiResponse({ status: 200, description: 'Created invitation.' })
+  @ApiResponse({ status: 403, description: 'CASL deny (member role).' })
+  async createInvitation(
+    @Headers() headers: Record<string, unknown>,
+    @Body() dto: CreateInvitationDto,
+  ): Promise<unknown> {
+    try {
+      return await this.ba().createInvitation({ headers, body: dto });
+    } catch (err) {
+      return mapBaError(err);
+    }
+  }
+
+  @Post('invitations/cancel')
+  @Can('cancel', 'Invitation')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cancel an invitation (owner/admin · CASL cancel)' })
+  @ApiResponse({ status: 200, description: 'Cancelled invitation.' })
+  @ApiResponse({ status: 403, description: 'CASL deny (member role) / not cancellable (BA).' })
+  async cancelInvitation(
+    @Headers() headers: Record<string, unknown>,
+    @Body() dto: InvitationIdDto,
+  ): Promise<unknown> {
+    try {
+      return await this.ba().cancelInvitation({ headers, body: dto });
+    } catch (err) {
+      return mapBaError(err);
+    }
+  }
+}

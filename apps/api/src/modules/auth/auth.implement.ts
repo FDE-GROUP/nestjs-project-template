@@ -13,7 +13,6 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { ConfigService } from '../../config/config.service';
 import type { MikroOrmService } from '../../database/mikro/mikro-orm.service';
 import { createSeatsQuotaPlugin } from './seats-quota.hook';
-import { tenantAccessControl, tenantRoles } from './tenancy-access-control';
 
 export type AuthRequest = FastifyRequest & { originalUrl?: string; url?: string };
 export type AuthResponse = FastifyReply;
@@ -32,6 +31,17 @@ export function parseTrustedProxies(value?: string): string[] | undefined {
   return list.length > 0 ? list : undefined;
 }
 
+/**
+ * BA 内置 org 授权 HTTP 面封堵谓词（module-rbac-casl 甲裁·严格拆）：
+ * 取 pathname（query 不参与）判 `/organization` 段——命中则 handler 直接 404，
+ * 成员/邀请/职权管理收归我方门面（@Can·CASL 裁决）；服务端 auth.api.* 直调不经
+ * HTTP 不受影响。单测锁形，避免封堵谓词只能经真 HTTP 验证的盲区。
+ */
+export function isSealedOrgHttpPath(url: string): boolean {
+  const pathname = url.split('?')[0];
+  return pathname.endsWith('/organization') || pathname.includes('/organization/');
+}
+
 export interface CreateAuthResult {
   handler: (req: AuthRequest, res: AuthResponse) => Promise<any>;
   auth: {
@@ -40,9 +50,6 @@ export interface CreateAuthResult {
       getSession: (params: any) => Promise<any>;
       getProviders: () => string[];
       listUserAccounts: (params: any) => Promise<any>;
-      // 租户级 RBAC 判定（S1 · FR-4）：透传 Better Auth organization 插件的 hasPermission，
-      // 以 ac + roles 为唯一权限源，供 TenantPermissionGuard 调用。
-      hasPermission: (params: any) => Promise<any>;
       // 建租户唯一通道（S4 · FR-1）：透传 organization 插件 createOrganization（服务端系统动作）。
       createOrganization: (params: any) => Promise<any>;
       // 服务端登录编排面（S9 补遗 · 真·BA 登录 e2e 及系统侧用户开通复用）：透传 better-auth 原生
@@ -56,6 +63,20 @@ export interface CreateAuthResult {
       // 邀请发出端点：server key 为 createInvitation（HTTP path 才是 /organization/invite-member）。
       createInvitation: (params: any) => Promise<any>;
       acceptInvitation: (params: any) => Promise<any>;
+      // module-rbac-casl 甲裁（严格拆）：BA 内置 org HTTP 面封堵后，我方门面（admin/self）与
+      // 丙裁角色预注入唯经此窄门面服务端直调（server key 对拍 organization.mjs 路由表：
+      // listMembers/updateMemberRole/removeMember/listInvitations/cancelInvitation/
+      // listOrganizations/leaveOrganization/rejectInvitation/listUserInvitations/getActiveMemberRole）。
+      getActiveMemberRole: (params: any) => Promise<any>;
+      listMembers: (params: any) => Promise<any>;
+      updateMemberRole: (params: any) => Promise<any>;
+      removeMember: (params: any) => Promise<any>;
+      listInvitations: (params: any) => Promise<any>;
+      cancelInvitation: (params: any) => Promise<any>;
+      listOrganizations: (params: any) => Promise<any>;
+      leaveOrganization: (params: any) => Promise<any>;
+      rejectInvitation: (params: any) => Promise<any>;
+      listUserInvitations: (params: any) => Promise<any>;
     };
   };
 }
@@ -168,19 +189,14 @@ export async function CreateAuth(
       } satisfies BetterAuthPlugin,
       // 境内登录渠道（方案 C · FR-3/A1）：有配置才挂 genericOAuth 插件（NFR-2 未配即降级）
       ...(genericConfigs.length > 0 ? [genericOAuth({ config: genericConfigs })] : []),
-      // 多租户（混合复用 · S0/S1/S3）：org 插件承载 tenant/member/invitation + RBAC，
-      // 并将 activeOrganizationId 落到 session（D4 session-cookie）。以 ac + roles 为唯一
-      // 权限源（禁散点·§9.3），由 TenantPermissionGuard 经 `TenantPermissionChecker` 端口（适配落 BA
-      // hasPermission·§9.5.4①B P1b）判定。S3 扩展 ac
-      // 增 `workspace` 资源（read=全成员·create/update/delete=owner+admin），roles 精确镜像
-      // BA 默认集再叠加 workspace（见 modules/auth/tenancy-access-control.ts），故既有 org 端点行为不变。
-      // S4（FR-1 审批制）：`allowUserToCreateOrganization: false` 封死 HTTP 自助即时开通
-      // （任何会话调 /organization/create 一律 403·ORGANIZATION_ERROR_CODES.YOU_ARE_NOT_ALLOWED…）；
-      // 建租户唯一通道 = 服务端系统动作（无 session + body.userId → isSystemAction·源码坐实不受
-      // 此开关限），由 tenants 申请端点独享（强制 metadata.status=pending_approval）。
+      // 多租户（混合复用 · S0/S1/S3）：org 插件**仅作认证·数据源**（tenant/member/invitation
+      // 表 + activeOrganizationId 落 session·D4）——module-rbac-casl 甲裁（人裁新宪）：授权裁决
+      // 归 CASL（tenant-rules 单源），BA ac 插件/自定义 roles 退场；本仓业务端点由门面
+      // （@Can + TenantPermissionGuard）承接，BA 内置 org HTTP 端点面在 handler 入口封堵（见下）。
+      // S4（FR-1 审批制）：`allowUserToCreateOrganization: false` 封死 HTTP 自助即时开通（现叠加
+      // 封堵双保险）；建租户唯一通道 = 服务端系统动作（无 session + body.userId → isSystemAction·
+      // 源码坐实不受此开关限），由 tenants 申请端点独享（强制 metadata.status=pending_approval）。
       organization({
-        ac: tenantAccessControl,
-        roles: tenantRoles,
         allowUserToCreateOrganization: false,
       }),
       // S7 收尾（vision §7 阶段 2 商业闭环）：成员增量端点（accept-invitation 为现网唯一真实
@@ -247,6 +263,13 @@ export async function CreateAuth(
       //（整面 500）。实例级接线递来的 raw.url 即完整路径，BA 自剥 basePath 匹配，无需任何
       // 改写；旧「保形 Express 兼容层」整段退役。
 
+      // module-rbac-casl 甲裁（严格拆）：BA org 内置 HTTP 端点面封堵（谓词见 isSealedOrgHttpPath）。
+      // 授权/成员/邀请管理收归我方门面（@Can·CASL 裁决）；服务端 auth.api.*
+      // 直调（门面/e2e 编排/seats hook）不经 HTTP，不受封堵影响。
+      if (isSealedOrgHttpPath(url)) {
+        return res.code(404).send({ message: 'Not Found' });
+      }
+
       // Only modify socket encryption if needed, don't replace the entire socket
       if (req.raw && req.raw.socket) {
         // Use type assertion since the socket may be from different request types
@@ -288,9 +311,7 @@ export async function CreateAuth(
             throw error;
           }
         },
-        hasPermission(params: Parameters<typeof auth.api.hasPermission>[0]) {
-          return auth.api.hasPermission(params);
-        },
+        // 租户级 RBAC 判定旧 BA hasPermission 透传已随 module-rbac-casl 退场（裁决归 CASL）。
         // S4 · FR-1：申请建租户的服务端系统动作（无 session + body.userId → isSystemAction），
         // 绕过 HTTP 层 `allowUserToCreateOrganization:false` 封禁，由 tenants 申请端点独享。
         createOrganization(params: Parameters<typeof auth.api.createOrganization>[0]) {
@@ -314,6 +335,39 @@ export async function CreateAuth(
         },
         acceptInvitation(params: any) {
           return (auth.api as any).acceptInvitation(params);
+        },
+        // module-rbac-casl 甲裁：成员/邀请管理门面 + 丙裁角色预注入的服务端直调透传。
+        // 纯加法透传（与 createOrganization/createInvitation 同范式）：BA 侧 membership/
+        // last-owner/seats 等数据校验与 hooks pipeline 照旧生效。
+        getActiveMemberRole(params: any) {
+          return (auth.api as any).getActiveMemberRole(params);
+        },
+        listMembers(params: any) {
+          return (auth.api as any).listMembers(params);
+        },
+        updateMemberRole(params: any) {
+          return (auth.api as any).updateMemberRole(params);
+        },
+        removeMember(params: any) {
+          return (auth.api as any).removeMember(params);
+        },
+        listInvitations(params: any) {
+          return (auth.api as any).listInvitations(params);
+        },
+        cancelInvitation(params: any) {
+          return (auth.api as any).cancelInvitation(params);
+        },
+        listOrganizations(params: any) {
+          return (auth.api as any).listOrganizations(params);
+        },
+        leaveOrganization(params: any) {
+          return (auth.api as any).leaveOrganization(params);
+        },
+        rejectInvitation(params: any) {
+          return (auth.api as any).rejectInvitation(params);
+        },
+        listUserInvitations(params: any) {
+          return (auth.api as any).listUserInvitations(params);
         },
       },
     },

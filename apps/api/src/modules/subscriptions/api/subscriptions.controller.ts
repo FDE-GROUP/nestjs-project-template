@@ -1,7 +1,7 @@
 import { CreateSubscriptionCommand } from '@core/saas-kit/modules/subscriptions/application/commands/create-subscription.command';
 import { GetSubscriptionQuery } from '@core/saas-kit/modules/subscriptions/application/queries/get-current-subscription.query';
 import type { TenantSubscriptionView } from '@core/saas-kit/modules/subscriptions/application/read-models/subscription.read-model';
-import { RequirePermissions } from '@core/saas-kit/tenancy/rbac/require-permissions.decorator';
+import { Can } from '@core/saas-kit/tenancy/rbac/can.decorator';
 import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import {
@@ -59,7 +59,7 @@ export class SubscriptionsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(TenantScopeGuard, TenantPermissionGuard)
-  @RequirePermissions('organization:update')
+  @Can('update', 'Organization')
   @ApiOperation({
     summary: 'Provision/upgrade the tenant subscription (creates the provider customer)',
   })

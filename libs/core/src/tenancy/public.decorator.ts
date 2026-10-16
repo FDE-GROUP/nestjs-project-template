@@ -2,7 +2,7 @@ import { SetMetadata } from '@nestjs/common';
 
 /**
  * 元数据键：`@Public()` 声明、全局 `SessionGuard`（S11 · 高危#4 收口）经 `Reflector` 读回。
- * 与 `QUOTA_KEY`/`REQUIRED_PERMISSIONS_KEY` 同构——单一声明点，禁散点特判。
+ * 与 `QUOTA_KEY`/`CAN_KEY` 同构——单一声明点，禁散点特判。
  */
 export const IS_PUBLIC_KEY = Symbol('isPublic');
 

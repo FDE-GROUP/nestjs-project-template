@@ -8,22 +8,18 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ERROR_CODES } from '../../shared-kernel/errors/error-codes';
 import { TenantContextService } from '../tenant-context.service';
-import { REQUIRED_PERMISSIONS_KEY, toPermissionMap } from './permissions';
+import { CAN_KEY, type CanRequirement } from './can.decorator';
 import { TENANT_PERMISSION_CHECKER, type TenantPermissionChecker } from './tenant-permission.port';
 
-interface PermissionRequest {
-  headers: Record<string, string | string[] | undefined>;
-}
-
 /**
- * Enforces tenant-level RBAC for routes annotated with `@RequirePermissions`
- * (global-tenancy §9.3 / FR-4). Applied per-route via `@UseGuards` (not global — the
- * data-isolation guard that runs everywhere lands in S2).
+ * Enforces tenant-level RBAC for routes annotated with `@Can` (module-rbac-casl §2.2/§2.3 ·
+ * global-tenancy §9.3 / FR-4). Applied per-route via `@UseGuards`.
  *
- * Fail-closed: without an active tenant context the request is rejected outright. The
- * actual permission decision is delegated to the core-owned `TenantPermissionChecker`
- * port (§9.5.4①B · P1b) — the Better Auth `hasPermission` call stays on the app side, so
- * role→permission mapping has exactly one source of truth and core imports no auth impl.
+ * Fail-closed: without an active tenant context the request is rejected outright; a guarded
+ * route additionally requires the ALS-preset member role (丙裁·会话解析点预注入) — missing
+ * role denies. The allow/deny decision itself is delegated to the core-owned
+ * `TenantPermissionChecker` port, whose reference-app adapter projects the single-source
+ * `TENANT_RULES` table into a CASL ability. Core imports no auth / CASL impl (§9.5.4①B).
  */
 @Injectable()
 export class TenantPermissionGuard implements CanActivate {
@@ -33,7 +29,7 @@ export class TenantPermissionGuard implements CanActivate {
     @Inject(TENANT_PERMISSION_CHECKER) private readonly checker: TenantPermissionChecker,
   ) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  canActivate(context: ExecutionContext): boolean {
     // Fail-closed: a tenant-scoped route requires an active tenant (FR-5 seed).
     if (!this.tenantContext.tenantId) {
       throw new ForbiddenException('No active tenant context', {
@@ -41,21 +37,20 @@ export class TenantPermissionGuard implements CanActivate {
       });
     }
 
-    const required = this.reflector.getAllAndOverride<string[]>(REQUIRED_PERMISSIONS_KEY, [
+    const requirement = this.reflector.getAllAndOverride<CanRequirement | undefined>(CAN_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
     // Authenticated + in-tenant is enough when the route declares no specific capability.
-    if (!required || required.length === 0) return true;
+    if (!requirement) return true;
 
-    const req = context.switchToHttp().getRequest<PermissionRequest>();
-    // Standardise the flat `resource:action` list into the grouped `{ resource: actions[] }`
-    // shape, then delegate the allow/deny decision to the port (fail-closed → 403).
-    const allowed = await this.checker.hasPermission(req.headers, toPermissionMap(required));
+    const role = this.tenantContext.role;
+    const allowed = this.checker.can({ role, ...requirement });
     if (!allowed) {
-      throw new ForbiddenException(`Missing tenant permission: ${required.join(', ')}`, {
-        errorCode: ERROR_CODES.TENANCY_PERMISSION_DENIED,
-      });
+      throw new ForbiddenException(
+        `Missing tenant permission: ${requirement.action} ${requirement.subject}`,
+        { errorCode: ERROR_CODES.TENANCY_PERMISSION_DENIED },
+      );
     }
     return true;
   }

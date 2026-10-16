@@ -41,10 +41,9 @@ function ctxWith(headers: Record<string, string> = {}): {
   return { ctx, req };
 }
 
-function authWith(session: SessionResult | null, hasPermission?: { success: boolean }) {
+function authWith(session: SessionResult | null) {
   const api = {
     getSession: vi.fn().mockResolvedValue(session),
-    hasPermission: vi.fn().mockResolvedValue(hasPermission),
   };
   return { get: () => ({ api }), set: () => {} } as unknown as InjectAuthInstance;
 }
@@ -62,8 +61,9 @@ function sessionReader(session: SessionResult | null): RequestSessionReader {
   return { read: async () => view } as unknown as RequestSessionReader;
 }
 
+/** module-rbac-casl 换形：端口消费同步 can({role,action,subject})·裁决引擎在 CASL 适配侧。 */
 function permissionChecker(allowed: boolean): TenantPermissionChecker {
-  return { hasPermission: async () => allowed } as unknown as TenantPermissionChecker;
+  return { can: () => allowed } as unknown as TenantPermissionChecker;
 }
 
 function userStatus(blocked = false): UserStatusService {
@@ -154,14 +154,16 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
       );
     });
 
-    it('租户权限缺失时 BA hasPermission=false → TenantPermissionGuard 403（租户权不外溢）', async () => {
+    it('租户权限缺失时 CASL 裁决 deny → TenantPermissionGuard 403（租户权不外溢）', () => {
       const tcs = new TenantContextService();
-      const reflector = { getAllAndOverride: () => ['organization:delete'] };
+      const reflector = {
+        getAllAndOverride: () => ({ action: 'delete', subject: 'Organization' }),
+      };
       const guard = new TenantPermissionGuard(reflector as never, tcs, permissionChecker(false));
       const { ctx } = ctxWith({ cookie: 's' });
-      await expect(
+      expect(() =>
         tcs.run({ tenantId: 'org_1', userId: 'm' }, () => guard.canActivate(ctx)),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      ).toThrow(ForbiddenException);
     });
   });
 

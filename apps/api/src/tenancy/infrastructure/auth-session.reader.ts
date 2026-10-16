@@ -1,6 +1,7 @@
 import { AUTH_BYPASS_PATHS, AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
-import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
+import type { AuthInstance, InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { resolveRequestSession } from '@app/modules/auth/session-resolver';
+import { TENANT_ROLE_VALUES, type TenantRole } from '@core/saas-kit/tenancy/rbac/tenant-rules';
 import type {
   RequestSessionReader,
   SessionRequestLike,
@@ -15,7 +16,38 @@ import { Inject, Injectable } from '@nestjs/common';
  * （`resolveRequestSession`·`WeakMap` 按请求记忆·跨守卫复用一次 getSession）封装在应用侧，
  * 仅向 core 透出标量 `SessionView`。auth 实例经全局 `AuthInstanceInjectKey` 注入（`AuthModule.forRoot`
  * 声明 `global: true`）。会话未解析出（null）归一为「无租户上下文」返回 null。
+ *
+ * module-rbac-casl 丙裁：额外在**有活动租户时**从 BA 数据面（`getActiveMemberRole`）取当前
+ * 成员角色注入 `SessionView.role`（按请求 WeakMap 记忆·与 resolveRequestSession 同构模式）。
+ * 角色是认证域事实（membership 数据），不是裁决——裁决在 CASL 侧。
+ * 注：BA **服务端** API 面方法名为 `listOrganizations`/`getActiveMemberRole`（client 面的
+ * `getOrganizationList` 不存在于 server 端·源码 organization.mjs 路由表对拍）；且
+ * `listOrganizations` 返回纯 org 字段不带 role，角色只能经 getActiveMemberRole 取。
  */
+
+/** 按请求记忆活动租户角色，避免同一请求多次 membership 读取。 */
+const roleCache = new WeakMap<SessionRequestLike, TenantRole | undefined>();
+
+/** BA role 字符串 → 本仓词汇表归一（词汇外 → undefined·消费侧 fail-closed）。 */
+function toTenantRole(raw: unknown): TenantRole | undefined {
+  return TENANT_ROLE_VALUES.includes(raw as TenantRole) ? (raw as TenantRole) : undefined;
+}
+
+/**
+ * 从 BA 数据面取当前用户在活动租户内的成员角色（module-rbac-casl 丙裁）。
+ * `getActiveMemberRole` 按会话 `activeOrganizationId` 直取 `{ role }`（membership 数据事实）；
+ * 失败/非成员 → undefined（guard 侧 fail-closed 拒）。
+ */
+async function resolveActiveRole(
+  auth: AuthInstance,
+  req: SessionRequestLike,
+): Promise<TenantRole | undefined> {
+  const hit = await auth.api.getActiveMemberRole({
+    headers: req.headers as unknown as Headers,
+  });
+  return toTenantRole((hit as { role?: unknown } | undefined)?.role);
+}
+
 @Injectable()
 export class AuthSessionReader implements RequestSessionReader {
   constructor(@Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance) {}
@@ -42,6 +74,13 @@ export class AuthSessionReader implements RequestSessionReader {
 
     const userId = result.user?.id ? String(result.user.id) : undefined;
     const activeOrganizationId = result.session?.activeOrganizationId ?? undefined;
-    return { userId, activeOrganizationId };
+    if (!activeOrganizationId) return { userId };
+
+    // 有活动租户才付 membership 角色读（按请求记忆·has() 判命中避免与 undefined 值混淆）。
+    if (!roleCache.has(req)) {
+      const role = await resolveActiveRole(auth, req).catch(() => undefined);
+      roleCache.set(req, role);
+    }
+    return { userId, activeOrganizationId, role: roleCache.get(req) };
   }
 }

@@ -11,5 +11,8 @@
     "start:dev": "pnpm -w run start:dev",
     "start:prod": "pnpm -w run start:prod",
     "db:seed": "pnpm -w run db:seed"
+  },
+  "dependencies": {
+    "@casl/ability": "^7.0.2"
   }
 }

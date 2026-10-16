@@ -112,6 +112,39 @@ gated('BA HTTP 面全链 e2e（真·原生端点经真 HTTP·env-gated）', () =
     const res = await app.inject({ method: 'GET', url: '/better-auth/session' });
     expect(res.statusCode).toBe(404);
   });
+
+  it('module-rbac-casl 甲裁·封堵实证：BA 内置 org 授权端点经真 HTTP 直访 404（含带会话）', async () => {
+    // 封堵在 handler 入口（BA 处理前）：无会话/有会话皆 404，授权面唯我方门面可达。
+    const anon = await app.inject({ method: 'GET', url: '/api/v1/auth/organization/list-members' });
+    expect(anon.statusCode).toBe(404);
+
+    const signIn = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/sign-in/email',
+      headers: { 'content-type': 'application/json', origin: 'http://localhost' },
+      payload: JSON.stringify({ email, password: PASSWORD }),
+    });
+    expect(signIn.statusCode).toBe(200);
+    const setCookie = signIn.headers['set-cookie'];
+    const cookie = (Array.isArray(setCookie) ? setCookie : [setCookie])
+      .filter(Boolean)
+      .map((c) => String(c).split(';')[0])
+      .join('; ');
+    const authed = await app.inject({
+      method: 'GET',
+      url: '/api/v1/auth/organization/has-permission',
+      headers: { cookie },
+    });
+    expect(authed.statusCode).toBe(404);
+
+    // 反锁：非 org 认证面不被封堵误伤（同会话 get-session 仍 200）。
+    const session = await app.inject({
+      method: 'GET',
+      url: '/api/v1/auth/get-session',
+      headers: { cookie },
+    });
+    expect(session.statusCode).toBe(200);
+  });
 });
 
 /*

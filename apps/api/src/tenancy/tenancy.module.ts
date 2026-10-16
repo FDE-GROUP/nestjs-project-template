@@ -18,7 +18,7 @@ import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import { Global, type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthSessionReader } from './infrastructure/auth-session.reader';
-import { BetterAuthTenantPermissionChecker } from './infrastructure/ba-tenant-permission.checker';
+import { CaslTenantPermissionChecker } from './infrastructure/casl-tenant-permission.checker';
 import { ConfigPlatformSettings } from './infrastructure/config-platform.settings';
 import { MikroPlatformIdentityLookup } from './infrastructure/mikro-platform-identity.lookup';
 import { MikroQuotaStore } from './infrastructure/mikro-quota.store';
@@ -64,7 +64,7 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
     { provide: PLATFORM_IDENTITY_LOOKUP, useClass: MikroPlatformIdentityLookup },
     // §9.5.4①B · P1b 会话端口倒置：core 经端口消费会话/RBAC，Better Auth 实例适配由参考应用装配。
     { provide: SESSION_READER, useClass: AuthSessionReader },
-    { provide: TENANT_PERMISSION_CHECKER, useClass: BetterAuthTenantPermissionChecker },
+    { provide: TENANT_PERMISSION_CHECKER, useClass: CaslTenantPermissionChecker },
     // §9.5.3 热点③ · P1c 配置端口：core 经端口消费平台配置，`ConfigService` 适配留参考应用。
     { provide: PLATFORM_SETTINGS, useClass: ConfigPlatformSettings },
     // S11 · 高危#4 复合全局：全局租户墙（deny-by-default）。TenantScopeGuard 已在本模块 provide，

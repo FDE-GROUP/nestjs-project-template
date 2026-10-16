@@ -40,6 +40,8 @@ export class TenantMiddleware implements NestMiddleware {
 
         const tenantId = view.activeOrganizationId;
         const userId = view.userId;
+        // module-rbac-casl 丙裁：会话解析点预注入的成员角色（BA 数据面事实·CASL 裁决输入）。
+        const role = view.role;
         // S3 · workspace 二级边界 (D2/§9.2): the active workspace is a per-request
         // selector read from the `x-workspace-id` header (header may override — §9.2).
         // OPTIONAL: absent → request runs at tenant scope. Cross-tenant safety never
@@ -54,6 +56,8 @@ export class TenantMiddleware implements NestMiddleware {
             tenantId: boundTenantId,
             workspaceId,
             userId: boundUserId,
+            // 无租户则无角色：封禁/失能路径下 role 一并清空（与「既不绑租户也不绑身份」同构）。
+            role: boundTenantId ? role : undefined,
           };
           tenantStorage.run(ctx, next);
         };

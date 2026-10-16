@@ -3,6 +3,8 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { PlatformTenantsController } from './api/platform-tenants.controller';
 import { PlatformUsersController } from './api/platform-users.controller';
 import { TenantsController } from './api/tenants.controller';
+import { TenantsOrgAdminController } from './api/tenants-org-admin.controller';
+import { TenantsSelfController } from './api/tenants-self.controller';
 import { ApproveTenantCommandHandler } from './application/commands/handlers/approve-tenant.command-handler';
 import { DeleteTenantCommandHandler } from './application/commands/handlers/delete-tenant.command-handler';
 import { DeleteTenantPermanentlyCommandHandler } from './application/commands/handlers/delete-tenant-permanently.command-handler';
@@ -51,7 +53,15 @@ const QueryHandlers = [
  */
 @Module({
   imports: [CqrsModule],
-  controllers: [TenantsController, PlatformTenantsController, PlatformUsersController],
+  // module-rbac-casl 甲裁：BA 内置 org 授权 HTTP 面封堵后，成员/邀请管理门面（@Can·CASL）
+  // 与个人通道门面（TenantExempt·BA 数据面自裁决）接管对外端点。
+  controllers: [
+    TenantsController,
+    TenantsOrgAdminController,
+    TenantsSelfController,
+    PlatformTenantsController,
+    PlatformUsersController,
+  ],
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,

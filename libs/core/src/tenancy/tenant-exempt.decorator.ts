@@ -2,7 +2,7 @@ import { SetMetadata } from '@nestjs/common';
 
 /**
  * 元数据键：`@TenantExempt()` 声明、全局 `TenantScopeGuard`（S11 · 高危#4 复合全局）经 `Reflector` 读回。
- * 与 `IS_PUBLIC_KEY`/`QUOTA_KEY`/`REQUIRED_PERMISSIONS_KEY` 同构——单一声明点，禁散点特判。
+ * 与 `IS_PUBLIC_KEY`/`QUOTA_KEY`/`CAN_KEY` 同构——单一声明点，禁散点特判。
  */
 export const IS_TENANT_EXEMPT_KEY = Symbol('isTenantExempt');
 

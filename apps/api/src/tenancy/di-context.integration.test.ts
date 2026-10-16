@@ -17,7 +17,7 @@ import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthSessionReader } from './infrastructure/auth-session.reader';
-import { BetterAuthTenantPermissionChecker } from './infrastructure/ba-tenant-permission.checker';
+import { CaslTenantPermissionChecker } from './infrastructure/casl-tenant-permission.checker';
 
 /**
  * S9 · NFR-7 DI / 租户上下文集成测试（对齐 `design:paramtypes` 回归）。
@@ -105,7 +105,7 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
           { provide: PLATFORM_IDENTITY_LOOKUP, useValue: { emailOf: async () => undefined } },
           // §9.5.4①B · P1b：守卫/中间件经会话/裁决端口消费·此处用真实适配类坐实 DI 解析（依赖全局 AuthInstanceInjectKey）。
           { provide: SESSION_READER, useClass: AuthSessionReader },
-          { provide: TENANT_PERMISSION_CHECKER, useClass: BetterAuthTenantPermissionChecker },
+          { provide: TENANT_PERMISSION_CHECKER, useClass: CaslTenantPermissionChecker },
           { provide: UserStatusService, useValue: { isBlocked: async () => false } },
           { provide: TenantStatusService, useValue: { isBlocked: async () => false } },
         ],

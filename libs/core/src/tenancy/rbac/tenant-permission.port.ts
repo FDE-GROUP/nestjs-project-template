@@ -1,22 +1,28 @@
+import type { TenantAction, TenantRole, TenantSubject } from './tenant-rules';
+
 /**
- * 租户级权限裁决端口（global-tenancy §9.5.4①B · P1b 会话端口倒置）。
+ * 租户级权限裁决端口（global-tenancy §9.5.4①B 端口倒置 · module-rbac-casl §2.2 换形）。
  *
- * `TenantPermissionGuard` 声明所需权限（`permissions.ts` 的 `toPermissionMap` 是 core-safe 纯函数），
- * 但把「是否允许」的**实际裁决**委派给本端口——Better Auth 的 `auth.api.hasPermission` 具体调用留在
- * 参考应用侧适配（`infrastructure/ba-tenant-permission.checker`）。角色→权限映射的唯一真源仍是 BA ac，
- * core 只是消费布尔结果，不 import 认证实现。
+ * `TenantPermissionGuard` 声明所需授权（`@Can`），把「是否允许」的**实际裁决**委派给
+ * 本端口——参考应用侧的 CASL 适配器（`infrastructure/casl-tenant-permission.checker`）
+ * 从 `tenant-rules.ts` 单源投影建 ability 并判定。新宪（人裁 2026-10-17）：授权裁决归
+ * CASL，Better Auth 只管认证；角色由会话解析点预注入 ALS（丙裁），本端口只消费标量输入，
+ * core 不 import 认证/CASL 实现。
  */
 
 export const TENANT_PERMISSION_CHECKER = Symbol('TENANT_PERMISSION_CHECKER');
 
+export interface TenantPermissionCheck {
+  /** ALS 预注入的活动租户成员角色；undefined = 无租户/封禁/词汇外（适配侧必拒）。 */
+  readonly role?: TenantRole;
+  readonly action: TenantAction;
+  readonly subject: TenantSubject;
+}
+
 export interface TenantPermissionChecker {
   /**
-   * @param headers 入站请求头（适配侧透传给 BA 以解析会话）
-   * @param permissions 已归组的 `{ resource: actions[] }`（由 core `toPermissionMap` 产出）
-   * @returns 是否放行；缺权 / 非成员均返回 false（fail-closed 由守卫落 403）
+   * 纯裁决：是否放行。同步签名——裁决输入已全部预注入（不再透传 headers 回查认证运行时）；
+   *  deny 由守卫落 403（fail-closed）。
    */
-  hasPermission(
-    headers: Record<string, string | string[] | undefined>,
-    permissions: Record<string, string[]>,
-  ): Promise<boolean>;
+  can(check: TenantPermissionCheck): boolean;
 }

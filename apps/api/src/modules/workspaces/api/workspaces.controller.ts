@@ -5,7 +5,7 @@ import { ListWorkspacesQuery } from '@core/saas-kit/modules/workspaces/applicati
 import type { WorkspaceReadModel } from '@core/saas-kit/modules/workspaces/application/read-models/workspace.read-model';
 import type { Page } from '@core/saas-kit/shared-kernel/domain/pagination';
 import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
-import { RequirePermissions } from '@core/saas-kit/tenancy/rbac/require-permissions.decorator';
+import { Can } from '@core/saas-kit/tenancy/rbac/can.decorator';
 import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import {
@@ -51,7 +51,7 @@ export class WorkspacesController {
   ) {}
 
   @Get()
-  @RequirePermissions('workspace:read')
+  @Can('read', 'Workspace')
   @ApiOperation({ summary: 'List workspaces in the active tenant' })
   @ApiResponse({ status: 200, description: 'Workspaces owned by the active tenant.' })
   @ApiResponse({ status: 403, description: 'No active tenant, or missing workspace:read.' })
@@ -63,7 +63,7 @@ export class WorkspacesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @RequirePermissions('workspace:create')
+  @Can('create', 'Workspace')
   @ApiOperation({ summary: 'Create a workspace (owner/admin)' })
   @ApiResponse({ status: 201, description: 'Created workspace stamped with the active tenant.' })
   @ApiResponse({ status: 403, description: 'Missing workspace:create (members are rejected).' })
@@ -74,7 +74,7 @@ export class WorkspacesController {
   }
 
   @Patch(':id')
-  @RequirePermissions('workspace:update')
+  @Can('update', 'Workspace')
   @ApiOperation({ summary: 'Update a workspace (owner/admin)' })
   @ApiResponse({ status: 200, description: 'Updated workspace.' })
   @ApiResponse({ status: 404, description: 'Workspace not found in the active tenant.' })
@@ -94,7 +94,7 @@ export class WorkspacesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @RequirePermissions('workspace:delete')
+  @Can('delete', 'Workspace')
   @ApiOperation({ summary: 'Delete a workspace (owner/admin)' })
   @ApiResponse({ status: 204, description: 'Workspace deleted.' })
   @ApiResponse({ status: 404, description: 'Workspace not found in the active tenant.' })

@@ -1,18 +1,22 @@
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
-import { ForbiddenException } from '@nestjs/common';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AuthSessionReader } from './auth-session.reader';
-import { BetterAuthTenantPermissionChecker } from './ba-tenant-permission.checker';
 
-/** `RequestSessionReader` 适配：封装 cookie/旁路短路 + Better Auth 会话解析。 */
+/** `RequestSessionReader` 适配：封装 cookie/旁路短路 + Better Auth 会话解析（+ 丙裁角色预注入）。 */
 describe('AuthSessionReader (P1b · 会话端口适配)', () => {
-  function readerWith(session: unknown, opts: { noAuth?: boolean } = {}) {
+  function readerWith(session: unknown, opts: { noAuth?: boolean; memberRole?: unknown } = {}) {
     const getSession = vi.fn().mockResolvedValue(session);
+    // BA 服务端真名对拍 organization.mjs 路由表：getActiveMemberRole → { role }（非 client 面
+    // getOrganizationList，且 listOrganizations 纯 org 字段不带 role）。
+    const getActiveMemberRole = vi
+      .fn()
+      .mockResolvedValue(opts.memberRole === undefined ? null : { role: opts.memberRole });
     const authInstance = {
-      get: () => (opts.noAuth ? undefined : ({ api: { getSession } } as never)),
+      get: () =>
+        opts.noAuth ? undefined : ({ api: { getSession, getActiveMemberRole } } as never),
       set: () => {},
     } as unknown as InjectAuthInstance;
-    return { reader: new AuthSessionReader(authInstance), getSession };
+    return { reader: new AuthSessionReader(authInstance), getSession, getActiveMemberRole };
   }
 
   it('returns null WITHOUT a session lookup for a request with no cookie', async () => {
@@ -36,14 +40,41 @@ describe('AuthSessionReader (P1b · 会话端口适配)', () => {
     ).resolves.toBeNull();
   });
 
-  it('maps a resolved session to the scalar view (userId + activeOrganizationId)', async () => {
-    const { reader } = readerWith({
-      user: { id: 'u1' },
-      session: { activeOrganizationId: 'org_1' },
-    });
+  it('maps a resolved session to the scalar view（无活动租户 → 不付角色读）', async () => {
+    const { reader, getActiveMemberRole } = readerWith({ user: { id: 'u1' } });
     await expect(
       reader.read({ headers: { cookie: 'session=abc' }, url: '/posts' }),
-    ).resolves.toEqual({ userId: 'u1', activeOrganizationId: 'org_1' });
+    ).resolves.toEqual({ userId: 'u1' });
+    expect(getActiveMemberRole).not.toHaveBeenCalled();
+  });
+
+  it('有活动租户时从 BA 数据面预注入成员角色（module-rbac-casl 丙裁）', async () => {
+    const { reader } = readerWith(
+      { user: { id: 'u1' }, session: { activeOrganizationId: 'org_1' } },
+      { memberRole: 'admin' },
+    );
+    await expect(
+      reader.read({ headers: { cookie: 'session=abc' }, url: '/posts' }),
+    ).resolves.toEqual({ userId: 'u1', activeOrganizationId: 'org_1', role: 'admin' });
+  });
+
+  it('角色词汇外/读取失败 → role 缺省（消费侧 fail-closed）', async () => {
+    const { reader } = readerWith(
+      { user: { id: 'u1' }, session: { activeOrganizationId: 'org_1' } },
+      { memberRole: 'wizard' },
+    );
+    await expect(
+      reader.read({ headers: { cookie: 'session=abc' }, url: '/posts' }),
+    ).resolves.toEqual({ userId: 'u1', activeOrganizationId: 'org_1', role: undefined });
+
+    const failing = readerWith(
+      { user: { id: 'u1' }, session: { activeOrganizationId: 'org_1' } },
+      { memberRole: 'member' },
+    );
+    failing.getActiveMemberRole.mockRejectedValue(new Error('not a member'));
+    await expect(
+      failing.reader.read({ headers: { cookie: 'session=abc' }, url: '/posts' }),
+    ).resolves.toEqual({ userId: 'u1', activeOrganizationId: 'org_1', role: undefined });
   });
 
   it('normalizes an unresolved session (null) to no tenant context', async () => {
@@ -51,42 +82,5 @@ describe('AuthSessionReader (P1b · 会话端口适配)', () => {
     await expect(
       reader.read({ headers: { cookie: 'session=abc' }, url: '/posts' }),
     ).resolves.toBeNull();
-  });
-});
-
-/** `TenantPermissionChecker` 适配：把 BA `hasPermission` 的 `{ headers, body:{permissions} }` 形状封装在此。 */
-describe('BetterAuthTenantPermissionChecker (P1b · RBAC 裁决适配)', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  function checkerWith(result: unknown, opts: { noAuth?: boolean } = {}) {
-    const hasPermission = vi.fn().mockResolvedValue(result);
-    const authInstance = {
-      get: () => (opts.noAuth ? undefined : ({ api: { hasPermission } } as never)),
-      set: () => {},
-    } as unknown as InjectAuthInstance;
-    return { checker: new BetterAuthTenantPermissionChecker(authInstance), hasPermission };
-  }
-
-  it('grants and wraps the permission map into the Better Auth body shape', async () => {
-    const { checker, hasPermission } = checkerWith({ success: true });
-    await expect(
-      checker.hasPermission({ cookie: 'session=abc' }, { member: ['create'] }),
-    ).resolves.toBe(true);
-    expect(hasPermission).toHaveBeenCalledWith({
-      headers: { cookie: 'session=abc' },
-      body: { permissions: { member: ['create'] } },
-    });
-  });
-
-  it('returns false when Better Auth reports the permission is not satisfied', async () => {
-    const { checker } = checkerWith({ success: false });
-    await expect(checker.hasPermission({}, { organization: ['delete'] })).resolves.toBe(false);
-  });
-
-  it('fails closed (403) when the auth instance is not initialized', async () => {
-    const { checker } = checkerWith(undefined, { noAuth: true });
-    await expect(checker.hasPermission({}, { member: ['create'] })).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
   });
 });
