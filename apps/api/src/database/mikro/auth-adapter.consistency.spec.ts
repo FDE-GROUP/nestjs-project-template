@@ -26,6 +26,19 @@ const enabled = process.env.BA_MIKRO_CONSISTENCY === '1';
 const databaseUrl =
   process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/mikro_ba_consistency';
 
+// 门禁安全前置（人签核路线 A）：DROP/CREATE 仅允许作用于约定的 scratch 库名，否则抛错拒绝——
+// 杜绝 DATABASE_URL 误指主 dev 库时每次跑 `ci:db` 门禁 DROP 真实库。换名需经 MIKRO_CONSISTENCY_DB 显式许可。
+const scratchDb = process.env.MIKRO_CONSISTENCY_DB ?? 'mikro_ba_consistency';
+function assertScratchDb(url: string): void {
+  const dbName = decodeURIComponent(new URL(url).pathname.replace(/^\//, ''));
+  if (dbName !== scratchDb) {
+    throw new Error(
+      `[auth-consistency] 拒绝在非 scratch 库上 DROP：库名 "${dbName}"≠"${scratchDb}"` +
+        '（如需换名请设 MIKRO_CONSISTENCY_DB）。',
+    );
+  }
+}
+
 const suite = enabled ? describe : describe.skip;
 
 suite('mikro-orm v7 × better-auth authFlow consistency', async () => {
@@ -33,12 +46,18 @@ suite('mikro-orm v7 × better-auth authFlow consistency', async () => {
   const ormPromise = initMikroOrm(databaseUrl);
   let ormRef: Awaited<ReturnType<typeof initMikroOrm>> | undefined;
 
-  const runMigrations = async () => {
-    const orm = await ormPromise;
-    ormRef = orm;
+  // 全表重建（一致性 + 存照共用）：先过 scratch 库名断言（安全前置）再 drop。
+  const resetScratchSchema = async (orm: Awaited<ReturnType<typeof initMikroOrm>>) => {
+    assertScratchDb(databaseUrl);
     await orm.schema.ensureDatabase();
     await orm.schema.drop();
     await orm.schema.create();
+  };
+
+  const runMigrations = async () => {
+    const orm = await ormPromise;
+    ormRef = orm;
+    await resetScratchSchema(orm);
   };
 
   // testAdapter 内部自行注册 describe/beforeAll/afterAll/test（官方 harness）——须在 describe 层调用，
@@ -57,9 +76,7 @@ suite('mikro-orm v7 × better-auth authFlow consistency', async () => {
   it('evidence: real BA sign-up → user/account/session 各 1 真行', async () => {
     const orm = await ormPromise;
     ormRef = orm;
-    await orm.schema.ensureDatabase();
-    await orm.schema.drop();
-    await orm.schema.create();
+    await resetScratchSchema(orm);
     const auth = betterAuth({
       emailAndPassword: {
         enabled: true,

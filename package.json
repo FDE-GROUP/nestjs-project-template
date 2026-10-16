@@ -24,6 +24,7 @@
     "check:fix": "biome check --write .",
     "ci": "node scripts/ci.ts",
     "ci:quick": "node scripts/ci.ts quick",
+    "ci:db": "pnpm run check && pnpm run test && pnpm run test:auth-consistency",
     "verify:prod-boot": "node scripts/verify-prod-boot.ts",
     "verify:i18n-assets": "node scripts/verify-i18n-assets.ts",
     "verify:compose-contract": "node scripts/verify-compose-contract.ts",
