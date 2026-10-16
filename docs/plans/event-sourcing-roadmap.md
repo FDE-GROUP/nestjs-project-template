@@ -25,7 +25,9 @@
 
 只针对**需要审计轨迹的重状态上下文**（如 orders / ledger）。auth users 这类有状态身份数据**可能永远保持 CRUD**。
 
-### Event store 表（Drizzle）
+### Event store 表（MikroORM）
+
+> 下表为**初稿示意 DDL**（snake_case 仅为直观）；实际落表列名为 **camelCase**（`EntityCaseNamingStrategy` 对齐 BA 字段名）且含 `eventId` 保真列——**以首切片 [module-users-es-append](./module-users-es-append.md) §6 为准**，本表已随基线迁移 `Migration20261016055354` 建立。
 
 ```sql
 CREATE TABLE event (
@@ -44,7 +46,7 @@ CREATE TABLE event (
 CREATE INDEX event_aggregate_idx ON event (aggregate_type, aggregate_id);
 ```
 
-经 `drizzle-kit generate` + `drizzle-kit migrate` 落表（显式迁移，**永不** `synchronize`）；本表属高危#1，逐次人审后 apply。
+经 **MikroORM** `migration:generate` + `migration:run`（tsx 运行器 · 见 `docs/mikro-migration-guide.md`）落表（显式迁移，**永不** `synchronize` / schema push 到生产）；新表属高危#1，逐次人审后 apply。
 
 ### 写路径切换
 
