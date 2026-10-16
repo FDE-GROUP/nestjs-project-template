@@ -9,7 +9,7 @@
 
 ORM 迁移主线收尾后，人择「就绪便宜预备」方向，落 microservice-readiness §2.3 缓行的两项：**#3 稳定业务错误码** 与 **#5 游标分页**。两者均为「契约增量」——非破坏优先，且各自触公共契约（高危#4），须过审计门方可实现。
 
-**#3 现状**：`ErrorResponse` 七字段中 `errorCode?: string` 透传机制已由 `fed300b` 建好（HttpException object response 摘取·零新类），但当时明示「机制先行·码表等消费方按需定义」。全仓 **43 处业务抛错点**（tenants 11 / core 5 / storage 2 / users 2 / workspaces 1 / auth 1 / infra·filter 2）**现状全为纯字符串、零一带码**；§4-② 已锁命名 = **冒号分段**（如 `TENANCY:SEAT_LIMIT_EXCEEDED`）。repowiki 自认「无错误码」为短板。本片把已备的**机制填成码表**。
+**#3 现状**：`ErrorResponse` 七字段中 `errorCode?: string` 透传机制已由 `fed300b` 建好（HttpException object response 摘取·零新类），但当时明示「机制先行·码表等消费方按需定义」。全仓 **44 处业务抛错点**（tenants 19 / core 10 / storage 6 / auth 3 / users 2 / workspaces 2 / payment 1 / tenancy-infra 1）**现状全为纯字符串、零一带码**；初判 43 系「9 命名子类」正则漏计 `quota.service` raw `HttpException(…,402)` seat 超限与 `payment.service` `ServiceUnavailableException` 两枚（尤以 402 `SEAT_LIMIT_EXCEEDED` 为配额闭环最关键码），盘全订正为 44；§4-② 已锁命名 = **冒号分段**（如 `TENANCY:SEAT_LIMIT_EXCEEDED`）。repowiki 自认「无错误码」为短板。本片把已备的**机制填成码表**。
 
 **#5 现状**：`Page<T>` = offset 语义（`items/total/limit/offset`）；列表端点走 offset 的有 5 处（治理面 platform-tenants / platform-users + 业务面 workspaces / posts / users findAll）。分页契约片 §6-丁 明示「cursor 与 sort 参数化缓行·有真实需求再设计」；readiness §4-④ 裁「游标分页本期性=否·**立标准后另裁**」——**本片即该「立标准」片**。
 
@@ -64,14 +64,14 @@ A、B 互不依赖，各自「实现 → CI 绿 → 验收」。建议 A 先行�
 
 > 无已审方案不写码。局部可逆 → 轻量自审；全局 / 不可逆 → 人签核。
 
-- 结论：**待审计**（草案·未过门·**未实现任何代码**）
-- 未决项逐裁（拟）：
-  - **甲**：错误码命名空间粒度（按限界上下文 / 按资源）
-  - **乙**：附码范围（全 43 / **仅语义关键码·推荐** / 仅立约定+校验面）
-  - **丙**：是否本片做结构化 `errors[]`（是·加法 / 否·仅码）
-  - **丁**：游标排序键 + 编码（`(createdAt,id)` 复合·推荐 / `id` 单调）
-  - **戊**：本阶段是否即迁端点（纯立契约·最保守 / **迁 1 端点样例·推荐 `/posts`**）
-- 审计人 / 日期：待补
+- 结论：**已审计**（人签核 2026-10-17·经 AskUserQuestion 逐裁甲–戊·取**完整 scope**）→ 授权开工实现
+- 未决项逐裁（定）：
+  - **甲**：命名空间 = **按限界上下文**（`AUTH / TENANCY / USER / WORKSPACE / BILLING / STORAGE`）
+  - **乙**：附码范围 = **全 44 处都附码**（含各 `NotFound→*:NOT_FOUND` 家族·非保守档）
+  - **丙**：**同时引入结构化 `errors[]`**（校验/业务共用扁平·顶层 `message` 兼容不破）
+  - **丁**：游标排序键 = **`(createdAt, id)` 复合·降序**（实现期核 `createdAt` 索引·无则登记不本片加）
+  - **戊**：**迁 `GET /posts` 作 expand 样例**（含该端点 `Page<T>`→`CursorPage<T>` 响应形状破坏变更）
+- 审计人 / 日期：人（AskUserQuestion「全 43·加 errors[]·(createdAt,id)·迁 /posts」）/ 2026-10-17
 
 ## 5. 完成判据（可核验 + 穷尽）
 
@@ -94,8 +94,9 @@ A、B 互不依赖，各自「实现 → CI 绿 → 验收」。建议 A 先行�
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
 | 2026-10-17 | 0.1.0 | ORM 主线收尾后人择「就绪便宜预备」方向（#3+#5）；据实取证 43 抛错点 + 5 offset 端点后起草决策完备草案 | 首版：两切片 expand 设计 + 甲–戊 五归人裁点 + 完成判据（待审计门） |
+| 2026-10-17 | 0.2.0 | 人签核过审计门（AskUserQuestion·取完整 scope）；盘全抛错面订正初判 43→实为 44（补 seat 402 + payment ServiceUnavailable） | §1 计数订正；§4 结论翻**已审计** + 甲–戊 逐裁定案（全 44 附码·加 errors[]·(createdAt,id)·迁 /posts）；进入实现（切片 A→CI 绿→切片 B） |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.1.0 起草（待审计），以当前正文内容为准。
+正文已于 2026-10-17 / v0.2.0 变更（过审计门·甲–戊 逐裁·计数订正 44），以当前正文内容为准。
