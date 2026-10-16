@@ -36,6 +36,7 @@
   完成判据：复测账目成文回写本案 §5.1；每条与勘察 v0.2 对照（绿/红/差异点名）；零仓库依赖变更。
 - **切片 1 · 自持 BA adapter（开工触高危清单 2+3·待人逐片签核）**——按官方 `createAdapterFactory` 实现 8 必选 + `consumeOne` / `incrementOne` / `createSchema` 3 可选 + **`transaction`**（社区包三大缺失·勘察 §2.4）；em 一律 per-request fork（禁全局 `orm.em`·V4 串租户教训）。**契约钉点（切片 0 R4 面实测写入）**：`consumeOne`/`incrementOne` 必返**行快照 T|null**（非 boolean·否则 password-reset 恒 `Invalid token`）·raw `update` 改动值在键 `update` 带 `modelKey`·`where.connector` 大写·`supportsDates/Booleans/JSON` 置真·`transaction` 内破坏性删除用 `nativeDelete`。`@better-auth/test-utils` **authFlow 一致性套件 = 本切片强制验收判据**（已实跑 8/8）；`normalTestSuite` 因跑本仓无的合成模型（testModel/joins/arrays/json）**不作本仓验收判据**（仅佐证核心 CRUD）。把一致性套件**并入本仓 `ci` 硬门禁链**触清单 3（改 `scripts/ci.ts`），**待本切片随实现由人签核后再接**·本阶段不预改门禁。
   完成判据：**authFlow 一致性套件 EXIT=0**（作为独立 script 存在·入 `ci` 链与否待签核）；sign-up→session→DB 真行 ×3 实机存照；未动生产装配。**开工前置**：装 MikroORM v7 依赖（清单 2）+ 新增门禁 script（清单 3）须人明示签核。
+  ✅ **已落地（人签核开工·Agent 照建议代裁留痕 2026-10-16·详见 §5.2）**：验收判据达成（authFlow in-repo 8/8 EXIT=0 + 真行×3 存照·默认 `ci` 基线 358 不动），唯「一致性套件并入 `scripts/ci.ts` 硬门禁链」这一步触清单 3·**本阶段未预改门禁**（待随后续实现由人签核后另接）。
 - **切片 2 · expand：单上下文试迁移**——选一个**非 BA、低触面**上下文（拟 `posts` 参考切片·定名归人）做 entity + repository adapter，新旧双轨并存，跨切面（DrizzleService / EventStore）**暂留 Drizzle**；行为对齐以**既有测试不改动仍绿**为准（禁为过测改断言）。
   完成判据：该上下文读写全走 Mikro 且回归绿；触面清单与回滚点成文。
 - **切片 3 · BA 面接链切换**——auth/tenancy/users 的数据面换自持 adapter；迁移链**交接**：以现存 PG schema 为基线生成 Mikro init migration，`drizzle/` 冻结保留不删（口径类比「push 管理的库不能直接 migrate」的既有教训）。
@@ -89,6 +90,19 @@
   - **Agent 判读建议→已由人采纳为裁定（2026-10-16·见 §5 结论）**：R4「第一强前置」的功能面（organization/additionalFields/quota）与直接相关的一致性门 authFlow（8/8·且抓出并修正常规坑 `consumeOne` 返回形状）均绿——「自持 v7 adapter 足以承载本仓 BA 真实表面」这一核心命题**证据成立**；normal 失败系合成模型 scope 不匹配、非缺陷。人据此授意照建议自裁：**整案审计门裁定＝GO**（技术依据已具备·实施逐片仍须高危签核）。
 - 审计人 / 日期：FDE· Abel（人授权·Agent 照建议代裁留痕·问责归人 P2）/ 2026-10-16（审计门裁定＝整案 GO·见上 §5 结论）
 
+### §5.2 切片 1 in-repo 实现记录（人签核开工·Node 22 + pnpm + 真 PG 15·scratch 库 `mikro_ba_consistency` 毕即 DROP）
+
+本仓首次以**真实源码位 + 专用 vitest 配置**落地自持 v7 adapter与验收套件（非 /tmp spike）：
+
+- **实体位（`apps/api/src/database/mikro/`）**：`entities.ts` 7 实体**零装饰器** `defineEntity`（User/Account/Session/Verification/Organization/Member/Invitation + `MIKRO_ENTITIES` 数组 + 小写模型名→entity 映射）；`isOwner: p.boolean().default(false)`、`handle: p.string().nullable()`（authFlow 走 harness 默认 options·不带本仓 additionalFields·避 NOT NULL 冲突）；Session 用 `expiresAt`（非 `expiresIn`）。
+- **ORM 初始化（`orm.ts`）**：`PostgreSqlMikroORM.init`（从 `@mikro-orm/postgresql`）+ `EntityCaseNamingStrategy`（属性名**原样**作列名⇒camelCase 列·与 BA DB 字段名两侧对齐·免 snake↔camel 往返）+ `allowGlobalContext: true`。
+- **自持 adapter（`mikro-auth-adapter.ts`）**：`mikroAuthAdapter(orm)` 返 `createAdapterFactory({ adapter, config })` 工厂；8 必选 + `consumeOne`/`incrementOne`/`createSchema` + `transaction`。**形态选择**：全走 **raw SQL（`em.execute(sql, params, 'all'|'get'|'run')`）**而非 entity-manager（避序列化/snake-camel/Date 不确定性·Q4 裁定允许 `em.execute` 逃生）；标识符一律双引号限定（规避 `user` 等 PG 保留字）；`compileWhere` 逐项加括号、首项无前缀、connector 大写不敏感归 OR/AND；operator 全谱（eq/ne/lt/lte/gt/gte/in/not_in/contains/starts_with/ends_with + `mode:insensitive`→ILIKE·LIKE 转义 `%`/`_`·空 `in`→`1=0`·null→`IS [NOT] NULL`）。
+- **契约钉点逐条落地**：`consumeOne` 以**单语句原子** `DELETE … WHERE id IN (SELECT id … LIMIT 1) RETURNING *` 返行快照 `T|null`；`incrementOne` 以 `UPDATE … SET f=f+? WHERE … RETURNING *` 返行快照；per-op `orm.em.fork()`（禁全局 em）；`transaction` 走 `em.transactional` + **AsyncLocalStorage** 透传事务 em（破坏性删除在同一事务 em 上以原生 SQL 执行·不依赖 `removeAndFlush`）。
+- **❗ 对 pinpoint③ 的形态取反（诚实留痕）**：切片 0 §5.1 记「`supportsDates` 置真」是针对 entity-manager 回**真实 Date** 的形态；本实现采 **raw `em.execute`**，v7 Kysely 层把 `timestamptz` 回传为**字符串**（如 `"2026-10-16 02:29:25.791+00"`）而非 Date——故 `supportsDates: false`，让 factory 代劳两侧 Date↔ISO 转换（首跑 5/8 因日期断言要 Date 而红·改此开关后 8/8）。`supportsBooleans/JSON` 仍置真。
+- **验收套件（env-gated）**：`auth-adapter.consistency.spec.ts`（命名 `*.spec.ts`·默认 vitest include 仅收 `*.test.ts` 故不被收集）+ 专用 `vitest.consistency.config.ts`（只收本 spec·`BA_MIKRO_CONSISTENCY=1` 门控·无则 `describe.skip` 零连库）+ `pnpm run test:auth-consistency` 脚本。经 `@better-auth/test-utils` 的 `testAdapter({ adapter: async () => mikroAuthAdapter(orm), runMigrations, tests: [authFlowTestSuite()], onFinish })`（harness 动态重建 adapter·状态隔离）。
+- **结果（实机）**：`test:auth-consistency` → **Tests 9 passed (9)·EXIT=0**（authFlow 8/8 + evidence 真行×3）；`ci:quick` / `ci` → **342 passed | 16 skipped (358)**（基线不动·spec 未被默认 include 收集）；`pnpm run ci` **Local CI PASSED·EXIT=0**。scratch 库 `mikro_ba_consistency` 经 dev 容器 `DROP DATABASE` 毕即清理。
+- **未做（不 overclaim）**：未接入 `scripts/ci.ts` 硬门禁链（触清单 3·待人签核后另接）·未动生产装配（仍 Drizzle）·未改 `docs/specs`（属切片 4）。
+
 ## 6. 完成判据（可核验 + 穷尽）
 
 本稿自身（起草片）：
@@ -108,8 +122,9 @@
 | 2026-10-16 | 0.2.1 | 人选 Q2/Q3/Q4·「你帮我裁定」（人授意按建议自裁·同 V5 口径） | §5 将 Q2/Q3/Q4 由归人未决改为已裁并附由：Q2＝零装饰器 + S9 实体面豁免声明（装饰器线落选）·Q3＝Filters/RLS 暂不采纳（隔离唯一 SSOT 保留现仓储卡点·切片 5 不执行）·Q4＝不引入 Kysely（逃生走 `em.execute`/QueryBuilder）；§3 切片 5 同步标 Q3/Q4 已裁＝不做；仍留两项子项（夹具口径·一致性套件是否入硬门禁）归人 |
 | 2026-10-16 | 0.3.0 | 人裁「补拍 R4 面」（AskUserQuestion 选项①）·切片 0 结清取证 | §5.1 追加「切片 0 补拍 · R4 面」：organization 三实体真行 + activeOrganizationId + 邀请（psql 坐实·绿）·additionalFields 往返（绿）·quota 原生 `incrementOne/consumeOne` 原子路径（绿）·test-utils **authFlow 8/8 全绿**（含单用 token 的密码重置·抓出 `consumeOne` 须返行快照的常规坑）·normal 15/108（失败系本仓无的合成模型 scope 不匹配·非缺陷·订正 LIKE 转义误判）；直查 @better-auth/core 1.7.7 补全 raw adapter 契约（update 键·connector 大写·supportsDates/Booleans/JSON·consumeOne/incrementOne 返行快照·transaction 内 nativeDelete·harness 动态重建 adapter）；**genericOAuth 完整外部回调 dance 与 normal 的 join/arrays/json 能力仍未覆盖（不得 overclaim）**；给出 Agent 判读建议（整案 GO 技术依据已具备·**非裁定**·GO/NO-GO 与门禁归人）·scratch `mikro_spike_r4` 已 DROP·/tmp 已删·零仓库依赖变更 |
 | 2026-10-16 | 0.4.0 | 人裁「同意·继续·你帮我裁定」（人授意按建议自裁·同 Q2/Q3/Q4。V5 口径） | 三个归人裁决点成文：**整案审计门裁定＝GO**（技术依据已具备·见 §5 结论·实施逐片仍须高危签核）·**一致性套件**：authFlow 钉为切片 1 强制验收判据（EXIT=0），并入 `ci` 硬门禁链触清单 3、待切片 1 随实现签核后再接（本阶段不改 `scripts/ci.ts`）·**切片 0 夹具口径＝追认为惯例**；文档头/§5 前言由「待审计」改「已审计·整案 GO」·§3 切片 1 补入 R4 实测契约钉点（consumeOne/incrementOne 返行快照·update 键·connector 大写·supports* 置真·transaction nativeDelete）与开工前置（清单 2+3 待人签核）·零代码零依赖变更·ci 基线 358 不动 |
+| 2026-10-16 | 0.5.0 | 人签核开工切片 1·「同意·继续·你帮我裁定」（Agent 照建议代裁留痕·问责归人 P2） | **切片 1 落地**（本仓真实源码位·非 /tmp spike）：`apps/api/src/database/mikro/{entities,orm,mikro-auth-adapter}.ts`（7 实体零装饰器 defineEntity + EntityCaseNamingStrategy + PostgreSqlMikroORM + 自持 v7 adapter：createAdapterFactory·8 必选 + consumeOne/incrementOne/createSchema + transaction·per-op fork + ALS 事务透传·em.execute 原生 SQL·consumeOne 走 DELETE…RETURNING 单语句原子返行快照）；**对 pinpoint③ 的 raw 形态取反**（supportsDates:false 因 em.execute 回 timestamptz 为字符串·由 factory 代劳 Date↔ISO）；验收套件 env-gated（`auth-adapter.consistency.spec.ts` + 专用 `vitest.consistency.config.ts` + `pnpm run test:auth-consistency`）：**authFlow in-repo 8/8 + evidence 真行×3 → 9/9·EXIT=0**（scratch 库 `mikro_ba_consistency` 毕即 DROP）·默认 `ci` 基线 358 不动（spec 不被默认 include 收集）·`pnpm run ci` 全链 PASSED。**未接入 `scripts/ci.ts` 硬门禁链**（触清单 3·待人签核后另接）·未动生产装配·未改 `docs/specs`。§3 切片 1 标完成态 + 新增 §5.2 实现记录 | 
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-16 / v0.4.0 变更（人授意按建议自裁三个归人点·整案审计门裁定＝GO·一致性套件入硬门禁待切片 1 随实现签核·切片 0 夹具追认为惯例），以当前正文内容为准；审计门已过、但 **GO ≠ 实施片开工签核**（§4 高危清单 1/2/3/4 逐片仍须人明示签核·Agent 不得自行执行）。
+正文已于 2026-10-16 / v0.5.0 变更（**人签核开工·切片 1 已落地**：自持 v7 adapter + 零装饰器实体 + EntityCaseNamingStrategy + raw `em.execute` 寻址；验收 authFlow in-repo 8/8 EXIT=0 + 真行×3 存照；`supportsDates:false` 为 raw 形态对 pinpoint③ 的取反；scratch 库毕即 DROP；默认 `ci` 基线 358 不动）。一致性套件**未入 `scripts/ci.ts` 硬门禁链**（触清单 3·待随实现由人签核后另接）；生产装配未换（仍 Drizzle）；切片 2/3/4 未开工，各片动工前仍须人**逐次明示签核**（§4 高危清单 1/2/3/4·Agent 不得自行执行）。
