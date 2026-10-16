@@ -1,6 +1,7 @@
 import { ConfigService } from '@app/config/config.service';
 import type { EntityManager, MikroORM } from '@mikro-orm/core';
 import { Inject, Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
+import { mikroAuthAdapter } from './mikro-auth-adapter';
 import { initMikroOrm } from './orm';
 import { MIKRO_APP_ENTITIES } from './post.entity';
 
@@ -12,7 +13,7 @@ import { MIKRO_APP_ENTITIES } from './post.entity';
  * 数据面时才 `ensure()` 懒 init（本仓默认 CI 不跑真 posts 读写→永不触发·保持 DB-free 不变量）；
  * env-gated 全栈 e2e 打 `/posts` 时才真连。`onModuleDestroy` 仅在曾建过连时 close。
  *
- * 实体集＝`MIKRO_APP_ENTITIES`（本切片仅 `Post`）：与 BA 表面（切片 1·仍走 Drizzle）解耦·切片 3 换接链再并入。
+ * 实体集＝`MIKRO_APP_ENTITIES`（切片 2 仅 `Post`·切片 3b 已并入 BA 七表为单一 app-orm）。
  * 每次读写经 `fork()` 取**独立 em**（禁共享全局 `orm.em`·V4 串租户教训·与切片 1 adapter 同纪律）。
  */
 @Injectable()
@@ -28,7 +29,7 @@ export class MikroOrmService implements OnModuleDestroy {
       const url = this.config.getDatabaseConfig().url;
       this.pending = initMikroOrm(url, MIKRO_APP_ENTITIES).then((orm) => {
         this.orm = orm;
-        this.logger.log('MikroORM (posts trial slice) connected');
+        this.logger.log('MikroORM app-orm connected (posts + BA adapter)');
         return orm;
       });
     }
@@ -41,10 +42,20 @@ export class MikroOrmService implements OnModuleDestroy {
     return orm.em.fork();
   }
 
+  /**
+   * 切片 3b：为 Better Auth 数据面产出**自持 Mikro adapter 工厂**（`mikroAuthAdapter(orm)`）。
+   * 内部 `await ensure()` 复用同一条懒建连接·**不外泄 `orm`/`em` 实例**（只交出适配器·戒全局 em）。
+   * 仅在 `BA_ADAPTER=mikro` 时被 `CreateAuth` 调用；默认 drizzle 轨不触发→保持懒建 / DB-free 不变量。
+   */
+  async createAuthAdapter(): Promise<ReturnType<typeof mikroAuthAdapter>> {
+    const orm = await this.ensure();
+    return mikroAuthAdapter(orm);
+  }
+
   async onModuleDestroy(): Promise<void> {
     if (this.orm) {
       await this.orm.close();
-      this.logger.log('MikroORM (posts trial slice) disconnected');
+      this.logger.log('MikroORM app-orm disconnected');
     }
   }
 }

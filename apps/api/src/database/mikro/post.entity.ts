@@ -1,4 +1,5 @@
 import { defineEntity, p } from '@mikro-orm/core';
+import { MIKRO_ENTITIES } from './entities';
 
 /**
  * ORM 修宪案 B · 切片 2 —— posts 参考上下文试迁移的 **零装饰器** MikroORM v7 实体（expand 双轨）。
@@ -49,5 +50,12 @@ export const Post = defineEntity({
   },
 });
 
-/** 本切片 app-Mikro 实例承载的实体集（仅 posts·BA 面切片 3 才换接链，届时并入）。 */
-export const MIKRO_APP_ENTITIES = [Post];
+/**
+ * app-Mikro 实例承载的实体集（单一连接池）。
+ * 切片 2：仅 `Post`（posts 试迁移·与 BA 面解耦）。
+ * 切片 3b（ORM 修宪案 B）：BA 接链单点切换后，BA 七表（`MIKRO_ENTITIES`）并入**同一** app-orm。
+ * `mikroAuthAdapter` 全程 raw `em.execute` 按物理表名寻址、不依赖关系元数据→并入对既有 posts
+ * 读写零影响；表集与 `Post` 互斥无交叉；**懒建语义不变**→`app-boot.smoke`（不触发 `ensure()`）仍 DB-free。
+ * 忠实迁移实体集（含 FK/enum/index·13 表）另见 `migration/migration-entities.ts`·与这里有损运行时实体并存（双描述过渡态·留切片 4 收口）。
+ */
+export const MIKRO_APP_ENTITIES = [Post, ...MIKRO_ENTITIES];

@@ -34,6 +34,8 @@ const makeService = (overrides?: Record<string, unknown>) => {
   const service = new AuthBootstrapService(
     configService as never,
     { db: {} } as never,
+    // 切片 3b 新增 `mikroOrmService` 形参：本测缺省不设 `BA_ADAPTER` ⇒ 走 drizzle 轨·此桩永不被调。
+    { createAuthAdapter: async () => ({}) } as never,
     { checkSeats: async () => {} } as never,
     authInstance as never,
     httpAdapterHost as never,

@@ -32,10 +32,17 @@ const minimalConfigService = () =>
     getCorsConfig: () => ({ origin: ['*'] }),
   }) as never;
 
+// `CreateAuth` 已于切片 3b 转 async（`BA_ADAPTER` 双轨需 `await createAuthAdapter`）；本测默认
+// 不设 `BA_ADAPTER` ⇒ 走 drizzle 轨，`mikroOrmService` 桩永不被调（只占形参位）。
 const createAuthWithOptions = () =>
-  CreateAuth(undefined, [], { db: {} } as never, minimalConfigService(), {
-    checkSeats: async () => {},
-  } as never);
+  CreateAuth(
+    undefined,
+    [],
+    { db: {} } as never,
+    { createAuthAdapter: async () => ({}) } as never,
+    minimalConfigService(),
+    { checkSeats: async () => {} } as never,
+  );
 
 describe('CreateAuth ip-trust wiring', () => {
   const prevEnv = { ...process.env };
@@ -44,34 +51,34 @@ describe('CreateAuth ip-trust wiring', () => {
     vi.restoreAllMocks();
   });
 
-  it('AUTH_TRUSTED_PROXIES 配置后透传进 BA options（结构在场）', () => {
+  it('AUTH_TRUSTED_PROXIES 配置后透传进 BA options（结构在场）', async () => {
     process.env.AUTH_TRUSTED_PROXIES = '172.16.0.0/12,127.0.0.1';
-    const { auth } = createAuthWithOptions();
+    const { auth } = await createAuthWithOptions();
     const advanced = (auth.options as Record<string, any>).advanced;
     expect(advanced.ipAddress.trustedProxies).toEqual(['172.16.0.0/12', '127.0.0.1']);
     // 丙：限流结构显式在场（值跟库默认语义，enabled=true）
     expect((auth.options as Record<string, any>).rateLimit).toMatchObject({ enabled: true });
   });
 
-  it('未配置时不传 trustedProxies（保持库安全默认，而非空数组）', () => {
+  it('未配置时不传 trustedProxies（保持库安全默认，而非空数组）', async () => {
     delete process.env.AUTH_TRUSTED_PROXIES;
-    const { auth } = createAuthWithOptions();
+    const { auth } = await createAuthWithOptions();
     const advanced = (auth.options as Record<string, any>).advanced;
     expect(advanced.ipAddress.trustedProxies).toBeUndefined();
   });
 
-  it('乙1：production 未配 → 启动 warn 一响；已配 → 不响', () => {
+  it('乙1：production 未配 → 启动 warn 一响；已配 → 不响', async () => {
     const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
     process.env.NODE_ENV = 'production';
 
     delete process.env.AUTH_TRUSTED_PROXIES;
-    createAuthWithOptions();
+    await createAuthWithOptions();
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0][0]).toContain('AUTH_TRUSTED_PROXIES');
 
     warn.mockClear();
     process.env.AUTH_TRUSTED_PROXIES = '172.16.0.0/12';
-    createAuthWithOptions();
+    await createAuthWithOptions();
     expect(warn).not.toHaveBeenCalled();
   });
 });
