@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { uuidv7 } from '../util/uuid-v7';
 
 /**
  * Metadata envelope for a domain event.
@@ -38,7 +38,7 @@ export abstract class DomainEvent<TPayload extends object = object> {
   readonly payload: TPayload;
 
   protected constructor(props: DomainEventProps<TPayload>) {
-    this.eventId = props.eventId ?? randomUUID();
+    this.eventId = props.eventId ?? uuidv7();
     this.aggregateId = props.aggregateId;
     this.aggregateType = props.aggregateType;
     this.eventType = props.eventType;

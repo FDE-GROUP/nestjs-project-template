@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { TenantSubscription } from '@app/database/mikro/four-tables';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import type {
@@ -6,6 +5,7 @@ import type {
   SubscriptionRecord,
   SubscriptionRepository,
 } from '@core/saas-kit/modules/subscriptions/domain/repositories/subscription.repository';
+import { uuidv7 } from '@core/saas-kit/shared-kernel/util/uuid-v7';
 import { SUBSCRIPTION_STATUS } from '@core/saas-kit/tenancy/quota/tenant-plans';
 import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { QueryOrder } from '@mikro-orm/core';
@@ -54,7 +54,7 @@ export class MikroSubscriptionRepository implements SubscriptionRepository {
     const now = new Date();
     const em = await this.mikro.fork();
     const entity = em.create(TenantSubscription, {
-      id: randomUUID(),
+      id: uuidv7(),
       tenantId,
       plan: draft.plan,
       status: SUBSCRIPTION_STATUS.ACTIVE,

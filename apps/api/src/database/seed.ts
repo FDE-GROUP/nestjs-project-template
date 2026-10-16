@@ -2,8 +2,8 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+import { uuidv7 } from '@core/saas-kit/shared-kernel/util/uuid-v7';
 import type { EntityManager } from '@mikro-orm/core';
 import * as bcrypt from 'bcryptjs';
 import { Organization, User } from './mikro/entities';
@@ -113,7 +113,7 @@ export async function createUsers(em: EntityManager, options: SeedOptions): Prom
     // `em.insert` 只发给定列·`createdAt`/`emailVerified` 省略落 DB 默认；`updatedAt` NOT NULL 无 DB 默认须显式写。
     // 类型层 Mikro 要求非空列（emailVerified/createdAt）·本 seed 刻意不写（落 DB 默认）·按本仓既有 Mikro 逃生惯用法 `as never` 收口。
     await em.insert(User, {
-      id: randomUUID(),
+      id: uuidv7(),
       name: 'Admin User',
       email: operatorEmail,
       password: adminPassword,
@@ -133,7 +133,7 @@ export async function createUsers(em: EntityManager, options: SeedOptions): Prom
     const usersToCreate: (UserData & { id: string; name: string; updatedAt: Date })[] = [];
     for (let i = 1; i < userCount; i++) {
       usersToCreate.push({
-        id: randomUUID(),
+        id: uuidv7(),
         name: `User ${i}`,
         email: `user${i}@example.com`,
         password: userPassword,
@@ -211,7 +211,7 @@ export async function createPosts(em: EntityManager, options: SeedOptions): Prom
       await em.insert(
         Post,
         postsToCreate.map((p) => ({
-          id: randomUUID(),
+          id: uuidv7(),
           organizationId: orgId,
           updatedAt: new Date(),
           ...p,

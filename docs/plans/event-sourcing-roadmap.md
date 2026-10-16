@@ -23,7 +23,7 @@
 >
 > **第四切片已落地（2026-10-14·[module-tenancy-es-tenant-rejected-event](./module-tenancy-es-tenant-rejected-event.md)）**：reject 硬删成功产出 `tenant.rejected`（同 tenant 流·PII 最小：只留审计事实不留申请内容），治理事件面**收口**——含对第二切片 §6-①「需动迁移表」误判的忠实修正（reject 实为硬删路径不经状态机）。Phase B shadow-append 覆盖面无已知缺口；后半（同事务化/rehydrate）待专项方案。
 >
-> **Phase B 后半已落地（2026-10-17·[module-es-outbox-transactional](./module-es-outbox-transactional.md)）**：经人再裁决（推翻「shadow append 即终态」既有裁决）同事务化 outbox + relay 耐久投递落地——`EVENT_PUBLISH_MODE: inproc|shadow|outbox` 三态旋钮（缺省 inproc·行为逐字节等价）；`UNIT_OF_WORK` ambient 事务使业务行与事件行**同生共死**（dual-write 窗口消灭）；app 内 `OutboxRelay` 以 `FOR UPDATE SKIP LOCKED` 批量投递、`eventVersion` 拒收、重试上限表内留痕、eventId 去重窗。**投递语义 at-least-once：重投必然发生，消费者幂等为硬要求**（裁点丙·`@EventsHandler` 消费方须按 `eventId` 或业务键幂等）。rehydrate/投影/快照仍待后续。
+> **Phase B 后半已落地（2026-10-17·[module-es-outbox-transactional](./module-es-outbox-transactional.md)）**：经人再裁决（推翻「shadow append 即终态」既有裁决）同事务化 outbox + relay 耐久投递落地——`EVENT_PUBLISH_MODE: inproc|shadow|outbox` 三态旋钮（缺省 inproc·行为逐字节等价）；`UNIT_OF_WORK` ambient 事务使业务行与事件行**同生共死**（dual-write 窗口消灭）；app 内 `OutboxRelay` 以 `FOR UPDATE SKIP LOCKED` 批量投递、`eventVersion` 拒收、重试上限表内留痕、eventId 去重窗。**投递语义 at-least-once：重投必然发生，消费者幂等为硬要求**（裁点丙·`@EventsHandler` 消费方须按 `eventId` 或业务键幂等）。rehydrate/投影/快照仍待后续。**消费者兑现（2026-10-17·[module-es-first-real-consumer](./module-es-first-real-consumer.md) 治理档）**：首个真实业务消费者落地——`tenant.status.transitioned` → 订阅行终态收敛（suspend→suspended·resume→active·业务键收敛式幂等·gated 真库重投零重复效果实证），硬要求自此有真实兑现体；附带应用生成 id 切 UUIDv7（时序可排·零迁移）。
 
 只针对**需要审计轨迹的重状态上下文**（如 orders / ledger）。auth users 这类有状态身份数据**可能永远保持 CRUD**。
 
@@ -78,6 +78,7 @@ CREATE INDEX event_aggregate_idx ON event (aggregate_type, aggregate_id);
 
 | 日期 | 变更 |
 |------|------|
+| 2026-10-17 | 消费者兑现留痕（module-es-first-real-consumer 治理档）：首个真实业务消费者（治理→订阅终态收敛·幂等真库实证）；附带应用生成 id 切 UUIDv7 |
 | 2026-10-17 | Phase B 后半（outbox 同事务化 + relay）落地留痕（第五切片引用段）；消费者幂等硬要求显式声明；「当前明确不做」段校准（event store/outbox 移出·补无独立死信表口径） |
 | 2026-10-14 | 整篇中文化（AGENTS §6 中文优先）；Phase A 引用路径校准至 S10 后布局（`packages/core/src/shared-kernel/*`、`apps/reference/src/modules/users/*`）；补 outbox 设计参考链接（前次已回灌）；补高危#1 口径一句 |
 | 2026-10-14 | 经人澄清升格定位：ES + EDA 为**确定的架构目标**（CA+DDD+CQRS+ES+EDA 五件套），分期节奏与门禁不变；标题/指导原则改写，补 EDA 演进路径（进程内→outbox→broker） |

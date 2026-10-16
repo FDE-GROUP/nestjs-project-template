@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { Post } from '@app/database/mikro/post.entity';
 import {
@@ -9,6 +8,7 @@ import {
   decodeCursor,
   encodeCursor,
 } from '@core/saas-kit/shared-kernel/domain/pagination';
+import { uuidv7 } from '@core/saas-kit/shared-kernel/util/uuid-v7';
 import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { QueryOrder } from '@mikro-orm/core';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
@@ -122,7 +122,7 @@ export class MikroPostRepository implements PostRepository {
     const now = new Date();
     const em = await this.mikro.fork();
     const entity = em.create(Post, {
-      id: randomUUID(),
+      id: uuidv7(),
       title: draft.title,
       content: draft.content ?? null,
       published: draft.published ?? false,

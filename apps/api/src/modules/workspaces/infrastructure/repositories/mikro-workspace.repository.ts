@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { Workspace } from '@app/database/mikro/four-tables';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import type {
@@ -11,6 +10,7 @@ import {
   type Page,
   type PageRequest,
 } from '@core/saas-kit/shared-kernel/domain/pagination';
+import { uuidv7 } from '@core/saas-kit/shared-kernel/util/uuid-v7';
 import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { QueryOrder } from '@mikro-orm/core';
 import { Inject, Injectable } from '@nestjs/common';
@@ -75,7 +75,7 @@ export class MikroWorkspaceRepository implements WorkspaceRepository {
     const now = new Date();
     const em = await this.mikro.fork();
     const entity = em.create(Workspace, {
-      id: randomUUID(),
+      id: uuidv7(),
       name: draft.name,
       slug: draft.slug,
       organizationId,

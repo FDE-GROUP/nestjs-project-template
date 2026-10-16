@@ -7,11 +7,15 @@
  * `FREE_PLAN`（带限额·非 fail-open·裁②）。
  */
 
-/** 订阅状态（1:N 历史的行态；"当前订阅" = 最新 active 行）。 */
-export type SubscriptionStatus = 'active' | 'expired' | 'cancelled';
+/** 订阅状态（1:N 历史的行态；"当前订阅" = 最新 active 行）。
+ * `suspended`：治理挂起的可恢复关闭（module-es-first-real-consumer 裁点丙·租户被 suspend ⇒ 当前行置
+ * suspended，resume 回 active）；与 `cancelled`（不可逆终止·恢复新开行）并存不冲突。
+ * quota 读面仅滤 `ACTIVE`，suspended/expired/cancelled 自然排除→回落 FREE_PLAN。 */
+export type SubscriptionStatus = 'active' | 'suspended' | 'expired' | 'cancelled';
 
 export const SUBSCRIPTION_STATUS = {
   ACTIVE: 'active',
+  SUSPENDED: 'suspended',
   EXPIRED: 'expired',
   CANCELLED: 'cancelled',
 } as const;

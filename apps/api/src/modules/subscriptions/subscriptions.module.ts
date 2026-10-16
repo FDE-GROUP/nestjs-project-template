@@ -1,15 +1,20 @@
 import { CreateSubscriptionCommandHandler } from '@core/saas-kit/modules/subscriptions/application/commands/handlers/create-subscription.command-handler';
 import { GetSubscriptionQueryHandler } from '@core/saas-kit/modules/subscriptions/application/queries/handlers/get-current-subscription.query-handler';
 import { CUSTOMER_PROVISIONER } from '@core/saas-kit/modules/subscriptions/domain/ports/customer-provisioner.port';
+import { SUBSCRIPTION_LIFECYCLE } from '@core/saas-kit/modules/subscriptions/domain/ports/subscription-lifecycle.port';
 import { SUBSCRIPTION_REPOSITORY } from '@core/saas-kit/modules/subscriptions/domain/repositories/subscription.repository';
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { SubscriptionsController } from './api/subscriptions.controller';
+import { TenantStatusSubscriptionLinkHandler } from './infrastructure/dispatchers/tenant-status-subscription-link.handler';
+import { MikroSubscriptionLifecycle } from './infrastructure/mikro-subscription.lifecycle';
 import { PaymentCustomerProvisioner } from './infrastructure/payment-customer.provisioner';
 import { MikroSubscriptionRepository } from './infrastructure/repositories/mikro-subscription.repository';
 
 const CommandHandlers = [CreateSubscriptionCommandHandler];
 const QueryHandlers = [GetSubscriptionQueryHandler];
+// ES 首个真实业务消费者（module-es-first-real-consumer 治理档）：跨上下文只经领域事件入本侧
+const EventHandlers = [TenantStatusSubscriptionLinkHandler];
 
 /**
  * Tenant subscription slice (global-tenancy S7 · FR-7/FR-8/D5).
@@ -25,8 +30,11 @@ const QueryHandlers = [GetSubscriptionQueryHandler];
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,
+    ...EventHandlers,
     // ORM 修宪案 B · 切片 3c-ii-A：订阅仓储绑定改指 Mikro 适配（MikroORM 为唯一实现）。
     { provide: SUBSCRIPTION_REPOSITORY, useClass: MikroSubscriptionRepository },
+    // 治理联动系统面端口（module-es-first-real-consumer·显式 tenantId·终态收敛）。
+    { provide: SUBSCRIPTION_LIFECYCLE, useClass: MikroSubscriptionLifecycle },
     // §9.5.4①B/④ · P1c：订阅 domain/application 经端口消费客户开通，PaymentService 适配留应用侧。
     { provide: CUSTOMER_PROVISIONER, useClass: PaymentCustomerProvisioner },
   ],
