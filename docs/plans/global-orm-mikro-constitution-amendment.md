@@ -236,7 +236,7 @@
 - gated e2e `BA_ADAPTER=mikro`（真库 `nestjs_practice`）：auth-http-surface **3/3**·tenant-isolation **5/5**·seat-quota-member **1/1** 全 EXIT=0。
 - prod-boot 双轨：drizzle 轨 **200**（无 Mikro 连接·DB-free 不变量守住）·mikro 轨 **200**（`MikroORM app-orm connected (posts + BA adapter)` 坐实并入实体集建连并装配 BA 面）。
 
-**发现相邻既有缺陷（另案·非本片引入）**：`tenant-hard-delete.e2e` 2 用例在 `beforeAll` 抛 `httpAdapter.getInstance` of undefined。三重取证坐实**与 3b 正交**——① mikro 轨失败=drizzle 轨（不设 `BA_ADAPTER`）逐字同失败；② `git stash` 回 HEAD（本片改动全清）同样失败；③ 根因＝该测用裸 `ref.init()`（不建 HTTP adapter）与 `AuthBootstrapService.onApplicationBootstrap` 需 Fastify 实例不兼容·系 **module-auth-http-surface 落地时遗留的 harness 缺陷**·因 env-gated 从不进默认 CI 长期未暴露。**归为独立另案**（修该 e2e 装配面·非 ORM 修宪范围）·本片不越界夹带（不掩盖结构缺陷·P2）。
+**发现相邻既有缺陷（另案·非本片引入）**：`tenant-hard-delete.e2e` 2 用例在 `beforeAll` 抛 `httpAdapter.getInstance` of undefined。三重取证坐实**与 3b 正交**——① mikro 轨失败=drizzle 轨（不设 `BA_ADAPTER`）逐字同失败；② `git stash` 回 HEAD（本片改动全清）同样失败；③ 根因＝该测用裸 `ref.init()`（不建 HTTP adapter）与 `AuthBootstrapService.onApplicationBootstrap` 需 Fastify 实例不兼容·系 **module-auth-http-surface 落地时遗留的 harness 缺陷**·因 env-gated 从不进默认 CI 长期未暴露。**归为独立另案**（修该 e2e 装配面·非 ORM 修宪范围）·本片不越界夹带（不掩盖结构缺陷·P2）。〔结清（2026-10-16）：修复已在 contract `7c4a34f` 落地（`createNestApplication(FastifyAdapter)`+`init()`·断言未弱化）·scratch `nestjs_e2e_hd` 真库复验 2/2·另立 [`module-auth-e2e-harness-fix`](./module-auth-e2e-harness-fix.md) 正式销账该另案〕
 
 **回滚点**：① 一键（免重部署）：`BA_ADAPTER` 置回 `drizzle`（或不设）·双轨下 `drizzleAdapter` 路径 + `schema` import 不删；② 单点：`git revert` 本片 commit。与 §5.6 迁移基线**正交**（回滚适配器不动已登记 `mikro_migrations`）。
 
