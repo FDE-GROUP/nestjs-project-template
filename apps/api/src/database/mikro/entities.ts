@@ -10,10 +10,10 @@ import { defineEntity, p } from '@mikro-orm/core';
  * 使 BA 侧 DB 字段名（camelCase）与物理列名**直接对齐**——adapter 以手写 SQL（`em.execute`）寻址时键名两侧一致。
  * 表名单词小写与 BA 模型名对齐（`user`/`account`/…）。
  *
- * 字段集与 `apps/api/src/database/schema.ts`（现 Drizzle 生产表面）逐列对齐，另加 `dateField`
+ * 字段集与 `apps/api/src/database/schema.ts`（现生产表面）逐列对齐，另加 `dateField`
  * （供 `@better-auth/test-utils` authFlow 的 additional-fields 一致性用例往返 Date）。
  *
- * 本目录在切片 1 **未接入生产装配**（生产仍跑 Drizzle，见 auth.implement.ts）；切片 3 才换接链。
+ * 本目录在切片 1 **未接入生产装配**；切片 3 已换接链并接入生产。
  */
 
 export const User = defineEntity({

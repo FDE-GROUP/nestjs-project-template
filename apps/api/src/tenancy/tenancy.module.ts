@@ -57,7 +57,7 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
     QuotaService,
     QuotaGuard,
     // §9.5.4①B 端口倒置：core 服务经端口消费持久化，适配由本（参考）应用装配。
-    // ORM 修宪案 B · 切片 3c-ii-A：user_status/quota 绑定改指 Mikro 适配（Drizzle 版不删·双轨回滚点）。
+    // ORM 修宪案 B · 切片 3c-ii-A：user_status/quota 绑定改指 Mikro 适配（MikroORM 为唯一实现）。
     { provide: TENANT_STATUS_STORE, useClass: MikroTenantStatusStore },
     { provide: USER_STATUS_STORE, useClass: MikroUserStatusStore },
     { provide: QUOTA_STORE, useClass: MikroQuotaStore },
@@ -83,7 +83,7 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
     QuotaService,
     QuotaGuard,
     // 端口 token 随 @Global 一并导出：守卫/服务在消费模块（如 TenantsModule）就地实例化时
-    // 也能解析到应用侧 Drizzle 适配（对齐原 `DrizzleService` 经 @Global DatabaseModule 全局可见）。
+    // 也能解析到应用侧 旧 ORM 适配（对齐原 `原数据库服务` 经 @Global DatabaseModule 全局可见）。
     TENANT_STATUS_STORE,
     USER_STATUS_STORE,
     QUOTA_STORE,

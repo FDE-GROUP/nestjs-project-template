@@ -12,7 +12,7 @@ import { ConfigService } from './config/config.service';
 /**
  * OpenAPI codegen 入口（microservice-readiness 首切片 #4）。
  *
- * **DB-free**：只 `create` 不 `listen`——`onModuleInit`（DrizzleService 的 `SELECT 1`）
+ * **DB-free**：只 `create` 不 `listen`——`onModuleInit`（原数据库服务 的 `SELECT 1`）
  * 仅在 init/listen 时触发，故本脚本无数据库也能直出 spec，替代原先
  * 「起 7009 服务 + sleep 15 + curl /openapi.yaml」的间接路径。
  *

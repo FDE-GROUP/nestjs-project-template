@@ -19,15 +19,15 @@ import {
  *
  * 为何「忠实」——迁移基线 = Mikro 生成器据**实体元数据**反推 DDL；若元数据丢失 FK/索引/列，Mikro 一旦接管
  * 未来 DDL 就会**静默 DROP** 这些约束。多租户命脉（NFR-6 租户级联删除、S2/S3 租户作用域读索引）全在
- * FK cascade + 复合索引里，故本集**逐列对齐** `database/schema.ts`（现 Drizzle 生产表面）：
+ * FK cascade + 复合索引里，故本集**逐列对齐** `database/schema.ts`（现生产表面）：
  *  - 类型映射（实测钉死·见下）：`text`→`p.text()`；`timestamp`(无 tz)→`p.datetime().columnType('timestamp')`
- *    （Mikro 默认 `p.datetime()` 会发 `timestamptz`，与 Drizzle `.columnType` 缺省 `timestamp` 不符，须显式压回）；
+ *    （Mikro 默认 `p.datetime()` 会发 `timestamptz`，与旧实现 `.columnType` 缺省 `timestamp` 不符，须显式压回）；
  *    `integer`→`p.integer()`；`boolean`→`p.boolean()`；`jsonb`→`p.json()`；`bigserial`→`p.bigint('number').autoincrement()`；
  *    `pgEnum('role')`→`p.enum([...]).nativeEnumName('role')`；`DEFAULT now()`→`.defaultRaw('now()')`；
- *    app 级 `$onUpdate` 的 `updatedAt` **无 DB 默认**（Drizzle 亦然），故仅 NOT NULL、不挂 default。
+ *    app 级 `$onUpdate` 的 `updatedAt` **无 DB 默认**（旧 ORM 亦然），故仅 NOT NULL、不挂 default。
  *  - 跨模型外键用 `p.manyToOne(T).mapToPk().deleteRule(...)`——`mapToPk` 令列仍存**裸 FK 值**（贴合 adapter
  *    的扁平读写习惯），同时让生成器发出带 `on delete cascade / set null` 的 FK 约束（Postgres 不为 FK 自动建索引，
- *    与 Drizzle 一致，无多余索引漂移）。
+ *    与旧实现 一致，无多余索引漂移）。
  *  - 索引/唯一以**实体级 `indexes`/`uniques` + 显式 name** 复刻 schema.ts 的 `index/uniqueIndex/unique` 名与列集。
  *
  * 本集**不含** companion instance interface：实体从不被 app 代码实例化，仅作为 `MikroORM.init` 的 schema 元数据。

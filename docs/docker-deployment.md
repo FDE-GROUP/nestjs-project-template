@@ -47,8 +47,8 @@ You can then run the NestJS application locally:
 # Install dependencies
 pnpm install
 
-# Apply schema (development)
-pnpm run drizzle:push
+# Apply migrations (development)
+pnpm run migration:run
 
 # Start the application in development mode
 pnpm run start:dev
@@ -82,8 +82,9 @@ registry (`.npmrc`, and `COREPACK_NPM_REGISTRY` for the pnpm tarball itself — 
 read `.npmrc`), and `pnpm run build` compiles `libs/core` before the app. The runtime stage keeps
 `node_modules`, `dist`, `libs/core/dist` and the root/package `package.json` files (plus
 `pnpm-workspace.yaml`) so that the `@core/saas-kit/…` bare handles still resolve through the workspace
-link + `exports` map. It deliberately carries **no pnpm and no `drizzle.config.ts`** — that config points
-at TS sources absent from the runtime stage, so migrations run outside the image (ops machine / CI).
+link + `exports` map. It deliberately carries **no pnpm and no migration tooling** (the `scripts/mikro-migrate.ts` /
+`mikro-migration-create.ts` runners need `tsx` and the TS sources absent from the runtime stage), so migrations
+run outside the image (ops machine / CI).
 
 > If the build dies inside the dependency stage with `getaddrinfo ENOTFOUND registry.npmmirror.com`,
 > the base image pull succeeded but the `RUN` steps cannot resolve names — see

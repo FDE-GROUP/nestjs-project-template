@@ -15,8 +15,7 @@ import type {
 } from '../../domain/repositories/user-governance.repository';
 
 /**
- * ORM 修宪案 B · 切片 3c-ii-B —— 平台用户治理读面的 **MikroORM 适配**（expand 双轨·与
- * `DrizzleUserGovernanceRepository` 并存·`USER_GOVERNANCE_REPOSITORY` 绑定改指本类·旧类不删作回滚点）。
+ * ORM 修宪案 B · 切片 3c-ii-B —— 平台用户治理读面的 **MikroORM 适配**（`USER_GOVERNANCE_REPOSITORY` 绑定改指本类·MikroORM 为唯一实现）。
  *
  * 跨平台用户列表：`user` LEFT JOIN `user_status`——无状态记录行（未被动过暂停）视同 active，与租户
  * deny-list 同口径。刻意**不注入任何租户上下文**（平台级天然全量，FR-11①）——访问裁决完全由 controller
@@ -24,7 +23,7 @@ import type {
  *
  * Mikro 侧无关系对象（扁平列），故 LEFT JOIN 以「`findAndCount(User)` 取本页用户 + `find(UserStatus,
  * { userId: { $in: 本页 id } })` 批量取状态 + 内存合并」折叠·**不逐用户 N+1**。搜索采 `$ilike`（探针
- * 实测与 Drizzle `ilike`＝PG 原生 ILIKE 逐字节一致·忠实 drop-in·见 §5.13 R-B2）。`fields` 投影**只取
+ * 实测与旧实现 `ilike`＝PG 原生 ILIKE 逐字节一致·忠实 drop-in·见 §5.13 R-B2）。`fields` 投影**只取
  * 读面所需列**（`id/name/email/createdAt`·既排除凭据列也规避实体上非物理列如 `dateField`）。
  */
 @Injectable()

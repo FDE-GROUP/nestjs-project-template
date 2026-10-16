@@ -3,11 +3,11 @@ import { MIKRO_ENTITIES } from './entities';
 import { MIKRO_FOUR_TABLE_ENTITIES } from './four-tables';
 
 /**
- * ORM 修宪案 B · 切片 2 —— posts 参考上下文试迁移的 **零装饰器** MikroORM v7 实体（expand 双轨）。
+ * ORM 修宪案 B · 切片 2 —— posts 参考上下文试迁移的 **零装饰器** MikroORM v7 实体。
  *
- * 放置口径（有意为之）：本文件与 `database/mikro/entities.ts`（BA 表面）/ `database/schema.ts`（Drizzle 中心表
+ * 放置口径（有意为之）：本文件与 `database/mikro/entities.ts`（BA 表面）/ `database/schema.ts`（旧 ORM 中心表
  * 定义）同级——「物理表 → 实体」的映射属**基础设施/schema 层**，非领域模型（posts 领域是贫血的·port 只返
- * `PostRecord` 裸行）。沿现仓惯例：`schema.ts` 中心定义所有表（含 `post`），`DrizzlePostRepository` 从
+ * `PostRecord` 裸行）。沿现仓惯例：`schema.ts` 中心定义所有表（含 `post`），`原 posts 仓储` 从
  * `@app/database/schema` 引 `post`；本切片对称地从 `@app/database/mikro/post.entity` 引 `Post`。
  *
  * 列名走 `EntityCaseNamingStrategy`（见 orm.ts）：属性名**原样**作列名（camelCase 列·SQL 双引号限定），与
@@ -16,7 +16,7 @@ import { MIKRO_FOUR_TABLE_ENTITIES } from './four-tables';
  *
  * 跨模型外键（`organizationId`→organization、`workspaceId`→workspace）当**普通 string 列**存（不建 Mikro 关系
  * 对象）——与 BA 表面实体同构；DB 侧 FK 约束（cascade / set null）仍由物理表强制，本实体不参与关系装配。
- * `updatedAt` 在 Drizzle 侧靠 app 级 `$onUpdate` 维护（无 DB 触发器），故写路径（仓储）显式盖时间戳。
+ * `updatedAt` 在 旧实现靠 app 级 `$onUpdate` 维护（无 DB 触发器），故写路径（仓储）显式盖时间戳。
  */
 /**
  * 实例类型（companion interface·与下方 `const Post` 声明合并）：MikroORM v7 unchained 下 `defineEntity` 只产

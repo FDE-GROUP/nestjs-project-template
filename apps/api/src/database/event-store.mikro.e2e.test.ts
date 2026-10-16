@@ -2,23 +2,26 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { UserRegisteredEvent } from '@app/modules/users/domain/events/user-registered.event';
 import { TenantStatusTransitionedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-status-transitioned.event';
-import { eq, inArray } from 'drizzle-orm';
+import { UserStatusTransitionedEvent } from '@core/saas-kit/tenancy/lifecycle/events/user-status-transitioned.event';
+import { QueryOrder } from '@mikro-orm/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { DrizzleService } from './drizzle.service';
+import { Event } from './mikro/four-tables';
 import { MikroOrmService } from './mikro/mikro-orm.service';
 import { MikroEventStore } from './mikro-event-store';
-import { event } from './schema';
 
 /**
- * ORM 修宪案 B · 切片 3c-ii-C —— MikroEventStore **真库往返**（env-gated·沿 event-store.append.e2e 惯例）。
+ * ORM 修宪案 B · 切片 3c-ii-C —— MikroEventStore **真库往返**（env-gated）。
  *
- * 现默认 CI 的 `event-store.append.e2e.test.ts` 直接手工 `new DrizzleEventStore`（系 ES 首切片既有面·
- * 非生产装配）；本片把 `EVENT_STORE` 绑定改指 `MikroEventStore`，故补此测坐实**影子追加语义在 Mikro 轨下
- * 逐字节等价**——信封→列忠实、`version` 按流 max+1 递增、重复 `eventId`/唯一键 fail-loud、
- * `deleteByAggregate` PIPL 级联补删返条数。断言读回仍走 Drizzle（同物理 `event` 表·交叉验证非自证）。
+ * ORM 修宪案 B · Phase 2（旧 ORM 全退场）后，本测为 ES 影子追加面的**唯一**真库往返证据：坐实
+ * `MikroEventStore` 语义——信封→列逐字节忠实、`version` 按流 max+1 递增、重复 `eventId`/唯一键
+ * fail-loud、`deleteByAggregate` PIPL 级联补删返条数、以及「同聚合跨事件类型共一条连续版本序列」不变量。
  *
- * 仅当 `E2E_DATABASE_URL` 存在且目标库**已含 event 表（0009）**时运行；默认 CI 跳过、不触库（DB-free 不变量）。
- * Mikro 侧仅 `em.insert`/`nativeDelete` 写读、**不建表不迁移**（迁移实体与运行时实体分职·恒等闸正交）。
+ * 写面走 `MikroEventStore`（生产 `EVENT_STORE` 绑定），读回经 `MikroOrmService.fork()` 的 `em.find(Event,…)`
+ * 直读同物理 `event` 表——旧 ORM 交叉验证面已随依赖退场，现由 Mikro 自读自证（append-only 表·读写通道
+ * 独立 em·无 Identity Map 干扰）。
+ *
+ * 仅当 `E2E_DATABASE_URL` 存在且目标库**已含 event 表**时运行；默认 CI 跳过、不触库（DB-free 不变量）。
+ * Mikro 侧仅 `em.insert`/`find`/`nativeDelete` 写读、**不建表不迁移**。
  */
 const E2E_DB = process.env.E2E_DATABASE_URL;
 const gated = E2E_DB ? describe : describe.skip;
@@ -38,25 +41,28 @@ function makeRegistrationEvent(aggregateId: string, eventId?: string): UserRegis
 }
 
 gated('MikroEventStore real-DB round trip (ORM 修宪案 B · 切片 3c-ii-C · env-gated)', () => {
-  let drizzle: DrizzleService;
   let mikro: MikroOrmService;
   let store: MikroEventStore;
   const aggregateIds: string[] = [];
 
   beforeAll(async () => {
-    drizzle = new DrizzleService({ getDatabaseConfig: () => ({ url: E2E_DB }) } as never);
-    await drizzle.onModuleInit();
     mikro = new MikroOrmService({ getDatabaseConfig: () => ({ url: E2E_DB }) } as never);
     store = new MikroEventStore(mikro);
   });
 
   afterAll(async () => {
     if (aggregateIds.length > 0) {
-      await drizzle.db.delete(event).where(inArray(event.aggregateId, aggregateIds));
+      const em = await mikro.fork();
+      await em.nativeDelete(Event, { aggregateId: { $in: aggregateIds } } as never);
     }
     await mikro.onModuleDestroy();
-    await drizzle.onModuleDestroy();
   });
+
+  /** 按流读回（version 升序）——同物理 event 表·Mikro 自读。 */
+  async function readStream(aggregateId: string) {
+    const em = await mikro.fork();
+    return em.find(Event, { aggregateId } as never, { orderBy: { version: QueryOrder.ASC } });
+  }
 
   it('persists the envelope faithfully and increments version per stream', async () => {
     const aggregateId = `es-mikro-${Date.now()}`;
@@ -66,11 +72,7 @@ gated('MikroEventStore real-DB round trip (ORM 修宪案 B · 切片 3c-ii-C · 
     const second = makeRegistrationEvent(aggregateId, randomUUID());
     await store.append([second]);
 
-    const rows = await drizzle.db
-      .select()
-      .from(event)
-      .where(eq(event.aggregateId, aggregateId))
-      .orderBy(event.version);
+    const rows = await readStream(aggregateId);
 
     expect(rows.map((row) => row.version)).toEqual([1, 2]);
     expect(rows[0].eventId).toBe(first.eventId);
@@ -105,17 +107,13 @@ gated('MikroEventStore real-DB round trip (ORM 修宪案 B · 切片 3c-ii-C · 
       }),
     ]);
 
-    const rows = await drizzle.db
-      .select()
-      .from(event)
-      .where(eq(event.aggregateId, orgId))
-      .orderBy(event.version);
+    const rows = await readStream(orgId);
     expect(rows.map((row) => row.version)).toEqual([1, 2]);
     expect(rows[0].aggregateType).toBe('tenant');
 
     // PIPL 级联补删真库归零：nativeDelete 返删除条数，再查余 0 行
     await expect(store.deleteByAggregate('tenant', orgId)).resolves.toBe(2);
-    const remaining = await drizzle.db.select().from(event).where(eq(event.aggregateId, orgId));
+    const remaining = await readStream(orgId);
     expect(remaining).toHaveLength(0);
   });
 
@@ -126,7 +124,39 @@ gated('MikroEventStore real-DB round trip (ORM 修宪案 B · 切片 3c-ii-C · 
     await store.append([makeRegistrationEvent(victim), makeRegistrationEvent(bystander)]);
 
     await expect(store.deleteByAggregate('user', victim)).resolves.toBe(1);
-    const left = await drizzle.db.select().from(event).where(eq(event.aggregateId, bystander));
+    const left = await readStream(bystander);
     expect(left).toHaveLength(1);
   });
+
+  it('user stream shares one version sequence across event kinds; PIPL purge covers both（第三切片同流不变量）', async () => {
+    const userId = `es-mikro-same-stream-${Date.now()}`;
+    aggregateIds.push(userId);
+    // registered=1 → status.transitioned=2：不同 eventType 同 (user, userId) 流连续递增
+    await store.append([makeRegistrationEvent(userId)]);
+    await store.append([
+      new UserStatusTransitionedEvent({
+        aggregateId: userId,
+        payload: { from: 'active', to: 'suspended', actorId: 'op-1', reason: 'fraud' },
+      }),
+    ]);
+
+    const rows = await readStream(userId);
+    expect(rows.map((row) => row.version)).toEqual([1, 2]);
+    expect(rows.map((row) => row.eventType)).toEqual([
+      'user.registered',
+      'user.status.transitioned',
+    ]);
+
+    // deleteByAggregate('user', id) 零额外代码一并归零两类事件
+    await expect(store.deleteByAggregate('user', userId)).resolves.toBe(2);
+    const remaining = await readStream(userId);
+    expect(remaining).toHaveLength(0);
+  });
 });
+
+/*
+ * 本地跑法（沿用租户隔离 e2e 的专用 nestjs_e2e 库先例·库须已建含 event 表的 schema）：
+ *   E2E_DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
+ *     DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
+ *     pnpm exec vitest run apps/api/src/database/event-store.mikro.e2e.test.ts
+ */

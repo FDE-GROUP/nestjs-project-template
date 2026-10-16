@@ -8,8 +8,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MikroWorkspaceRepository } from './mikro-workspace.repository';
 
 /**
- * 切片 3c-ii-A 双轨**镜像断言**：与 `drizzle-workspace.repository.test.ts` 同一套隔离律（S3 · FR-5 卡点），
- * 只是把 Drizzle 谓词对象换成 Mikro `FilterQuery` 平面对象。fake `em` 由 `MikroOrmService.fork()` 供给——
+ * 切片 3c-ii-A 双轨**镜像断言**：与 `原工作区仓储镜像测试` 同一套隔离律（S3 · FR-5 卡点），
+ * 只是把旧 ORM 谓词对象换成 Mikro `FilterQuery` 平面对象。fake `em` 由 `MikroOrmService.fork()` 供给——
  * 关键不变量：`requireTenantId()` fail-closed **先于** `fork()`（无租户→403 且绝不取 em/查库）。
  */
 function makeRepo(tenantId: string | null) {

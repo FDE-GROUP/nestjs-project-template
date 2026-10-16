@@ -14,8 +14,7 @@ import type {
 } from '../../domain/repositories/tenant-provisioning.repository';
 
 /**
- * ORM 修宪案 B · 切片 3d（S-d2）—— Provisioning gateway 的 **MikroORM 适配**（expand 双轨·与
- * `DrizzleTenantProvisioningRepository` 并存·`TENANT_PROVISIONING_REPOSITORY` 绑定改指本类·旧类不删作回滚点）。
+ * ORM 修宪案 B · 切片 3d（S-d2）—— Provisioning gateway 的 **MikroORM 适配**（`TENANT_PROVISIONING_REPOSITORY` 绑定改指本类·MikroORM 为唯一实现）。
  *
  * `submit` **不触任何 ORM 写**——沿用 Better Auth `createOrganization` 服务端系统动作（无 session +
  * `body.userId` → `isSystemAction`，源码坐实不受 HTTP 层 `allowUserToCreateOrganization:false` 封禁），

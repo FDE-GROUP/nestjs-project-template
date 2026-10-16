@@ -1,11 +1,11 @@
 import 'reflect-metadata';
-import { DrizzleService } from '@app/database/drizzle.service';
-import { account, member, organization, post, session, user } from '@app/database/schema';
+import { Account, Member, Organization, Session, User } from '@app/database/mikro/entities';
+import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
+import { Post } from '@app/database/mikro/post.entity';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
-import { inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module';
 
@@ -59,7 +59,7 @@ interface Actor {
 
 gated('租户隔离全栈 e2e（真·Better Auth 登录编排 · 无认证桩 · env-gated）', () => {
   let app: NestFastifyApplication;
-  let db: DrizzleService['db'];
+  let mikro: MikroOrmService;
 
   const stamp = Date.now();
   const createdUserIds: string[] = [];
@@ -71,20 +71,21 @@ gated('租户隔离全栈 e2e（真·Better Auth 登录编排 · 无认证桩 ·
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
-    db = app.get(DrizzleService).db;
+    mikro = app.get(MikroOrmService);
   }, 120000);
 
   afterAll(async () => {
     if (!app) return;
+    const em = await mikro.fork();
     if (createdOrgIds.length) {
-      await db.delete(post).where(inArray(post.organizationId, createdOrgIds));
-      await db.delete(member).where(inArray(member.organizationId, createdOrgIds));
-      await db.delete(organization).where(inArray(organization.id, createdOrgIds));
+      await em.nativeDelete(Post, { organizationId: { $in: createdOrgIds } } as never);
+      await em.nativeDelete(Member, { organizationId: { $in: createdOrgIds } } as never);
+      await em.nativeDelete(Organization, { id: { $in: createdOrgIds } } as never);
     }
     if (createdUserIds.length) {
-      await db.delete(session).where(inArray(session.userId, createdUserIds));
-      await db.delete(account).where(inArray(account.userId, createdUserIds));
-      await db.delete(user).where(inArray(user.id, createdUserIds));
+      await em.nativeDelete(Session, { userId: { $in: createdUserIds } } as never);
+      await em.nativeDelete(Account, { userId: { $in: createdUserIds } } as never);
+      await em.nativeDelete(User, { id: { $in: createdUserIds } } as never);
     }
     await app.close();
   });
@@ -220,7 +221,7 @@ gated('租户隔离全栈 e2e（真·Better Auth 登录编排 · 无认证桩 ·
 /*
  * 本地跑法（专用 nestjs_e2e 库·不污染 dev 数据）：
  *   docker exec nestjs-pg-dev psql -U postgres -c "CREATE DATABASE nestjs_e2e;"            # 若不存在
- *   DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e pnpm run drizzle:push -- --force
+ *   DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e pnpm run migration:run -- --fresh
  *   E2E_DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
  *     DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
  *     pnpm exec vitest run apps/api/src/tenancy/tenant-isolation.e2e.test.ts

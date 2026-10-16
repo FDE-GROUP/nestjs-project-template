@@ -6,10 +6,9 @@ import { Event } from './mikro/four-tables';
 import { MikroOrmService } from './mikro/mikro-orm.service';
 
 /**
- * ORM 修宪案 B · 切片 3c-ii-C —— `EventStore` 端口的 **MikroORM 适配**（expand 双轨·与
- * `DrizzleEventStore` 并存·`EVENT_STORE` 绑定改指本类·旧类不删作回滚点·切片 4 才清）。
+ * ORM 修宪案 B · 切片 3c-ii-C —— `EventStore` 端口的 **MikroORM 适配**（`EVENT_STORE` 绑定改指本类·MikroORM 为唯一实现）。
  *
- * 影子追加语义逐字保真（承 `DrizzleEventStore` / module-users-es-append §2.2）：CRUD 仍是唯一真相源，
+ * 影子追加语义逐字保真（承 `原事件存储适配` / module-users-es-append §2.2）：CRUD 仍是唯一真相源，
  * 本适配只把 DomainEvent 信封耐久落 `event` 表——
  *  - 空批 noop（不触库）；
  *  - `version`（聚合内序号）按 `(aggregateType, aggregateId)` 流 max+1 递增取得（`eventVersion` 是
@@ -19,7 +18,7 @@ import { MikroOrmService } from './mikro/mikro-orm.service';
  *  - `deleteByAggregate` 为 PIPL 级联补删面（第二切片 §3.2）：`nativeDelete` 纯 SQL DELETE 返删除条数，
  *    不受 `EVENT_STORE_ENABLED` 开关控制、失败 fail-loud。
  *
- * 落位 `database/`（与 `DrizzleEventStore` 同层·ES 跨切面端口实现·非 modules/tenancy 上下文）→
+ * 落位 `database/`（与 `原事件存储适配` 同层·ES 跨切面端口实现·非 modules/tenancy 上下文）→
  * 表所有权纪律守卫（只扫 modules/tenancy）正交·`event` 写面不受跨上下文判定约束。
  * 每次读写经 `MikroOrmService.fork()` 取独立 em（禁全局 `orm.em`·与其余 Mikro 适配同纪律）；`insert`/
  * `nativeDelete` 不经 Identity Map（append-only + 无状态补删语义最贴·与 3c-ii-A store 同律）。

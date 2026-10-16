@@ -7,8 +7,8 @@ import { createSeatsQuotaPlugin, type SeatsQuotaHookDeps } from './seats-quota.h
 
 /**
  * 假 Mikro 连接面（ORM 修宪案 B 切片 3d·S-d3）：`mikro.fork()` 返一个只实现 `findOne` 的假 `em`。
- * invitation 读从 Drizzle `select().from().where().limit()` 改走 `em.findOne(Invitation,…,{fields})`，
- * 命中行→返回首行（否则 `null`）——行为与旧 Drizzle 版非弱化对齐（同一裁决口径·仅换数据通道）。
+ * invitation 读从旧 ORM `select().from().where().limit()` 改走 `em.findOne(Invitation,…,{fields})`，
+ * 命中行→返回首行（否则 `null`）——行为与旧版非弱化对齐（同一裁决口径·仅换数据通道）。
  */
 function fakeMikro(row: { organizationId: string; status: string } | null) {
   const findOne = vi.fn().mockResolvedValue(row);

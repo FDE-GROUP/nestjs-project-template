@@ -14,10 +14,10 @@ const QueryHandlers = [GetSubscriptionQueryHandler];
 /**
  * Tenant subscription slice (global-tenancy S7 · FR-7/FR-8/D5).
  *
- * Dependencies resolve without extra imports: `DrizzleService` (DatabaseModule @Global),
+ * Dependencies resolve without extra imports: `原数据库服务` (DatabaseModule @Global),
  * `QuotaService` / `TenantContextService` (TenancyModule @Global) and `PaymentService`
  * (PaymentModule now @Global). Dependency inversion: the domain owns the subscription
- * repository port; the Drizzle adapter stamps/scope the ALS tenant (FR-5 choke-point).
+ * repository port; the ORM adapter stamps/scope the ALS tenant (FR-5 choke-point).
  */
 @Module({
   imports: [CqrsModule],
@@ -25,7 +25,7 @@ const QueryHandlers = [GetSubscriptionQueryHandler];
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,
-    // ORM 修宪案 B · 切片 3c-ii-A：订阅仓储绑定改指 Mikro 适配（`DrizzleSubscriptionRepository` 不删·双轨回滚点）。
+    // ORM 修宪案 B · 切片 3c-ii-A：订阅仓储绑定改指 Mikro 适配（MikroORM 为唯一实现）。
     { provide: SUBSCRIPTION_REPOSITORY, useClass: MikroSubscriptionRepository },
     // §9.5.4①B/④ · P1c：订阅 domain/application 经端口消费客户开通，PaymentService 适配留应用侧。
     { provide: CUSTOMER_PROVISIONER, useClass: PaymentCustomerProvisioner },

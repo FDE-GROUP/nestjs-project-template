@@ -11,16 +11,16 @@ import { initMikroOrm } from './mikro/orm';
 import { MIKRO_APP_ENTITIES, Post } from './mikro/post.entity';
 
 /**
- * ORM 修宪案 B · 切片 4-α（S-d6）——seed 数据面由 Drizzle 换轨为 **MikroORM**（只换通道·不改行为）。
+ * ORM 修宪案 B · 切片 4-α（S-d6）——seed 数据面由旧 ORM 换轨为 **MikroORM**（只换通道·不改行为）。
  *
  * 保真律（对齐 §5.20 · 真库对拍校正）：
- * - **`createdAt` 靠 DB 默认（`defaultNow()`）填充**：`em.insert` 不发该列——与旧 Drizzle 一致（真库实证
+ * - **`createdAt` 靠 DB 默认（`defaultNow()`）填充**：`em.insert` 不发该列——与旧实现 一致（真库实证
  *   `user.createdAt` 有 `DEFAULT now()`·插入省略即落库为当前时间）。
- * - **`updatedAt` 必须显式写**：真库 `user/post.updatedAt` 为 `NOT NULL` 且**无 DB 默认**（Drizzle 的
+ * - **`updatedAt` 必须显式写**：真库 `user/post.updatedAt` 为 `NOT NULL` 且**无 DB 默认**（旧 ORM 的
  *   `$onUpdate` 是查询构建期行为、非 DB 触发器）·故 insert 显式盖 `new Date()`（还原旧轨落库产生有效
  *   updatedAt 的可观测结果·否则 23502 NOT NULL 违约）。
  * - **`role` 文本经 PG coerced 入 enum 列**（`roleEnum('role',['USER','ADMIN'])`·沿 §5.18 `role` default 实证）；
- *   直接写 `'ADMIN'`/`'USER'` 文本，不再 `import { Role } from './schema'`（去除对 Drizzle schema 的最后一处 seed 依赖）。
+ *   直接写 `'ADMIN'`/`'USER'` 文本，不再 `import { Role } from './schema'`（去除对旧 ORM schema 的最后一处 seed 依赖）。
  * - **`SEED_CLEANUP` / 弱口令兜底（`ADMIN_PASSWORD||admin123` · `USER_PASSWORD||user123`）逐字不变**——
  *   属 module-config-env-surface-contract 归人项，本批不夹带改 fail-loud。
  * - **运行器＝`tsx`**（`db:seed`）：seed 现值导入整条 Mikro 轨（`./mikro/orm`→`./entities`/`./four-tables`…
@@ -95,8 +95,8 @@ export async function createUsers(em: EntityManager, options: SeedOptions): Prom
   const existingAdmin = await em.findOne(User, { email: operatorEmail });
 
   if (existingAdmin) {
-    // 镜像旧 Drizzle `db.update(user).set({...}).where(eq(user.email, ...))`：原生 UPDATE·显式盖 updatedAt
-    // （旧 Drizzle `$onUpdate` 在查询构建期自动 bump updatedAt·此处如实还原该可观测行为）。
+    // 镜像旧实现 `db.update(user).set({...}).where(eq(user.email, ...))`：原生 UPDATE·显式盖 updatedAt
+    // （旧实现 `$onUpdate` 在查询构建期自动 bump updatedAt·此处如实还原该可观测行为）。
     await em.nativeUpdate(
       User,
       { email: operatorEmail },
@@ -230,7 +230,7 @@ export async function cleanup(em: EntityManager): Promise<void> {
   if (process.env.SEED_CLEANUP === 'true') {
     console.log('🧹 Cleaning up existing data...');
     try {
-      // 全表删·删序 post→user（post FK 引用 user·先删子表·与旧 Drizzle `db.delete` 一致）。
+      // 全表删·删序 post→user（post FK 引用 user·先删子表·与旧实现 `db.delete` 一致）。
       await em.nativeDelete(Post, {});
       await em.nativeDelete(User, {});
       console.log('✅ Cleanup completed');

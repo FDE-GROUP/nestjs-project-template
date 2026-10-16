@@ -1,13 +1,19 @@
 import 'reflect-metadata';
-import { DrizzleService } from '@app/database/drizzle.service';
-import { account, invitation, member, organization, session, user } from '@app/database/schema';
+import {
+  Account,
+  Invitation,
+  Member,
+  Organization,
+  Session,
+  User,
+} from '@app/database/mikro/entities';
+import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { FREE_PLAN } from '@core/saas-kit/tenancy/quota/tenant-plans';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { APIError } from 'better-auth/api';
-import { and, eq, inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module';
 
@@ -55,7 +61,7 @@ interface Actor {
 
 gated('seats 配额 hook 全栈 e2e（真·BA HTTP 入组通道 · env-gated）', () => {
   let app: NestFastifyApplication;
-  let db: DrizzleService['db'];
+  let mikro: MikroOrmService;
 
   const stamp = Date.now();
   const createdUserIds: string[] = [];
@@ -67,20 +73,21 @@ gated('seats 配额 hook 全栈 e2e（真·BA HTTP 入组通道 · env-gated）'
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
-    db = app.get(DrizzleService).db;
+    mikro = app.get(MikroOrmService);
   }, 120000);
 
   afterAll(async () => {
     if (!app) return;
+    const em = await mikro.fork();
     if (createdOrgIds.length) {
-      await db.delete(invitation).where(inArray(invitation.organizationId, createdOrgIds));
-      await db.delete(member).where(inArray(member.organizationId, createdOrgIds));
-      await db.delete(organization).where(inArray(organization.id, createdOrgIds));
+      await em.nativeDelete(Invitation, { organizationId: { $in: createdOrgIds } } as never);
+      await em.nativeDelete(Member, { organizationId: { $in: createdOrgIds } } as never);
+      await em.nativeDelete(Organization, { id: { $in: createdOrgIds } } as never);
     }
     if (createdUserIds.length) {
-      await db.delete(session).where(inArray(session.userId, createdUserIds));
-      await db.delete(account).where(inArray(account.userId, createdUserIds));
-      await db.delete(user).where(inArray(user.id, createdUserIds));
+      await em.nativeDelete(Session, { userId: { $in: createdUserIds } } as never);
+      await em.nativeDelete(Account, { userId: { $in: createdUserIds } } as never);
+      await em.nativeDelete(User, { id: { $in: createdUserIds } } as never);
     }
     await app.close();
   });
@@ -129,12 +136,10 @@ gated('seats 配额 hook 全栈 e2e（真·BA HTTP 入组通道 · env-gated）'
     });
   }
 
-  const countMembers = (orgId: string) =>
-    db
-      .select({ id: member.id })
-      .from(member)
-      .where(eq(member.organizationId, orgId))
-      .then((rows) => rows.length);
+  const countMembers = async (orgId: string) => {
+    const em = await mikro.fork();
+    return em.count(Member, { organizationId: orgId } as never);
+  };
 
   it('免费档塞满后 accept-invitation 被 hook 拒 402，member 行零增长（path 实证 + 商业闭环）', async () => {
     const owner = await signUpThenSignIn('owner');
@@ -182,11 +187,12 @@ gated('seats 配额 hook 全栈 e2e（真·BA HTTP 入组通道 · env-gated）'
     expect(await countMembers(orgId)).toBe(limit);
 
     // 超限邀请保持 pending（hook 拒绝不等于消费）
-    const [row] = await db
-      .select({ status: invitation.status })
-      .from(invitation)
-      .where(and(eq(invitation.id, overflowInvitationId), eq(invitation.organizationId, orgId)))
-      .limit(1);
+    const em = await mikro.fork();
+    const row = await em.findOne(
+      Invitation,
+      { id: overflowInvitationId, organizationId: orgId } as never,
+      { fields: ['status'] },
+    );
     expect(row?.status).toBe('pending');
   }, 120000);
 });

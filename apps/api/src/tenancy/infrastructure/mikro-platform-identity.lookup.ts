@@ -4,8 +4,7 @@ import type { PlatformIdentityLookup } from '@core/saas-kit/tenancy/platform/pla
 import { Inject, Injectable } from '@nestjs/common';
 
 /**
- * ORM 修宪案 B · 切片 3c-i —— `PlatformIdentityLookup` 的 **MikroORM 适配**（expand 双轨·与
- * `DrizzlePlatformIdentityLookup` 并存·`PLATFORM_IDENTITY_LOOKUP` 绑定改指本类·旧类不删作回滚点）。
+ * ORM 修宪案 B · 切片 3c-i —— `PlatformIdentityLookup` 的 **MikroORM 适配**（`PLATFORM_IDENTITY_LOOKUP` 绑定改指本类·MikroORM 为唯一实现）。
  *
  * 据实读 Better Auth 的 `user.email`（非 session 回传字段·FR-13 唯一经营者判定）。读走 `user`
  * **BA 实体**（切片 1 `entities.ts` 已含 `email` 列·无需补实体）·每次 `fork()` 取独立 em

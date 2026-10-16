@@ -8,11 +8,11 @@ import { ExportUserDataQuery } from '../export-user-data.query';
 import { ExportUserDataQueryHandler } from './export-user-data.query-handler';
 
 /**
- * ORM 修宪案 B · 切片 3d（S-d4）双轨**镜像断言**：数据通道由 Drizzle
+ * ORM 修宪案 B · 切片 3d（S-d4）双轨**镜像断言**：数据通道由旧 ORM
  * `db.query.user.findFirst({columns})` + `select().from().where()` 换成 Mikro
  * `em.findOne(User,…,{fields})` + `em.find(Entity,…,{fields})`。fake `em` 经 `MikroOrmService.fork()` 供给。
  *
- * **R-B1 凭据红线（非弱化）**：与旧 Drizzle 版逐列对齐——四表读全部走 `fields` 白名单，凭据列在
+ * **R-B1 凭据红线（非弱化）**：与旧版逐列对齐——四表读全部走 `fields` 白名单，凭据列在
  * **生成的 SELECT 投影面即被排除**（非取回后删），故测直接断言 `fields` 列表不含凭据键；另加序列化
  * 载荷红线兜底。fake 行刻意携带 password/accessToken/evidence 等，验证映射层不外泄。
  */

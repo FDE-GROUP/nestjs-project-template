@@ -10,8 +10,8 @@
  * 的 S7 错误体口径一致。hook 校验与实际插入间的并发窄口按 plan §4-丙接受为软性商业限制。
  * invitation 表查询为**读侧**（表所有权纪律条款②：读宽松·写卡 owner）。
  *
- * ORM 修宪案 B · 切片 3d（S-d3）：invitation 读由 Drizzle `select().from().where().limit()` 改走
- * **Mikro `em.findOne(Invitation,…,{fields})`**（expand 双轨·仅改数据通道·不改裁决行为）。`fork()` 只在
+ * ORM 修宪案 B · 切片 3d（S-d3）：invitation 读由旧 ORM `select().from().where().limit()` 改走
+ * **Mikro `em.findOne(Invitation,…,{fields})`**（仅改数据通道·不改裁决行为）。`fork()` 只在
  * **命中 matcher 的实际请求内**调用（插件构造时仅存 `mikro` 引用不建连）→ 保持 `app-boot.smoke`/
  * `verify:prod-boot` 的 DB-free 不变量。`QuotaService.checkSeats` 早在 3c-ii-A 即已走 Mikro（本片不动）。
  */

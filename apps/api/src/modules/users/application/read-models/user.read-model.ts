@@ -14,7 +14,7 @@ export interface UserReadModel {
   updatedAt: Date;
 }
 
-/** Boolean `columns` map for Drizzle relational queries (excludes password/name). */
+/** Boolean `columns` map for relational queries (excludes password/name). */
 export const userPublicColumns = {
   id: true,
   email: true,

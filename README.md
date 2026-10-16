@@ -4,7 +4,7 @@
   <a href="https://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-<p align="center">一个采用最佳实践的现代 NestJS 工程骨架：Fastify + Drizzle + PostgreSQL + Node/pnpm，<br/>多租户 SaaS 核心能力已就位（租户→工作区两级、全局用户 + membership、三层权限）。</p>
+<p align="center">一个采用最佳实践的现代 NestJS 工程骨架：Fastify + MikroORM + PostgreSQL + Node/pnpm，<br/>多租户 SaaS 核心能力已就位（租户→工作区两级、全局用户 + membership、三层权限）。</p>
 
 <p align="center">
   <a href="https://github.com/nestjs/nest" target="_blank"><img src="https://img.shields.io/github/license/nestjs/nest.svg" alt="Package License" /></a>
@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Drizzle-CEF4DD?style=flat-square&logo=drizzle&logoColor=%23C5F74F" alt="Drizzle" />
+  <img src="https://img.shields.io/badge/MikroORM-7.2-00b055?style=flat-square" alt="MikroORM" />
   <img src="https://img.shields.io/badge/Better--Auth-6366F1?style=flat-square&logo=lock&logoColor=white" alt="Better Auth" />
   <img src="https://img.shields.io/badge/Stripe-Payments-008CDD?style=flat-square&logo=stripe&logoColor=white" alt="Stripe" />
   <img src="https://img.shields.io/badge/Aliyun-OSS-FF6A00?style=flat-square&logo=alibabacloud&logoColor=white" alt="Aliyun OSS" />
@@ -39,7 +39,7 @@
 - **运行时**：[Node LTS ≥22](https://nodejs.org/)（ESM，`"type": "module"`；开发经 `nest start --watch`、生产运行 SWC 编译产物）+ [pnpm](https://pnpm.io/)（包管理·workspace）
 - **框架**：[NestJS 12](https://nestjs.com/) + [Fastify 5](https://www.fastify.io/)
 - **架构范式**：Clean Architecture + DDD + CQRS（[`@nestjs/cqrs`](https://docs.nestjs.com/recipes/cqrs)）垂直切片，叠加分阶段 **ES + EDA**（Phase A 进程内事件派发 · Phase B event store 影子追加（缺省关）· Phase C 投影/saga 待排，路线见[事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)）
-- **数据库**：[PostgreSQL](https://www.postgresql.org/) + [Drizzle ORM](https://orm.drizzle.team/)（迁移与种子）
+- **数据库**：[PostgreSQL](https://www.postgresql.org/) + [MikroORM](https://mikro-orm.io/)（迁移与种子）
 - **认证**：[Better Auth](https://github.com/better-auth/better-auth)（邮箱 + OAuth、会话/CSRF）——保留海外 OAuth（Google/GitHub）；**新增境内登录：微信、企业微信、钉钉、飞书**（自定义 provider；不做手机验证码登录）
 - **校验**：[class-validator](https://github.com/typestack/class-validator) + class-transformer（DTO）
 - **构建**：SWC（`nest build --builder swc`）
@@ -63,7 +63,7 @@ apps/api/src/
 ├─ modules/<上下文>/        # 限界上下文（users / auth / tenants / workspaces / payment / storage / subscriptions / posts）
 │  ├─ domain/               # 实体、值对象、领域事件、仓储接口
 │  ├─ application/          # 用例（command/query + handler）、DTO 编排
-│  ├─ infrastructure/       # 仓储实现、外部集成（Drizzle 等）
+│  ├─ infrastructure/       # 仓储实现、外部集成（MikroORM 等）
 │  └─ api/                  # controller / HTTP 边界
 ├─ tenancy/                 # 租户边界：生命周期 / RBAC / 配额 / 会话 / 平台治理 / 隔离
 ├─ common/ config/ database/ i18n/ logger/ mailer/   # 技术基础设施
@@ -96,7 +96,7 @@ apps/api/src/
 
 - [安装与运行](./docs/install&run.md)
 - [Docker 部署](./docs/docker-deployment.md)
-- [Drizzle 迁移指南](./docs/drizzle-migration-guide.md)
+- [MikroORM 迁移指南](./docs/mikro-migration-guide.md)
 - [邮件模块指南（英文）](./docs/mailer-en.md)
 - [OAuth 认证指南（英文）](./docs/oauth-guide-en.md)
 
@@ -109,7 +109,7 @@ apps/api/src/
 - **分层架构**：关注点分离的模块化 / 垂直切片结构
 - **配置管理**：`@nestjs/config` + [Joi](https://joi.dev/) 校验，分环境（`config/envs`）
 - **异常与响应**：全局异常过滤 + 响应转换拦截器 + 日志拦截器
-- **数据库**：Drizzle + PostgreSQL，含迁移（`drizzle:generate/migrate/push/studio`）与种子
+- **数据库**：MikroORM + PostgreSQL，含迁移（`migration:generate/migration:run`）与种子
 - **认证**：Better Auth——邮箱登录/注册 + 社交登录（Google、GitHub + 境内企微/钉钉/飞书 genericOAuth 通道）、会话与 CSRF；全局会话墙（deny-by-default + `@Public` 旁路）
 - **多租户**：审批制租户生命周期（状态机单点裁决）、租户→工作区两级边界、三层权限（平台/租户/Workspace RBAC）、仓储层行级隔离（ALS 卡点）、deny-list 即时失权
 - **平台治理与合规**：驳回/暂停/恢复/删除治理端点 + 结构化审计（FR-6）；PIPL 硬删级联清除（含事件流补删）
@@ -130,7 +130,7 @@ apps/api/src/
 ```bash
 pnpm install                # 安装依赖
 cp .env.example .env        # 配置环境变量（数据库等）
-pnpm run db:setup           # 推送 schema 并写入种子（drizzle push + seed）
+pnpm run db:setup           # 应用迁移并写入种子（migration:run + seed）
 
 pnpm run start:dev          # 开发：nest start --watch
 pnpm run build              # 构建：先 build:libs 再 nest build --builder swc

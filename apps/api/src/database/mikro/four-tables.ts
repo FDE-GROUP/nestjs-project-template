@@ -29,7 +29,7 @@ export const USER_STATUS_META: TableMeta = {
   name: 'UserStatus',
   tableName: 'user_status',
   columns: [
-    // PK-FK：userId 即主键 + FK→user（Drizzle 仅 `on delete cascade`·显式压回 updateRule no action 求逐字对齐）。
+    // PK-FK：userId 即主键 + FK→user（旧 ORM 仅 `on delete cascade`·显式压回 updateRule no action 求逐字对齐）。
     [
       'userId',
       { k: 'fk', target: 'User', onDelete: 'cascade', onUpdate: 'no action', primary: true },

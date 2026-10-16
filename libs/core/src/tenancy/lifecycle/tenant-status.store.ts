@@ -2,8 +2,8 @@
  * Tenant status store port（global-tenancy S10 · §9.5.4①B 端口倒置）。
  *
  * `TenantStatusService` 是租户生命周期状态的**唯一读写卡点**，但它本身**不应感知**具体
- * ORM/schema（Better Auth 的 `organization` 表、Drizzle 连接）。此端口把「按租户 id 取回/
- * 落回 metadata」这一持久化原语抽象出来，交由参考应用的 Drizzle 适配实现；core 侧只保留
+ * ORM/schema（Better Auth 的 `organization` 表、旧 ORM 连接）。此端口把「按租户 id 取回/
+ * 落回 metadata」这一持久化原语抽象出来，交由参考应用的 旧 ORM 适配实现；core 侧只保留
  * 纯状态判定逻辑（`tenant-lifecycle`）。
  *
  * 约定：`load` 对**行不存在**返回 `undefined`（fail-closed：非 active / not-found 由调用方裁决）；

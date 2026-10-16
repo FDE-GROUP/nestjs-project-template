@@ -25,7 +25,7 @@ import { type CleanedWhere, createAdapterFactory } from 'better-auth/adapters';
  *    事务 em 上以原生 SQL 执行，不依赖 `removeAndFlush`）。
  *  - **`generateId:false` 必须不在 BA 配置里**（BA 自生成 nanoid）；session 字段是 `expiresAt` 非 `expiresAt`（1.7.7）。
  *
- * 本切片**未接入生产装配**（生产仍跑 Drizzle）；一致性验收见同目录 `auth-adapter.consistency.test.ts`。
+ * 本适配为 BA 数据面唯一出口（切片 4 已接入生产）；一致性验收见同目录 `auth-adapter.consistency.test.ts`。
  */
 
 /** 事务内透传当前 `em`（供子操作复用同一事务连接）。 */

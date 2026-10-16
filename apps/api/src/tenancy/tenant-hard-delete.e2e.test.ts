@@ -1,20 +1,14 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
-import { DrizzleService } from '@app/database/drizzle.service';
-import {
-  event,
-  invitation,
-  member,
-  organization,
-  post,
-  tenantSubscription,
-  user,
-  workspace,
-} from '@app/database/schema';
+import { Invitation, Member, Organization, User } from '@app/database/mikro/entities';
+import { Event, TenantSubscription, Workspace } from '@app/database/mikro/four-tables';
+import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
+import { Post } from '@app/database/mikro/post.entity';
 import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+import type { EntityManager } from '@mikro-orm/core';
 import { CommandBus } from '@nestjs/cqrs';
+import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
-import { eq, inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module';
 import { DeleteTenantCommand } from '../modules/tenants/application/commands/delete-tenant.command';
@@ -30,6 +24,10 @@ import { DeleteTenantPermanentlyCommand } from '../modules/tenants/application/c
  *   → 断言六表 0 行 + `tenant` 聚合事件 0 行（先补删后主删）+ **user 行幸存**（自然人不连带）。
  * 另坐实前置闸：active 租户硬删 → 409 且不删。
  *
+ * ORM 修宪案 B · Phase 2（彻底去旧 ORM）：夹具播种 / 级联读回 / 残净由旧 `原数据库服务.db` 换轨为
+ * `MikroOrmService.fork()`——`em.insert`（只发给定列·DB 默认照旧）/`em.count`/`em.nativeDelete`，
+ * **只换通道·不改行为**（列集逐字镜像旧实现 values）。
+ *
  * **默认跳过**：仅当 `E2E_DATABASE_URL` 存在时运行（开关），连接串取 `DATABASE_URL`，
  * 不破默认 CI 的 DB-free 不变量。夹具用时间戳后缀唯一键，afterAll 显式清净，运行幂等。
  */
@@ -37,7 +35,8 @@ const E2E_DB = process.env.E2E_DATABASE_URL;
 const gated = E2E_DB ? describe : describe.skip;
 
 gated('按租户硬删全栈 e2e（真库 FK cascade + 事件补删 · env-gated）', () => {
-  let db: DrizzleService['db'];
+  let app: NestFastifyApplication;
+  let mikro: MikroOrmService;
   let commandBus: CommandBus;
 
   const stamp = Date.now();
@@ -45,16 +44,16 @@ gated('按租户硬删全栈 e2e（真库 FK cascade + 事件补删 · env-gated
   const orgId = `e2e-hd-org-${stamp}`;
   const activeOrgId = `e2e-hd-active-${stamp}`;
 
-  async function seedTenantOwned(id: string, withExtras: boolean) {
-    await db.insert(organization).values({ id, name: `HD ${id}`, slug: `hd-${id}` });
+  async function seedTenantOwned(em: EntityManager, id: string, withExtras: boolean) {
+    await em.insert(Organization, { id, name: `HD ${id}`, slug: `hd-${id}` } as never);
     if (!withExtras) return;
-    await db.insert(member).values({
+    await em.insert(Member, {
       id: `e2e-hd-mem-${stamp}`,
       organizationId: id,
       userId,
       role: 'owner',
-    });
-    await db.insert(invitation).values({
+    } as never);
+    await em.insert(Invitation, {
       id: `e2e-hd-inv-${stamp}`,
       organizationId: id,
       email: `invitee-${stamp}@e2e.test`,
@@ -62,26 +61,30 @@ gated('按租户硬删全栈 e2e（真库 FK cascade + 事件补删 · env-gated
       status: 'pending',
       expiresAt: new Date(Date.now() + 86_400_000),
       inviterId: userId,
-    });
-    await db.insert(workspace).values({
+    } as never);
+    await em.insert(Workspace, {
       id: `e2e-hd-ws-${stamp}`,
       organizationId: id,
       name: 'Core',
       slug: `core-${stamp}`,
-    });
-    await db.insert(tenantSubscription).values({
+      // updatedAt 列 NOT NULL 无 DB 默认（同 seed.ts R-η 教训）·写路径显式盖
+      updatedAt: new Date(),
+    } as never);
+    await em.insert(TenantSubscription, {
       id: `e2e-hd-sub-${stamp}`,
       tenantId: id,
       plan: 'free',
       seatsLimit: 5,
-    });
-    await db.insert(post).values({
+      updatedAt: new Date(),
+    } as never);
+    await em.insert(Post, {
       id: `e2e-hd-post-${stamp}`,
       title: 'HD e2e',
       organizationId: id,
-    });
+      updatedAt: new Date(),
+    } as never);
     // 手写一行 tenant 聚合事件（不依赖 EVENT_STORE_ENABLED 开关·FK-less 表应用层补删面）
-    await db.insert(event).values({
+    await em.insert(Event, {
       eventId: randomUUID(),
       aggregateId: id,
       aggregateType: 'tenant',
@@ -89,27 +92,40 @@ gated('按租户硬删全栈 e2e（真库 FK cascade + 事件补删 · env-gated
       eventType: 'tenant.status.transitioned',
       payload: { from: null, to: 'active' },
       occurredAt: new Date(),
-    });
+    } as never);
   }
 
   beforeAll(async () => {
-    const ref = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    // CqrsModule 在模块生命周期（init）才把 @CommandHandler 注册进 CommandBus；
-    // 纯 compile() 不触发（同 boot 冒烟免连库形态），经 CommandBus 驱动的本测必须 init。
-    await ref.init();
-    db = ref.get(DrizzleService).db;
-    commandBus = ref.get(CommandBus);
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    // 必须建真实 Fastify 应用（同 auth-http-surface.e2e 先例）：AppModule 的 AuthBootstrapService
+    // 在 onApplicationBootstrap 挂 BA 原生路由，裸 TestingModule.init() 下 `httpAdapter.getInstance()`
+    // 为 undefined 会崩；`createNestApplication(FastifyAdapter)` + `init()` 才实例化适配器（无需 listen）。
+    // CqrsModule 在生命周期（init）才把 @CommandHandler 注册进 CommandBus，经 CommandBus 驱动的本测必须 init。
+    app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    await app.init();
+    mikro = app.get(MikroOrmService);
+    commandBus = app.get(CommandBus);
 
-    await db.insert(user).values({ id: userId, name: 'HD E2E', email: `hd-${stamp}@e2e.test` });
-    await seedTenantOwned(orgId, true);
-    await seedTenantOwned(activeOrgId, false);
-  });
+    const em = await mikro.fork();
+    await em.insert(User, {
+      id: userId,
+      name: 'HD E2E',
+      email: `hd-${stamp}@e2e.test`,
+      // user.updatedAt 列 NOT NULL 无 DB 默认·必须显式写（同 seed.ts）
+      updatedAt: new Date(),
+    } as never);
+    await seedTenantOwned(em, orgId, true);
+    await seedTenantOwned(em, activeOrgId, false);
+  }, 120000);
 
   afterAll(async () => {
+    if (!app) return;
     // 清净残余（org 级联灭子表；user/event 独立清）——运行幂等
-    await db.delete(organization).where(inArray(organization.id, [orgId, activeOrgId]));
-    await db.delete(event).where(inArray(event.aggregateId, [orgId, activeOrgId]));
-    await db.delete(user).where(inArray(user.id, [userId]));
+    const em = await mikro.fork();
+    await em.nativeDelete(Organization, { id: { $in: [orgId, activeOrgId] } } as never);
+    await em.nativeDelete(Event, { aggregateId: { $in: [orgId, activeOrgId] } } as never);
+    await em.nativeDelete(User, { id: userId } as never);
+    await app?.close();
   });
 
   it('软删→硬删：六表 cascade 灭、tenant 事件补删、user 幸存；重复硬删 404 幂等', async () => {
@@ -124,27 +140,22 @@ gated('按租户硬删全栈 e2e（真库 FK cascade + 事件补删 · env-gated
     expect(purged).toBeGreaterThanOrEqual(1); // 至少清掉本测手写的那行
 
     // ③ 六表 cascade 断言（真库 DB 级联语义·单测 mock 证不了的面）
-    const counts = await Promise.all([
-      db.select({ id: organization.id }).from(organization).where(eq(organization.id, orgId)),
-      db.select({ id: member.id }).from(member).where(eq(member.organizationId, orgId)),
-      db.select({ id: invitation.id }).from(invitation).where(eq(invitation.organizationId, orgId)),
-      db.select({ id: workspace.id }).from(workspace).where(eq(workspace.organizationId, orgId)),
-      db
-        .select({ id: tenantSubscription.id })
-        .from(tenantSubscription)
-        .where(eq(tenantSubscription.tenantId, orgId)),
-      db.select({ id: post.id }).from(post).where(eq(post.organizationId, orgId)),
-    ]);
-    for (const rows of counts) expect(rows).toHaveLength(0);
+    const em = await mikro.fork();
+    const counts = [
+      await em.count(Organization, { id: orgId } as never),
+      await em.count(Member, { organizationId: orgId } as never),
+      await em.count(Invitation, { organizationId: orgId } as never),
+      await em.count(Workspace, { organizationId: orgId } as never),
+      await em.count(TenantSubscription, { tenantId: orgId } as never),
+      await em.count(Post, { organizationId: orgId } as never),
+    ];
+    for (const count of counts) expect(count).toBe(0);
 
     // ④ tenant 聚合事件补删至 0；user 行幸存（自然人不连带）
-    const eventsLeft = await db
-      .select({ id: event.id })
-      .from(event)
-      .where(eq(event.aggregateId, orgId));
-    expect(eventsLeft).toHaveLength(0);
-    const userLeft = await db.select({ id: user.id }).from(user).where(eq(user.id, userId));
-    expect(userLeft).toHaveLength(1);
+    const eventsLeft = await em.count(Event, { aggregateId: orgId } as never);
+    expect(eventsLeft).toBe(0);
+    const userLeft = await em.count(User, { id: userId } as never);
+    expect(userLeft).toBe(1);
 
     // ⑤ 重复硬删 → null（controller 面 404 幂等语义）
     await expect(
@@ -156,10 +167,16 @@ gated('按租户硬删全栈 e2e（真库 FK cascade + 事件补删 · env-gated
     await expect(
       commandBus.execute(new DeleteTenantPermanentlyCommand(activeOrgId, userId)),
     ).rejects.toThrow(/not in deleted terminal state/);
-    const rows = await db
-      .select({ id: organization.id })
-      .from(organization)
-      .where(eq(organization.id, activeOrgId));
-    expect(rows).toHaveLength(1);
+    const em = await mikro.fork();
+    const rows = await em.count(Organization, { id: activeOrgId } as never);
+    expect(rows).toBe(1);
   });
 });
+
+/*
+ * 本地跑法（专用 nestjs_e2e 库·不污染 dev 数据·库须已建含上述各表的 schema）：
+ *   E2E_DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
+ *     DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
+ *     pnpm exec vitest run apps/api/src/tenancy/tenant-hard-delete.e2e.test.ts
+ *   docker exec nestjs-pg-dev psql -U postgres -c "DROP DATABASE nestjs_e2e;"              # 用完清理（可选）
+ */

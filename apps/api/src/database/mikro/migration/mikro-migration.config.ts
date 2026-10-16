@@ -7,7 +7,8 @@ import { MIKRO_MIGRATION_ENTITIES } from './migration-entities';
  * ORM 修宪案 B · 切片 3a —— **迁移专用** MikroORM 初始化（注册 `Migrator` + `migrations` 配置）。
  *
  * 与生产/切片 1 装配**完全解耦**：本工厂**不被 `orm.ts` / `MikroOrmService` / `app.module` 导入**，
- * 只在离线基线工具（`scripts/mikro-migration-baseline.ts`）里按需 init，连到一次性 scratch 库。
+ * 只在离线迁移工具（`scripts/mikro-migrate.ts` 应用迁移 / `scripts/mikro-migration-create.ts` 生成迁移）里按需 init，
+ * 连到目标库（`DATABASE_URL`）。
  * 故对运行中的应用、默认 CI、生产 schema **零影响**——`extensions:[Migrator]` 仅在此实例生效。
  *
  * 迁移工件目录：`apps/api/src/database/mikro/migration/migrations`（生成物·表 `mikro_migrations`）。

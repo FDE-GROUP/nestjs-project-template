@@ -5,7 +5,7 @@
 ## Core Design Principles
 
 - **Clean Architecture (CA)**: every bounded context is split into four layers with a strict inward dependency direction: `api → application → domain ← infrastructure`. The domain depends on nothing but the shared kernel.
-- **Domain-Driven Design (DDD)**: business logic lives in framework-free aggregates with value objects, domain events and repository ports. Infrastructure supplies adapters (Drizzle) for those ports.
+- **Domain-Driven Design (DDD)**: business logic lives in framework-free aggregates with value objects, domain events and repository ports. Infrastructure supplies adapters (MikroORM) for those ports.
 - **CQRS**: writes go through `Command → CommandHandler`, reads through `Query → QueryHandler`, dispatched over `@nestjs/cqrs` buses. Controllers never call a service directly.
 - **Vertical slices**: contexts are packaged by feature (`apps/api/src/modules/<context>`; shared-contract contexts live under `libs/core/src/modules/<context>`), not by technical tier. Cross-context coupling only happens through domain events, never by importing another context's `domain/` or `infrastructure/`.
 - **Event Sourcing (committed, phased)**: confirmed architectural goal (human clarification 2026-10-14) — no longer gated on "a context actually needs it", while phasing and audit/migration gates stand. This phase (A) dispatches domain events in-process only. The command handler + aggregate `recordEvent/pullDomainEvents` seam and the event envelope are already ES-shaped. See [event-sourcing-roadmap.md](../plans/event-sourcing-roadmap.md).
@@ -24,13 +24,13 @@ src/
 │   ├── users/               # ★ Reference implementation of the full pattern
 │   │   ├── domain/          #   entities/ value-objects/ events/ repositories/ (ports)
 │   │   ├── application/     #   commands/ queries/ read-models/ (handlers)
-│   │   ├── infrastructure/  #   Drizzle repository adapter, mappers, event dispatcher
+│   │   ├── infrastructure/  #   MikroORM repository adapter, mappers, event dispatcher
 │   │   ├── api/             #   controller + DTOs (HTTP transport)
 │   │   └── users.module.ts  #   wires CqrsModule + handlers + port→adapter binding
 │   ├── auth/                # Better Auth adapter (reserved for future DDD/ES)
 │   ├── stripe/              # Payment context
 │   └── storage/             # Cloud storage context (S3/OSS/COS)
-├── database/                # Global infra: Drizzle client, schema, migrations, seed
+├── database/                # Global infra: MikroORM client, entities, migrations, seed
 ├── config/                  # Global infra: typed config + Joi validation
 ├── logger/  mailer/  common/  i18n/   # Cross-cutting infrastructure
 ```
@@ -44,27 +44,27 @@ POST /users
   → CreateUserCommandHandler (application)
         repo.findByEmail → ConflictException if exists
         User.register(...) (domain)       # invariants + recordEvent(UserRegisteredEvent)
-        repo.save(user)  (port → DrizzleUserRepository in infrastructure)
+        repo.save(user)  (port → MikroUserRepository in infrastructure)
         eventBus.publishAll(user.pullDomainEvents())   # in-process today, event store later
   → returns PublicUser projection (201)
 ```
 
 Reads (`GET /users`, `GET /users/:id`) use `Query` handlers that read the write store
-directly via `DrizzleService` (pragmatic CQRS read side, bypasses the domain).
+directly via `MikroOrmService` (pragmatic CQRS read side, bypasses the domain).
 
 ## Layer Dependency Rules
 
 | Layer | May import | Must NOT import |
 |-------|-----------|-----------------|
-| `domain/` | `shared-kernel/domain`, other files in same domain | Nest, Drizzle, DTOs, HTTP, other contexts |
+| `domain/` | `shared-kernel/domain`, other files in same domain | Nest, MikroORM, DTOs, HTTP, other contexts |
 | `application/` | `domain`, `shared-kernel/cqrs`, `@nestjs/cqrs`/common | other contexts' `domain`/`infrastructure` |
-| `infrastructure/` | `domain` (ports), Drizzle, Nest | — (it is the adapter boundary) |
+| `infrastructure/` | `domain` (ports), MikroORM, Nest | — (it is the adapter boundary) |
 | `api/` | `application` (commands/queries), DTOs | `domain` entities used as transport |
 
 Domain purity is guarded by the **fallow architecture-boundary advisory** in `pnpm run ci`
 (`scripts/ci.ts`, non-blocking; its findings require a second human check per
 [tooling-standards.md §4.7](./tooling-standards.md)). There is **no** test that scans
-`apps/api/src/modules/users/domain/**` for `@nestjs/*`, `drizzle-orm` or `@app/database`
+`apps/api/src/modules/users/domain/**` for `@nestjs/*`, `@mikro-orm/*` or `@app/database`
 imports — layer direction is additionally held by the per-layer import matrix above and by
 code review.
 
@@ -80,7 +80,7 @@ DDD/ES-ified later without disturbing the `users` pattern.
 - **Runtime**: Node LTS ≥22 (ESM, `"type": "module"`) + pnpm (package manager)
 - **Framework**: NestJS 12 + Fastify
 - **Architecture**: Clean Architecture + DDD + CQRS (`@nestjs/cqrs`)
-- **Database**: PostgreSQL + Drizzle ORM (explicit migrations)
+- **Database**: PostgreSQL + MikroORM (explicit migrations)
 - **Authentication**: Better Auth
 - **Testing**: Vitest (+ `unplugin-swc` for decorator metadata)
 - **Linting/Formatting**: Biome

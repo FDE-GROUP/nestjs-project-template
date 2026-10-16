@@ -1,7 +1,6 @@
 // S9 铁律：构造函数注入的类必须值导入 + 显式 @Inject（仅类型位会被 Biome autofix 成 import type →
 // design:paramtypes 退化、DI 运行时 UnknownDependenciesException——原 AuthMiddleware 同款写法）
 import { ConfigService } from '@app/config/config.service';
-import { DrizzleService } from '@app/database/drizzle.service';
 // 切片 3b：S9 铁律——构造注入的类必**值导入** + 显式 @Inject（`MikroOrmService` 经 @Global `MikroOrmModule` 可达）。
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { QuotaService } from '@core/saas-kit/tenancy/quota/quota.service';
@@ -38,7 +37,6 @@ export class AuthBootstrapService implements OnApplicationBootstrap {
 
   constructor(
     @Inject(ConfigService) private readonly configService: ConfigService,
-    @Inject(DrizzleService) private readonly drizzleService: DrizzleService,
     @Inject(MikroOrmService) private readonly mikroOrmService: MikroOrmService,
     @Inject(QuotaService) private readonly quotaService: QuotaService,
     @Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance,
@@ -49,7 +47,6 @@ export class AuthBootstrapService implements OnApplicationBootstrap {
     const { handler, auth } = await CreateAuth(
       this.buildSocialProviders(),
       this.buildGenericConfigs(),
-      this.drizzleService,
       this.mikroOrmService,
       this.configService,
       this.quotaService,

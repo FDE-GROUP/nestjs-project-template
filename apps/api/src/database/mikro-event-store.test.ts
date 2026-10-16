@@ -39,7 +39,7 @@ function makeStore(em: unknown): MikroEventStore {
   return new MikroEventStore({ fork: async () => em } as never);
 }
 
-describe('MikroEventStore (ORM 修宪案 B · 切片 3c-ii-C · shadow append 语义镜像 Drizzle)', () => {
+describe('MikroEventStore (ORM 修宪案 B · 切片 3c-ii-C · shadow append 语义镜像旧语义)', () => {
   let fixture: ReturnType<typeof makeEm>;
   let store: MikroEventStore;
 

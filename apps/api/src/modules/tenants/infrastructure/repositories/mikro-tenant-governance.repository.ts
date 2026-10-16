@@ -25,8 +25,7 @@ function effectiveStatus(metadata: unknown): TenantStatus {
 }
 
 /**
- * ORM 修宪案 B · 切片 3c-ii-B —— 平台租户治理读面 + 运营硬删的 **MikroORM 适配**（expand 双轨·与
- * `DrizzleTenantGovernanceRepository` 并存·`TENANT_GOVERNANCE_REPOSITORY` 绑定改指本类·旧类不删作回滚点）。
+ * ORM 修宪案 B · 切片 3c-ii-B —— 平台租户治理读面 + 运营硬删的 **MikroORM 适配**（`TENANT_GOVERNANCE_REPOSITORY` 绑定改指本类·MikroORM 为唯一实现）。
  *
  * 跨租户视图：刻意**不注入任何租户上下文**（requireTenantId 于此无关·平台级天然全量·FR-11①）——访问
  * 裁决完全由 controller 侧 `PlatformOperatorGuard` 前置把守（fail-closed）。
@@ -35,7 +34,7 @@ function effectiveStatus(metadata: unknown): TenantStatus {
  *  - **R-B1（安全红线）**：`exportTenantData` 成员名册的 user 侧走 `fields` 投影（`id/name/email/handle`）——
  *    探针实测该投影在**生成的 SQL SELECT 面**即不含 `password`（非取回后删）；缺省不投影时 QB `select .*`
  *    会取回，故投影必做。
- *  - **R-B2**：搜索采 `$ilike`（探针实测＝Drizzle `ilike`＝PG 原生 ILIKE 逐字节一致·忠实 drop-in）。
+ *  - **R-B2**：搜索采 `$ilike`（探针实测＝旧 ORM `ilike`＝PG 原生 ILIKE 逐字节一致·忠实 drop-in）。
  *  - **R-B3**：`destroy` 采 `nativeDelete`（纯 SQL DELETE·五子表由 DB FK `onDelete:cascade` 自动消灭·
  *    绝不用 `em.remove` 以免 ORM 级联/身份图分歧）·`>0` 为实删。
  *  - **R-B6**：`exportTenantData` 四段查询**不加 status 过滤**（deleted 终态亦可导·NFR-6 取证用途）。
@@ -115,8 +114,8 @@ export class MikroTenantGovernanceRepository implements TenantGovernanceReposito
     };
 
     // 成员名册：user 侧走 fields 投影（**R-B1 安全红线**·凭据列在 SQL 面即排除·非取回后删）。
-    // 与 Drizzle `innerJoin(user)` 同语义——user 行缺失的成员被丢弃（FK→user cascade 使孤儿结构上
-    // 不存在，此处仍显式过滤以严格对齐读面行为）。`handle` 在 Drizzle schema 为 `NOT NULL DEFAULT ''`
+    // 与旧实现 `innerJoin(user)` 同语义——user 行缺失的成员被丢弃（FK→user cascade 使孤儿结构上
+    // 不存在，此处仍显式过滤以严格对齐读面行为）。`handle` 在旧 ORM schema 为 `NOT NULL DEFAULT ''`
     // （Mikro 侧仅为 BA authFlow 测试面把列声明可空·真实列非空），故 `?? ''` 是类型层兜底、运行期不触发。
     const memberEntities = await em.find(Member, { organizationId } as never);
     let usersById = new Map<string, { name: string; email: string; handle: string | null }>();

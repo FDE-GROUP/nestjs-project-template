@@ -2,7 +2,7 @@ import type { User } from '../entities/user.aggregate';
 
 /**
  * Injection token for the User repository port (dependency inversion).
- * The concrete Drizzle-backed implementation lives in the infrastructure layer.
+ * The concrete ORM-backed implementation lives in the infrastructure layer.
  */
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
 

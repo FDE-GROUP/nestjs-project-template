@@ -6,7 +6,7 @@ import { initMikroOrm } from './orm';
 import { MIKRO_APP_ENTITIES } from './post.entity';
 
 /**
- * ORM 修宪案 B · 切片 2 —— app 侧 MikroORM v7 连接持有者（**懒建**·双轨）。
+ * ORM 修宪案 B · 切片 2 —— app 侧 MikroORM v7 连接持有者（**懒建**）。
  *
  * 刻意不在构造期 / `onModuleInit` 建连：`MikroORM.init()` 会开连接，若 eager 则劫持 `app-boot.smoke`
  * （DB-free 整树装配冒烟）与 `verify:prod-boot`（只打 /health·不碰 posts）。故首次**真正用到** posts
@@ -45,7 +45,8 @@ export class MikroOrmService implements OnModuleDestroy {
   /**
    * 切片 3b：为 Better Auth 数据面产出**自持 Mikro adapter 工厂**（`mikroAuthAdapter(orm)`）。
    * 内部 `await ensure()` 复用同一条懒建连接·**不外泄 `orm`/`em` 实例**（只交出适配器·戒全局 em）。
-   * 仅在 `BA_ADAPTER=mikro` 时被 `CreateAuth` 调用；默认 drizzle 轨不触发→保持懒建 / DB-free 不变量。
+   * 切片 4（contract）：旧 ORM 双轨已收口——`CreateAuth` **无条件**调本方法取 BA 唯一数据面出口，
+   * 但仍 `await ensure()` 懒建→保持 DB-free 装配冒烟不变量（`app-boot.smoke` 只 `compile()` 不触发）。
    */
   async createAuthAdapter(): Promise<ReturnType<typeof mikroAuthAdapter>> {
     const orm = await this.ensure();

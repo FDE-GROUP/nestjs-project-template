@@ -12,17 +12,16 @@ import { QueryOrder } from '@mikro-orm/core';
 import { Inject, Injectable } from '@nestjs/common';
 
 /**
- * ORM 修宪案 B · 切片 3c-ii-A —— subscriptions 上下文的 **MikroORM 仓储适配**（expand 双轨·与
- * `DrizzleSubscriptionRepository` 并存·`SUBSCRIPTION_REPOSITORY` 绑定改指本类·旧类不删作回滚点）。
+ * ORM 修宪案 B · 切片 3c-ii-A —— subscriptions 上下文的 **MikroORM 仓储适配**（`SUBSCRIPTION_REPOSITORY` 绑定改指本类·MikroORM 为唯一实现）。
  *
  * **隔离唯一卡点不变**（global-tenancy S7 · FR-5/7/8）：port 不暴露 tenant 参数·所属租户从可信 ALS 经
  * `requireTenantId()` fail-closed 解析（无租户→403·且在取 em **之前**抛出→绝不查库）；`create` 盖章租户
  * 追加一条 `active` 行（1:N 历史·不改旧行），`history` 按 `tenantId` 过滤、`periodStart` 倒序。配额裁决/
  * 限额读取留在 `QuotaService`（tenancy 层单点），本类只管订阅行的写与历史读。去掉任一 `tenantId` 谓词
- * 即令回归红（与 Drizzle 版同律）。
+ * 即令回归红（与旧实现 版同律）。
  *
- * 每次 `fork()` 取独立 em。`updatedAt`/`createdAt` 无 DB 默认（Drizzle 侧靠 app 盖）·写路径显式赋 `now`；
- * `periodStart` 亦显式赋 `now`（Drizzle 靠 DB `defaultRaw now()` + `returning` 回读·此处显式赋同值求确定）。
+ * 每次 `fork()` 取独立 em。`updatedAt`/`createdAt` 无 DB 默认（旧 ORM 侧靠 app 盖）·写路径显式赋 `now`；
+ * `periodStart` 亦显式赋 `now`（旧 ORM 靠 DB `defaultRaw now()` + `returning` 回读·此处显式赋同值求确定）。
  */
 @Injectable()
 export class MikroSubscriptionRepository implements SubscriptionRepository {

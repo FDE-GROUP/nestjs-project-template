@@ -46,7 +46,7 @@ const QueryHandlers = [
 
 /**
  * Tenant lifecycle slice (global-tenancy S4 · FR-1/FR-11/FR-12). `AuthInstanceInjectKey`
- * (global via AuthModule.forRoot) and `DrizzleService` (DatabaseModule @Global) are
+ * (global via AuthModule.forRoot) and `原数据库服务` (DatabaseModule @Global) are
  * resolved without extra imports; TenantStatusService comes from the global TenancyModule.
  */
 @Module({
@@ -57,11 +57,11 @@ const QueryHandlers = [
     ...QueryHandlers,
     // Dependency inversion: domain owns the gateway port, infrastructure calls Better Auth.
     // ORM 修宪案 B · 切片 3d（S-d2）：provisioning gateway 改指 MikroTenantProvisioningRepository
-    // （expand 双轨·旧 DrizzleTenantProvisioningRepository 类不删作回滚点；`submit` 仍走 BA
+    // （MikroORM 为唯一实现；`submit` 仍走 BA
     // createOrganization 系统动作·仅 `remove` 落 Mikro nativeDelete）。
     { provide: TENANT_PROVISIONING_REPOSITORY, useClass: MikroTenantProvisioningRepository },
     // S5 governance: platform-level cross-tenant read model (no tenant filter).
-    // ORM 修宪案 B · 切片 3c-ii-B：治理读面整片切 Mikro（expand 双轨·旧 Drizzle 类不删作回滚点）。
+    // ORM 修宪案 B · 切片 3c-ii-B：治理读面整片切 Mikro（MikroORM 为唯一实现）。
     { provide: TENANT_GOVERNANCE_REPOSITORY, useClass: MikroTenantGovernanceRepository },
     // S6 user governance: platform-level cross-user read model (no tenant filter)。
     { provide: USER_GOVERNANCE_REPOSITORY, useClass: MikroUserGovernanceRepository },

@@ -1,9 +1,8 @@
 import 'reflect-metadata';
-import { DrizzleService } from '@app/database/drizzle.service';
-import { account, session, user } from '@app/database/schema';
+import { Account, Session, User } from '@app/database/mikro/entities';
+import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
-import { inArray } from 'drizzle-orm';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../../app.module';
@@ -28,7 +27,7 @@ const PASSWORD = 'E2e-Pa55w0rd!';
 
 gated('BA HTTP 面全链 e2e（真·原生端点经真 HTTP·env-gated）', () => {
   let app: NestFastifyApplication;
-  let db: DrizzleService['db'];
+  let mikro: MikroOrmService;
   const stamp = Date.now();
   const email = `e2e-http-${stamp}@example.com`;
   let userId: string | undefined;
@@ -37,15 +36,16 @@ gated('BA HTTP 面全链 e2e（真·原生端点经真 HTTP·env-gated）', () =
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
-    db = app.get(DrizzleService).db;
+    mikro = app.get(MikroOrmService);
   }, 120000);
 
   afterAll(async () => {
     if (!app) return;
     if (userId) {
-      await db.delete(session).where(inArray(session.userId, [userId]));
-      await db.delete(account).where(inArray(account.userId, [userId]));
-      await db.delete(user).where(inArray(user.id, [userId]));
+      const em = await mikro.fork();
+      await em.nativeDelete(Session, { userId } as never);
+      await em.nativeDelete(Account, { userId } as never);
+      await em.nativeDelete(User, { id: userId } as never);
     }
     await app.close();
   });
@@ -114,7 +114,7 @@ gated('BA HTTP 面全链 e2e（真·原生端点经真 HTTP·env-gated）', () =
 /*
  * 本地跑法（沿用租户隔离 e2e 的专用 nestjs_e2e 库先例）：
  *   docker exec nestjs-pg-dev psql -U postgres -c "CREATE DATABASE nestjs_e2e;"          # 若不存在
- *   DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e pnpm run drizzle:push -- --force
+ *   DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e pnpm run migration:run -- --fresh
  *   E2E_DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
  *     DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
  *     pnpm exec vitest run apps/api/src/modules/auth/auth-http-surface.e2e.test.ts

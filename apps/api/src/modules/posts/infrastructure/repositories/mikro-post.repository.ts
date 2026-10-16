@@ -16,17 +16,17 @@ import type {
 } from '../../domain/repositories/post.repository';
 
 /**
- * ORM 修宪案 B · 切片 2 —— posts 上下文的 **MikroORM 仓储适配**（expand 双轨·与 `DrizzlePostRepository` 并存）。
+ * ORM 修宪案 B · 切片 2 —— posts 上下文的 **MikroORM 仓储适配**（MikroORM 为唯一实现）。
  *
  * **隔离唯一 SSOT 不变**（global-tenancy §9.3 / FR-5·D2 复合作用域）：port 不暴露 tenant/workspace 参数·
  * 租户从可信 ALS 经 `requireTenantId()` fail-closed 解析（无租户→403·且在取 em **之前**抛出→绝不查库）；
  * 可选 `workspaceId` 选择器仅**收窄**读/写、非独立安全边界。故本类是 posts 隔离的**唯一卡点**·移除任一
- * `organizationId` 谓词或改写归属即令回归红（与 Drizzle 版同律）。
+ * `organizationId` 谓词或改写归属即令回归红（与旧实现 版同律）。
  *
  * 读写全走 Mikro `EntityManager`（`findAndCount`/`findOne`/`create`+`persist`）·每次 `fork()` 取独立 em
  * （禁共享全局 em）。`EntityCaseNamingStrategy` 使 camelCase 属性⇄camelCase 物理列（对齐 `schema.ts`·见
  * `post.entity.ts` 头注）·`datetime` 回真实 `Date`·故 `PostRecord` 的 `createdAt/updatedAt` 天然为 `Date`。
- * `updatedAt` 无 DB 触发器（Drizzle 侧靠 app `$onUpdate`）·写路径显式盖时间戳。
+ * `updatedAt` 无 DB 触发器（旧 ORM 侧靠 app `$onUpdate`）·写路径显式盖时间戳。
  */
 @Injectable()
 export class MikroPostRepository implements PostRepository {

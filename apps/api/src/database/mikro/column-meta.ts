@@ -6,7 +6,7 @@ import { defineEntity, type EntitySchema, p } from '@mikro-orm/core';
  *
  * 立意（人裁 γ·2026-10-16）：「迁移忠实实体」与「运行时实体」**从同一份列元数据派生**，消双描述——
  *  - `buildMigrationEntity(meta, targets)`：FK 走 `p.manyToOne(T).mapToPk().deleteRule()`，**逐字节复刻**
- *    原 `migration-entities.ts` 手写的四表定义（受 `scripts/mikro-ddl-identity.ts` 恒等闸守护·漂移即红）；
+ *    原 `migration-entities.ts` 手写的四表定义（DDL 恒等已固化进基线迁移工件 `Migration20261016055354`·与 snapshot 一同供增量比对）；
  *    迁移实体从不被 app 实例化，类型宽松无碍，**DDL 保真是其唯一职责**（高危清单 1）。
  *  - `buildRuntimeEntity(meta)`：FK 走**扁平 `p.string()` 列**（与 `entities.ts`/`post.entity.ts` 同构·
  *    对齐 `EntityCaseNamingStrategy` camelCase 物理列）；实例形状由同名 companion `interface` 提供。
@@ -45,7 +45,7 @@ export interface TableMeta {
 
 type Cols = TableMeta['columns'];
 
-/** 时间列压回无 tz（Drizzle 缺省 `timestamp`），`defaultNow` 复刻 `.defaultRaw('now()')`。 */
+/** 时间列压回无 tz（旧 ORM 缺省 `timestamp`），`defaultNow` 复刻 `.defaultRaw('now()')`。 */
 function datetime(c: Extract<ColKind, { k: 'datetime' }>): any {
   let b: any = p.datetime().columnType('timestamp');
   if (c.defaultNow) b = b.defaultRaw('now()');

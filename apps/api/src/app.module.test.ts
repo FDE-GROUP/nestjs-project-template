@@ -11,7 +11,7 @@ describe('Application', () => {
   it('should have proper infrastructure and application structure', async () => {
     await expect(import('./config/config.service')).resolves.toBeDefined();
     await expect(
-      import('./modules/users/infrastructure/repositories/drizzle-user.repository'),
+      import('./modules/users/infrastructure/repositories/mikro-user.repository'),
     ).resolves.toBeDefined();
     await expect(
       import('./modules/users/application/commands/handlers/delete-user.command-handler'),

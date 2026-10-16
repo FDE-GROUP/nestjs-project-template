@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import { DrizzleService } from '@app/database/drizzle.service';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
 import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
@@ -53,14 +52,6 @@ function authStub(session: FakeSession | null) {
   };
 }
 
-function drizzleStub() {
-  return {
-    db: {
-      select: () => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve([]) }) }) }),
-    },
-  };
-}
-
 function configStub(email = 'admin@x.com') {
   return { operatorEmail: () => email };
 }
@@ -110,7 +101,6 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
           TenantMiddleware,
           Reflector,
           { provide: AuthInstanceInjectKey, useValue: authStub(null) },
-          { provide: DrizzleService, useValue: drizzleStub() },
           { provide: PLATFORM_SETTINGS, useValue: configStub() },
           { provide: PLATFORM_IDENTITY_LOOKUP, useValue: { emailOf: async () => undefined } },
           // §9.5.4①B · P1b：守卫/中间件经会话/裁决端口消费·此处用真实适配类坐实 DI 解析（依赖全局 AuthInstanceInjectKey）。

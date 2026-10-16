@@ -105,7 +105,7 @@ describe('domain purity (Clean Architecture constraint)', () => {
     it(`${rel} imports no framework/ORM`, () => {
       const source = readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
       expect(source).not.toMatch(/from '@nestjs\//);
-      expect(source).not.toMatch(/from 'drizzle-orm/);
+      expect(source).not.toMatch(/from '@mikro-orm\//);
       expect(source).not.toMatch(/from '@app\/database/);
     });
   }

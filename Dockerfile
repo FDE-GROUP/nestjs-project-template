@@ -26,9 +26,9 @@ FROM dependencies AS builder
 COPY . .
 RUN pnpm run build
 
-# 生产层：只带运行时必需的东西——corepack/pnpm 与 `drizzle.config.ts` **不在产物镜像里保留**：
-# drizzle.config 的 schema 指 `apps/api/src/**.ts` 源文件，而本层无 TS 源，容器内迁移本就
-# 跑不通（迁移在运维机/CI 上跑）——留着只是不可用的死面，删净以免误导。
+# 生产层：只带运行时必需的东西——corepack/pnpm 与迁移工具链**不在产物镜像里保留**：
+# 迁移走 `scripts/mikro-migrate.ts`（tsx·需 `apps/api/src/**.ts` 源与 dev 依赖），而本层无 TS 源，
+# 容器内迁移本就跑不通（迁移在运维机/CI 上跑）——留着只是不可用的死面，删净以免误导。
 FROM ${NODE_IMAGE} AS runner
 ENV NODE_ENV=production
 # 容器语义的监听默认：代码侧 `HOST` 缺省为 `localhost`（宿主开发语义），而容器内只绑回环会使

@@ -8,8 +8,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MikroUserGovernanceRepository } from './mikro-user-governance.repository';
 
 /**
- * 切片 3c-ii-B 双轨**镜像断言**：与 `drizzle-user-governance.repository.test.ts` 同一套读语义
- *（S6 · FR-6/FR-10 跨平台用户视图·无状态记录视同 active），只是把 Drizzle 的 `LEFT JOIN user_status`
+ * 切片 3c-ii-B 双轨**镜像断言**：与 `原用户治理仓储镜像测试` 同一套读语义
+ *（S6 · FR-6/FR-10 跨平台用户视图·无状态记录视同 active），只是把旧 ORM 的 `LEFT JOIN user_status`
  * 单查折叠成 Mikro 的「`findAndCount(User)` + `find(UserStatus, $in)` 批量拼接」。fake `em` 经
  * `MikroOrmService.fork()` 供给。刻意**无租户上下文**（平台级天然全量·FR-11①）。
  */

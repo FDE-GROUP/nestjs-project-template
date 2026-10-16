@@ -4,10 +4,9 @@ import type { TenantStatusStore } from '@core/saas-kit/tenancy/lifecycle/tenant-
 import { Inject, Injectable } from '@nestjs/common';
 
 /**
- * ORM 修宪案 B · 切片 3c-i —— `TenantStatusStore` 的 **MikroORM 适配**（expand 双轨·与
- * `DrizzleTenantStatusStore` 并存·`TENANT_STATUS_STORE` 绑定改指本类·旧类不删作回滚点）。
+ * ORM 修宪案 B · 切片 3c-i —— `TenantStatusStore` 的 **MikroORM 适配**（`TENANT_STATUS_STORE` 绑定改指本类·MikroORM 为唯一实现）。
  *
- * 直接落 Better Auth 的 `organization.metadata`（jsonb）·不另建表/列 → 无迁移（与 Drizzle 版同律·
+ * 直接落 Better Auth 的 `organization.metadata`（jsonb）·不另建表/列 → 无迁移（与旧实现 版同律·
  * 租户状态读写唯一卡点 `TenantStatusService` 经端口消费·不感知 ORM）。走 `organization` **BA 实体**
  * （切片 1 `entities.ts` 已含 `metadata`(json) + `updatedAt`·无需补实体）。`load` 行不存在 →
  * `undefined`（fail-closed·与「存在但 metadata 为 null」区分）；`save` 走 `nativeUpdate` 直发 UPDATE

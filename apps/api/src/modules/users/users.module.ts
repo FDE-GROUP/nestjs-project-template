@@ -21,8 +21,8 @@ const EventHandlers = [UserRegisteredEventHandler];
     ...QueryHandlers,
     ...EventHandlers,
     // Dependency inversion: domain owns the port, infrastructure provides the adapter.
-    // ORM 修宪案 B · 切片 3d（S-d1）：`USER_REPOSITORY` 绑定改指 MikroUserRepository（expand 双轨·
-    // 旧 DrizzleUserRepository 类不删作回滚点·MikroOrmService 由 @Global MikroOrmModule 供给）。
+    // ORM 修宪案 B · 切片 3d（S-d1）：`USER_REPOSITORY` 绑定改指 MikroUserRepository（MikroORM 为唯一实现·
+    // MikroOrmService 由 @Global MikroOrmModule 供给）。
     { provide: USER_REPOSITORY, useClass: MikroUserRepository },
   ],
   exports: [],

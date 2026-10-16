@@ -32,14 +32,15 @@ const minimalConfigService = () =>
     getCorsConfig: () => ({ origin: ['*'] }),
   }) as never;
 
-// `CreateAuth` 已于切片 3b 转 async（`BA_ADAPTER` 双轨需 `await createAuthAdapter`）；本测默认
-// 不设 `BA_ADAPTER` ⇒ 走 drizzle 轨，`mikroOrmService` 桩永不被调（只占形参位）。
+// `CreateAuth` 已于切片 3b 转 async（需 `await createAuthAdapter`）；ORM 修宪案 B · Phase 2
+// 彻底去旧 ORM 后，`mikroOrmService` 桩恒被传。本测只断言 BA options 装配（不查库），故
+// `createAuthAdapter` 返回**适配器工厂函数**（`database` 为 function → BA 走自定义 adapter 分支，
+// 不触 Kysely 初始化），避免无真库时的 `Failed to initialize database adapter` 异步拒绝。
 const createAuthWithOptions = () =>
   CreateAuth(
     undefined,
     [],
-    { db: {} } as never,
-    { createAuthAdapter: async () => ({}) } as never,
+    { createAuthAdapter: async () => () => ({ id: 'test-adapter' }) } as never,
     minimalConfigService(),
     { checkSeats: async () => {} } as never,
   );

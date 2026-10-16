@@ -7,9 +7,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MikroTenantProvisioningRepository } from './mikro-tenant-provisioning.repository';
 
 /**
- * ORM 修宪案 B · 切片 3d（S-d2）双轨**镜像断言**：与 `drizzle-tenant-provisioning.repository.test.ts`
+ * ORM 修宪案 B · 切片 3d（S-d2）双轨**镜像断言**：与 `原租户开通仓储镜像测试`
  * 逐例对齐的非弱化断言。`submit` **不触任何 ORM**（沿用 BA createOrganization 系统动作·FR-12），
- * 迁移仅落 `remove`：Drizzle `delete().where(eq(...)).returning()` → Mikro `em.nativeDelete(Organization,{id})`
+ * 迁移仅落 `remove`：旧 ORM `delete().where(eq(...)).returning()` → Mikro `em.nativeDelete(Organization,{id})`
  *（纯 SQL DELETE·FK cascade·R-B3 同律·>0 为实删）。`organization` 属 tenants 上下文，本类在
  * `modules/tenants/**` 内写自身 owned 表 → 写侧纪律天然合规。
  */

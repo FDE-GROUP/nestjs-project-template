@@ -7,8 +7,7 @@ import { QueryOrder } from '@mikro-orm/core';
 import { Inject, Injectable } from '@nestjs/common';
 
 /**
- * ORM 修宪案 B · 切片 3c-ii-A —— `QuotaStore` 的 **MikroORM 适配**（expand 双轨·与
- * `DrizzleQuotaStore` 并存·`QUOTA_STORE` 绑定改指本类·旧类不删作回滚点）。
+ * ORM 修宪案 B · 切片 3c-ii-A —— `QuotaStore` 的 **MikroORM 适配**（`QUOTA_STORE` 绑定改指本类·MikroORM 为唯一实现）。
  *
  * 读 `tenant_subscription` 生效行、数 `member`（core 经端口消费、不感知具体表·§9.5.4①B）。`tenantId`
  * 由 `QuotaService`（tenancy 层唯一卡点·FR-7）传入·本 store 非 ALS 作用域（与 3c-i `MikroTenantStatusStore`

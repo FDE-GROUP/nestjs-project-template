@@ -9,7 +9,7 @@ import type { UserStatusStore } from '@core/saas-kit/tenancy/lifecycle/user-stat
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * 桩 `UserStatusStore`（§9.5.4①B 端口倒置后·服务不再感知 Drizzle/schema）。
+ * 桩 `UserStatusStore`（§9.5.4①B 端口倒置后·服务不再感知 ORM/schema）。
  * `exists` 控 user 存在性；`status` 控 user_status 行状态（undefined=无行）。
  * ES 第三切片：publisher 桩捕获事件，锁「ok 才发、not-found/illegal 不发」。
  */

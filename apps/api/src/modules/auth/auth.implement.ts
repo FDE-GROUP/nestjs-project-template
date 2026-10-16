@@ -6,15 +6,12 @@ import {
   type BetterAuthPlugin,
   betterAuth,
 } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { createAuthMiddleware } from 'better-auth/api';
 import { toNodeHandler } from 'better-auth/node';
 import { type GenericOAuthConfig, genericOAuth, organization } from 'better-auth/plugins';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { ConfigService } from '../../config/config.service';
-import type { DrizzleService } from '../../database/drizzle.service';
 import type { MikroOrmService } from '../../database/mikro/mikro-orm.service';
-import * as schema from '../../database/schema';
 import { createSeatsQuotaPlugin } from './seats-quota.hook';
 import { tenantAccessControl, tenantRoles } from './tenancy-access-control';
 
@@ -66,7 +63,6 @@ export interface CreateAuthResult {
 export async function CreateAuth(
   providers: BetterAuthOptions['socialProviders'],
   genericConfigs: GenericOAuthConfig[],
-  drizzleService: DrizzleService,
   mikroOrmService: MikroOrmService,
   configService: ConfigService,
   quota: Pick<QuotaService, 'checkSeats'>,
@@ -88,14 +84,10 @@ export async function CreateAuth(
     );
   }
 
-  // ORM 修宪案 B · 切片 3b：BA 数据面单点**双轨**（expand）——`BA_ADAPTER=mikro` 走自持 Mikro adapter
-  // （全站 BA 读写唯此一处出口）；否则（缺省/drizzle）沿用 `drizzleAdapter`。缺省取态 drizzle
-  // ⇒ 不触发 Mikro 懒建·保持 `app-boot.smoke`/`verify:prod-boot` 的 DB-free 不变量；生产翻转归运维
-  // 另定·`drizzleAdapter` 路径与 `schema` import 留至切片 4 收口（一键回滚：改 `BA_ADAPTER` 重启免重部署）。
-  const useMikroAdapter = (process.env.BA_ADAPTER ?? 'drizzle').trim().toLowerCase() === 'mikro';
-  const database = useMikroAdapter
-    ? await mikroOrmService.createAuthAdapter()
-    : drizzleAdapter(drizzleService.db, { provider: 'pg', schema });
+  // ORM 修宪案 B · 切片 4（contract）：BA 数据面**唯自持 Mikro adapter**（全站 BA 读写唯此一处出口）。
+  // `原 BA adapter` 分支与 `schema` import 已随旧 ORM 依赖一并退场（双轨收口·不再保留回滚阀）。
+  // `createAuthAdapter()` 内部 `await ensure()` 懒建·`app-boot.smoke` 只 `compile()` 不触发本钩子故仍 DB-free。
+  const database = await mikroOrmService.createAuthAdapter();
 
   const auth = betterAuth({
     database,

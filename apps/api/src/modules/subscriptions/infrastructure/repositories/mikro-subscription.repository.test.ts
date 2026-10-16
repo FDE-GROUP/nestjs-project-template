@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MikroSubscriptionRepository } from './mikro-subscription.repository';
 
 /**
- * 切片 3c-ii-A 双轨**镜像断言**：与 `drizzle-subscription.repository.test.ts` 同一套隔离律（S7 · FR-5），
+ * 切片 3c-ii-A 双轨**镜像断言**：与 `原订阅仓储镜像测试` 同一套隔离律（S7 · FR-5），
  * 谓词对象换为 Mikro `FilterQuery`。关键不变量：`requireTenantId()` fail-closed **先于** `fork()`。
  */
 function makeRepo(tenantId: string | null) {

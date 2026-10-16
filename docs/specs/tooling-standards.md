@@ -1,6 +1,6 @@
 # 工具使用规范（Tooling Standards）
 
-> 状态：现行 · 适用仓库：`nestjs-saas-start` · 关联文档：[architecture.md](./architecture.md)、[workflow.md](./workflow.md)（流程与工具矩阵 L1–L4）、[drizzle-migration-guide.md](../drizzle-migration-guide.md)
+> 状态：现行 · 适用仓库：`nestjs-saas-start` · 关联文档：[architecture.md](./architecture.md)、[workflow.md](./workflow.md)（流程与工具矩阵 L1–L4）、[mikro-migration-guide.md](../mikro-migration-guide.md)
 > 受众: **人 + Agent**（`读者: Agent`——工具红线与命令，须遵循）
 
 本文件定义本项目的**唯一合规工具链**及其使用规则。目的：消除同类工具并存导致的配置漂移、构建失败与运行时陷阱。凡新增/升级工具，须先更新本规范并走一次提交。
@@ -22,10 +22,10 @@
 | 应用框架 | **NestJS** | ^12.1.3 | 模块化 DI、装饰器 | 强制 |
 | HTTP 适配 | **Fastify**（platform-fastify） | ^5.12.5 | 替代 Express 的平台层 | 强制 |
 | CQRS 总线 | **@nestjs/cqrs** | ^12.1.0 | Command/Query/EventBus | 强制（架构约束） |
-| ORM | **Drizzle ORM** | ^0.44.7 | 类型安全 SQL 映射 | 强制 |
-| 数据库驱动 | **postgres**（postgres.js） | ^3.4.9 | Drizzle 底层驱动 | 强制 |
-| 迁移/CLI | **drizzle-kit** | ^0.31.11 | generate/migrate/push/studio | 强制 |
-| 认证 | **Better Auth** | ^1.7.7 | 会话/凭证（drizzleAdapter）；社交/企业渠道经 `genericOAuth`（见 §2.1） | 强制 |
+| ORM | **MikroORM** | 7.2.5 | Data Mapper / UoW / 类型安全实体映射 | 强制 |
+| 数据库驱动 | **`@mikro-orm/postgresql`**（底层 `pg`） | 7.2.5 | Mikro 的 Postgres 驱动（随包自带 `pg`，无需顶层驱动包） | 强制 |
+| 迁移/CLI | **`@mikro-orm/migrations`**（`Migrator`） | 7.2.5 | `migrator.create()` 生成 / `migrator.up()` 执行（经 `tsx` 脚本驱动·无独立 CLI bin） | 强制 |
+| 认证 | **Better Auth** | ^1.7.7 | 会话/凭证（自持 Mikro adapter `mikroAuthAdapter`·非社区预置 adapter）；社交/企业渠道经 `genericOAuth`（见 §2.1） | 强制 |
 | 校验 | **class-validator + class-transformer** | ^0.15.1 / ^0.5.1 | DTO 校验 + ValidationPipe | 强制 |
 | 配置校验 | **Joi + @nestjs/config** | ^18.2.9 / ^12.0.1 | env schema 校验 | 强制 |
 | 编译/构建 | **@nestjs/cli + SWC** | cli ^12.0.8 / @swc/core ^1.16.18 | `nest build --builder swc` | 强制 |
@@ -65,8 +65,8 @@
 - **禁止** 使用 bun / npm / yarn 安装依赖 —— 统一 `pnpm` / `pnpm dlx`（corepack 按 `packageManager` 锁定版本）。
 - **禁止** 引入 ESLint / Prettier 及任一 `eslint-*`/`prettier` 插件 —— 已由 Biome 全量承担。
 - **禁止** 使用 `jest` / `mocha` / `bun test`（`bun:test`）—— 测试统一 Vitest。
-- **禁止** Prisma / TypeORM / MongoDB 等第二套 ORM/DB —— 统一 Drizzle + PostgreSQL。
-- **禁止** `drizzle-kit push` 进入 CI/生产做 schema 同步 —— 生产只走显式 `generate` + `migrate`。
+- **禁止** Prisma / TypeORM / MongoDB 等第二套 ORM/DB，亦**禁止回迁已退役 ORM** —— 统一 MikroORM + PostgreSQL。
+- **禁止** schema 自动同步（`schema:sync` / push 类隐式对齐）进入 CI/生产做 schema 同步 —— 生产只走显式 `migration:generate`（生成工件）+ `migration:run`（应用迁移）。
 - **禁止** 在依赖注入构造函数里对被注入类使用 `import type`（见 §4.3）。
 - **禁止** 未经二次人工核验即按 fallow（或任何前置分析器）的结论删除代码/依赖或重构 —— 其输出为候选线索而非判决（见 §4.7）。
 - **禁止** 用 `--no-verify` 绕过 husky/commitlint；**禁止** 修改全局 git 身份（提交用内联身份，见 §6）。
@@ -89,12 +89,13 @@
 
 ### 4.3 装饰器元数据与导入形态（关键陷阱）
 - **Controller 的 DTO**：出现在 `@Body/@Param/@Query` 参数位置时必须**值导入**（`import { CreateUserDto }`），否则 `design:paramtypes` 退化为 `Object`，ValidationPipe 静默跳过校验。
-- **被构造函数注入的类/Provider**（如 `@nestjs/cqrs` 的 `EventBus`/`CommandBus`/`QueryBus`、全局的 `DrizzleService`）：使用**值导入 + 显式 `@Inject(Class)`** token；仅靠类型注解的隐式注入在 `import type` 下会于**运行时启动**才暴露 `UnknownDependenciesException`。
+- **被构造函数注入的类/Provider**（如 `@nestjs/cqrs` 的 `EventBus`/`CommandBus`/`QueryBus`、全局的 `MikroOrmService`）：使用**值导入 + 显式 `@Inject(Class)`** token；仅靠类型注解的隐式注入在 `import type` 下会于**运行时启动**才暴露 `UnknownDependenciesException`。
 - 上述两类文件依赖 §5 的 Biome 豁免，防止 auto-fix 回滚。
 
-### 4.4 数据库（Drizzle）
-- 迁移流程：改 `apps/api/src/database/schema.ts`（路径以 `drizzle.config.ts` 的 `schema` 为准）→ `pnpm run drizzle:generate` → 审 SQL → `pnpm run drizzle:migrate`。
-- 本地快速同步可用 `pnpm run drizzle:push`（无 TTY 环境需 `--force`），**仅限 dev**。
+### 4.4 数据库（MikroORM）
+- 迁移流程：改实体定义（`apps/api/src/database/mikro/**`·运行时实体 + 迁移实体经列元数据单一源 `column-meta.ts` 派生）→ `pnpm run migration:generate`（`scripts/mikro-migration-create.ts`·`migrator.create()` 比对「实体元数据 ↔ 库 schema」产增量工件 + 更新 snapshot）→ 审 SQL → `pnpm run migration:run`（`scripts/mikro-migrate.ts`·`migrator.up()` 应用未执行迁移）。
+- 迁移工件目录：`apps/api/src/database/mikro/migration/migrations`（基线 `Migration20261016055354` + snapshot·台账表 `mikro_migrations`）；迁移装配 `mikro-migration.config.ts`（与 app boot / `orm.ts` 解耦·`extensions:[Migrator]` 仅离线工具实例生效）。
+- 破坏性 dev 重建走 `pnpm run db:reset`（= `mikro-migrate.ts --fresh`·`schema.drop({ dropMigrationsTable: true })` 删实体表 + 台账后重放）；**切勿指向生产/现网库**（生产只走增量 `migration:run`）。
 - `db:seed` / `db:reset` / `db:setup` 为数据准备入口；Postgres 由 `docker compose` 供给。
 
 ### 4.5 测试（Vitest）
@@ -143,13 +144,13 @@
 - **容器监听默认须与部署语义同源**：镜像不得依赖调用方补 `HOST` 才能对外可达。代码侧面向宿主开发的默认值（本项目 `HOST` 缺省 `localhost`）在容器内会只绑回环，使发布端口**不可达**（转发给代理时为 **502**，走 iptables 转发时为连接被拒 / 被重置——症状随链路而变，但**应用日志零请求记录**是共同特征），症状貌似「应用挂了」实则进程未监听对外接口——此类默认在**镜像层显式覆盖**（`Dockerfile` `ENV HOST=0.0.0.0`），并保持**单一真源**（编排不再双写同一变量）。
 - **合规/安全守卫不得以整闸关闭换取可启动**：编排与守卫互斥时，须用**最小逃生阀**表达（如 `DATA_RESIDENCY_DB_HOST_ALLOWLIST` 窄放行图内 DB 服务名），其余校验继续生效；「验证时顺手 `*_ENFORCE=false`」跑通的结果**不得作为该编排可用性的证据**，须以守卫开启态实跑存照。
 - **部署声明 = 可执行契约，必须真跑对拍**：改 `Dockerfile`/`docker-compose*.yml`/`.github/workflows/*` 后，验收口径为实跑结果（`docker build` EXIT=0 → **裸** `docker run`（不补 `-e HOST` 等纠正变量）真起服命中 `/api/v1/health` 200 → `docker inspect --format='{{.State.Health.Status}}'` 为 `healthy` → compose 全图 `Up (healthy)`），**不得以「配置就位」「构建通过」代替**；Actions 面以真实 run 结论为证。同型教训：声明的路由与代码实现脱节、探针工具不存在，均属「声明有、实现无」且静态门禁全绿无征兆。
-- **镜像内不留不可用死面**：若某声明隐含能力而产物实际不支持（如 runner 携 `drizzle.config.ts`，其 `schema` 指 TS 源而产物镜像无源文件 → 容器内迁移跑不通），**删净并在文档写明能力边界**（迁移归运维机/CI），不加「看起来能用」的兼容配置。
+- **镜像内不留不可用死面**：若某声明隐含能力而产物实际不支持（如 runner 携迁移工具 `scripts/mikro-migrate.ts`/`mikro-migration-create.ts`，其经 `tsx` 需 `apps/api/src/**.ts` 源与 dev 依赖而产物镜像无源文件 → 容器内迁移跑不通），**删净并在文档写明能力边界**（迁移归运维机/CI），不加「看起来能用」的兼容配置。
 
 ## 5. Biome 规范
 
 - 命令：`pnpm run check`（校验）、`check:fix`/`lint:fix`/`format`（写回）。pre-commit 触发 `lint:fix`。
 - **必须保留的豁免**：`overrides` 中对 `**/*.controller.ts`（及按 §4.3 含 DI 的 provider/handler 路径）关闭 `style/useImportType`，避免把值导入擦成 `import type`。
-- `files.includes` 保留 `!drizzle/**`、`!.claude/**` 等生成/工具目录排除。
+- `files.includes` 保留 `!.claude/**`、`!.qoder/**` 等工具目录排除（历史 ORM 产物目录排除已随该 ORM 退场移除）。
 - 提交前 `pnpm run check` 须 **0 errors**。
 
 ## 6. Git 与提交规范
@@ -169,7 +170,7 @@
 | 构建 | `pnpm run build`（= `build:libs` → `build:nest`） |
 | 校验/修复 | `pnpm run check` / `check:fix` |
 | 测试/监听/覆盖 | `pnpm run test` / `test:watch` / `test:cov` |
-| 迁移生成/执行/同步/Studio | `drizzle:generate` / `drizzle:migrate` / `drizzle:push` / `drizzle:studio` |
+| 迁移生成/执行 | `pnpm run migration:generate` / `migration:run` |
 | 数据 seed/reset/setup | `db:seed` / `db:reset` / `db:setup` |
 | OpenAPI 导出 | `pnpm run openapi:export` |
 | 代码库健康/审计（fallow） | `pnpm dlx fallow` / `pnpm dlx fallow audit` / `pnpm dlx fallow dead-code` |

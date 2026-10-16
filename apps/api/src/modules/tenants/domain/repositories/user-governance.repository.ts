@@ -9,7 +9,7 @@ import type { UserStatus } from '@core/saas-kit/tenancy/lifecycle/user-status.se
  * 无记录行视同 active（与租户 deny-list 同口径）。
  *
  * 状态迁移（suspend/resume/delete）不在此 port——统一走 `UserStatusService.transition`
- * （`user_status` 单点·复用 §9.4 迁移表）；session 硬删由治理 handler 直接经 Drizzle 叠加。
+ * （`user_status` 单点·复用 §9.4 迁移表）；session 硬删由治理 handler 直接经旧 ORM 叠加。
  */
 export const USER_GOVERNANCE_REPOSITORY = Symbol('USER_GOVERNANCE_REPOSITORY');
 

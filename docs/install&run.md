@@ -24,10 +24,10 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-4. Apply the database schema (development):
+4. Apply the database migrations (development):
 
 ```bash
-pnpm run drizzle:push
+pnpm run migration:run
 ```
 
 5. Seed the database (optional):
@@ -41,22 +41,20 @@ pnpm run db:seed
 ### Database Management
 
 ```bash
-# Open Drizzle Studio
-pnpm run drizzle:studio
-
 # Generate and apply database migrations
-pnpm run drizzle:generate
-pnpm run drizzle:migrate
+pnpm run migration:generate
+pnpm run migration:run
 ```
 
 ### 迁移口径（Migration Workflow & Provenance）
 
-仓库内 `drizzle/` 迁移链（SQL + `meta/_journal.json`）是 **schema 的唯一真相（SSOT）**。
+schema 的唯一真相是实体模型（`apps/api/src/database/mikro/**`·迁移实体经 `column-meta.ts` 单一源派生）；
+生成物落 `apps/api/src/database/mikro/migration/migrations/`（迁移 TS 工件 + snapshot·库内台账表 `mikro_migrations`）。
 
-- **空库 / CI / 生产**：`pnpm run drizzle:migrate`（按 0000→000N 顺序应用，并在库内 `drizzle.__drizzle_migrations` 记账），再 `pnpm run db:seed`。可复现、与 journal 一致。
-- **本地增量开发**：改 `apps/api/src/database/schema.ts` 后 `pnpm run drizzle:generate` 产新迁移片，再 `pnpm run drizzle:migrate` 落库——保持库内 journal 与文件链同步。
-- `pnpm run drizzle:push` / `pnpm run db:reset`（= `drizzle:push --force` + seed）**不写库内 journal**，仅适合一次性把本地库强行对齐 schema；`push` 会直接执行 diff，破坏性变更前务必先看预览。
-- ⚠️ 混用后果：若库由 push 建立（库内 journal 为空）后再跑 `drizzle:migrate`，会重跑已存在的建表语句而失败且错误不清。此时要么继续用 push 同步，要么**清库重建走 migrate**（`DROP SCHEMA public CASCADE; CREATE SCHEMA public;` → `drizzle:migrate` → `db:seed`）以得到 journal 一致的规范态。
+- **空库 / CI / 生产**：`pnpm run migration:run`（`migrator.up()` 依序应用未执行迁移并在 `mikro_migrations` 记账），再 `pnpm run db:seed`。可复现、与台账一致。
+- **本地增量开发**：改实体后 `pnpm run migration:generate`（`migrator.create()` 比对「实体元数据 ↔ 库 schema」产新工件 + 更新 snapshot），人工审 SQL 后 `pnpm run migration:run` 落库。
+- `pnpm run db:reset`（= `mikro-migrate.ts --fresh` + seed）先 `schema.drop()` 删实体表 + 台账再重放基线——**破坏性·仅限本地一次性重建**，切勿指向生产。
+- ⚠️ 生产只走显式 `migration:generate` + `migration:run`；不存在 push / 隐式同步通道。
 
 ### OpenAPI Documentation
 

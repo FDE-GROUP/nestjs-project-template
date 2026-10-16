@@ -17,7 +17,7 @@
 ## 2. 铁律（不得违反）
 - **无已审方案不写码**：审计门**强制**（即便单人）；未过审计不得实现。
 - **ESM + Node + 装饰器元数据** 三重约束：Controller 的 DTO（`@Body/@Param/@Query`）与构造函数注入的类**必须值导入**（勿 `import type`），否则 `design:paramtypes` 退化、DI/校验运行时静默失败（见 tooling §4.3）。Node-ESM 不兼容需人工防（CJS 默认导出、`__dirname`、dotenv 装载时序），见 tooling §4.1 R-η。
-- **工具红线**（tooling §3）：只用 `pnpm`/`pnpm dlx`（禁 bun/npm/yarn）；**Biome**（禁 ESLint/Prettier）；**Vitest**（禁 jest/`bun test`）；**Drizzle + PostgreSQL**（禁 Prisma/TypeORM）；生产只走 `generate`+`migrate`，`push` 仅限 dev。
+- **工具红线**（tooling §3）：只用 `pnpm`/`pnpm dlx`（禁 bun/npm/yarn）；**Biome**（禁 ESLint/Prettier）；**Vitest**（禁 jest/`bun test`）；**MikroORM + PostgreSQL**（禁 Prisma/TypeORM·禁回迁已退役 ORM）；生产只走 `migration:generate`+`migration:run`，破坏性 `db:reset`（`mikro-migrate --fresh`）仅限 dev。
 - **fallow 等静态分析结论必须二次人工核验**（大量假阳性源于反射/框架魔法，见 tooling §4.7）。
 - **部署声明必须真跑对拍**（tooling §4.10）：改 `Dockerfile`/compose/`HEALTHCHECK`/workflows 后，以实跑链为验收口径（build→容器起服→`/health` 200→`healthy`），“配置就位/构建通过”不算完成；探针只能用镜像内实存能力（slim 无 wget/curl），镜像内不留产物实际跑不通的死面。
 - **高危动作须人签核**（workflow §3）：schema 迁移 / 删码删依赖 / 改门禁·CI·husky·commitlint·Biome / 改 `docs/specs` 宪法与公共契约 / **改 `.env`·密钥**——Agent 不得自行执行，**不得写入真实凭证**。
@@ -31,7 +31,7 @@ pnpm run test              # 测试（Vitest）；check = Biome（lint+format）
 pnpm run ci                # L1 门禁：check → build → test（+ fallow 佐证）
 pnpm run ci:quick          # 轻量：check + test
 pnpm run verify:prod-boot  # prod 回归防线：构建后真起服验 /health 200
-pnpm run drizzle:generate / drizzle:migrate / db:setup   # 迁移/数据
+pnpm run migration:generate / migration:run / db:setup   # 迁移/数据
 ```
 
 ## 4. 门禁与提交

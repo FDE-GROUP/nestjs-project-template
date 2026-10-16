@@ -36,7 +36,7 @@ export interface PublicUser {
 }
 
 /**
- * User aggregate root. Pure domain: no Nest, no Drizzle, no DTOs.
+ * User aggregate root. Pure domain: no Nest, no ORM, no DTOs.
  * State transitions record domain events; the repository/command layer persists
  * and dispatches them (ES-ready seam).
  */

@@ -8,8 +8,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MikroPostRepository } from './mikro-post.repository';
 
 /**
- * 切片 2 双轨**镜像断言**：与 `drizzle-post.repository.test.ts` 同一套隔离律（S2 FR-5 / S3 D2·§8-6），
- * 只是把 Drizzle 谓词对象换成 Mikro `FilterQuery` 平面对象。fake `em` 由 `MikroOrmService.fork()` 供给——
+ * 切片 2 双轨**镜像断言**：与 `原 posts 仓储镜像测试` 同一套隔离律（S2 FR-5 / S3 D2·§8-6），
+ * 只是把旧 ORM 谓词对象换成 Mikro `FilterQuery` 平面对象。fake `em` 由 `MikroOrmService.fork()` 供给——
  * 关键不变量：`requireTenantId()` fail-closed **先于** `fork()`（无租户→403 且绝不取 em/查库）。
  */
 function makeRepo(tenantId: string | null, workspaceId?: string) {

@@ -22,7 +22,7 @@ const QueryHandlers = [ListWorkspacesQueryHandler];
     ...CommandHandlers,
     ...QueryHandlers,
     // Dependency inversion: domain owns the port, infrastructure enforces tenant scope.
-    // ORM 修宪案 B · 切片 3c-ii-A：绑定改指 Mikro 适配（`DrizzleWorkspaceRepository` 不删·双轨回滚点）。
+    // ORM 修宪案 B · 切片 3c-ii-A：绑定改指 Mikro 适配（MikroORM 为唯一实现）。
     { provide: WORKSPACE_REPOSITORY, useClass: MikroWorkspaceRepository },
   ],
   exports: [],

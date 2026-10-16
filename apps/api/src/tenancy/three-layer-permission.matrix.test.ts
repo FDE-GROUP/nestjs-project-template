@@ -75,7 +75,7 @@ function reflectorStub() {
   return { getAllAndOverride: () => undefined } as never;
 }
 
-function emailDrizzle(email: string | null): PlatformIdentityLookup {
+function emailLookup(email: string | null): PlatformIdentityLookup {
   return { emailOf: async () => email ?? undefined };
 }
 
@@ -106,7 +106,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
       const { ctx } = ctxWith();
       const guard = new PlatformOperatorGuard(
         sessionReader(null),
-        emailDrizzle('admin@x.com'),
+        emailLookup('admin@x.com'),
         config('admin@x.com'),
         userStatus(),
       );
@@ -130,7 +130,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
       // 会话有效、处于某租户，但 DB email 不命中 operator 配置 → 平台层拒绝
       const guard = new PlatformOperatorGuard(
         sessionReader({ user: { id: 'tm-1' }, session: { activeOrganizationId: 'org_1' } }),
-        emailDrizzle('tenant-admin@corp.com'),
+        emailLookup('tenant-admin@corp.com'),
         config('admin@x.com'),
         userStatus(),
       );
@@ -181,7 +181,7 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
       const { ctx } = ctxWith();
       const guard = new PlatformOperatorGuard(
         sessionReader(blockedSession),
-        emailDrizzle('admin@x.com'),
+        emailLookup('admin@x.com'),
         config('admin@x.com'),
         userStatus(true),
       );

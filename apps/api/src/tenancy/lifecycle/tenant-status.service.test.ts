@@ -6,7 +6,7 @@ import type { TenantStatusStore } from '@core/saas-kit/tenancy/lifecycle/tenant-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * 桩 `TenantStatusStore`（§9.5.4①B 端口倒置后·服务不再感知 Drizzle/schema）。
+ * 桩 `TenantStatusStore`（§9.5.4①B 端口倒置后·服务不再感知 ORM/schema）。
  * `metadata === undefined` 表示组织行不存在（load → undefined）；否则返回原始 metadata。
  * ES 第二切片：publisher 桩捕获事件，锁「ok 才发、not-found/illegal 不发」。
  */

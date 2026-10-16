@@ -7,13 +7,13 @@ import { ExportUserDataQuery } from '../export-user-data.query';
 
 /**
  * ORM 修宪案 B · 切片 3d（S-d4）—— PIPL 右-access 用户数据导出读面的 **MikroORM 适配**（原地换轨·旧
- * Drizzle 数据访问逻辑随本文件替换·回滚点＝git 历史 + §5.18 记录）。
+ * 旧 ORM 数据访问逻辑随本文件替换·回滚点＝git 历史 + §5.18 记录）。
  *
  * **R-B1 安全红线（凭据永不落 SELECT）**：四表（user/account/session/consent）读全部走 `em.find`/`findOne`
  * 的 **`fields` 白名单投影**——凭据列（`user.password`/`user.isOwner`、`account.{password,accessToken,
  * refreshToken,idToken}`、`session.{token,ipAddress,userAgent}`、`consent.evidence`）**不在投影列表内**，
  * 依 3c-ii-B 探针结论在生成的 SQL SELECT 面即被排除（非取回后删）。缺省不投影时 QB `select .*` 会取回，
- * 故投影必做。与旧 Drizzle 版 `columns`/`select({...})` 显式列集**逐列对齐**（导出语义零漂移）。
+ * 故投影必做。与旧版 `columns`/`select({...})` 显式列集**逐列对齐**（导出语义零漂移）。
  *
  * `Consent` 运行时实体系切片 3d 补入 app-orm（见 `entities.ts`）·此处只读投影·不写。
  */

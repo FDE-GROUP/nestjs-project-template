@@ -6,8 +6,8 @@ import { User } from '../../domain/entities/user.aggregate';
 import { MikroUserRepository } from './mikro-user.repository';
 
 /**
- * ORM 修宪案 B · 切片 3d（S-d1）双轨**镜像断言**：与 `drizzle-user.repository.test.ts` 逐例对齐的
- * 非弱化断言，仅把 Drizzle 的 insert/update/delete/findFirst 换成 Mikro
+ * ORM 修宪案 B · 切片 3d（S-d1）双轨**镜像断言**：与 `原用户仓储镜像测试` 逐例对齐的
+ * 非弱化断言，仅把旧 ORM 的 insert/update/delete/findFirst 换成 Mikro
  * `em.create+persist+flush` / `em.assign+flush` / `em.nativeDelete` / `em.findOne`。fake `em` 经
  * `MikroOrmService.fork()` 供给——每操作取独立 em（禁共享全局 em）。`user` 属 users 上下文，
  * 本类写自身 owned 表 → 表所有权写侧纪律天然合规（无跨上下文写）。
@@ -109,7 +109,7 @@ describe('MikroUserRepository (S-d1)', () => {
     expect(saved.updatedAt).toBeInstanceOf(Date);
   });
 
-  it('save(existing) fails loud when the row is absent (镜像 Drizzle update…returning 缺行崩溃语义·不静默新建)', async () => {
+  it('save(existing) fails loud when the row is absent (镜像旧语义 update…returning 缺行崩溃语义·不静默新建)', async () => {
     const { repo, spies } = makeRepo();
     spies.findOne.mockResolvedValueOnce(null);
     const user = User.rehydrate({

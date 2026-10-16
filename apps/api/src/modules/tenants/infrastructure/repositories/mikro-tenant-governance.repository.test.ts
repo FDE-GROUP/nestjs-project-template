@@ -9,8 +9,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MikroTenantGovernanceRepository } from './mikro-tenant-governance.repository';
 
 /**
- * 切片 3c-ii-B 双轨**镜像断言**：与 `drizzle-tenant-governance.repository.test.ts` 逐例对齐的非弱化断言
- *（S5 · FR-6 跨租户视图 + NFR-6 导出/硬删），只是把 Drizzle 的 fluent select/innerJoin/delete 换成 Mikro
+ * 切片 3c-ii-B 双轨**镜像断言**：与 `原租户治理仓储镜像测试` 逐例对齐的非弱化断言
+ *（S5 · FR-6 跨租户视图 + NFR-6 导出/硬删），只是把旧 ORM 的 fluent select/innerJoin/delete 换成 Mikro
  * `EntityManager` 的 `findAndCount/findOne/find/count/nativeDelete`。fake `em` 经 `MikroOrmService.fork()`
  * 供给。刻意**无租户上下文**（平台级天然全量·FR-11①·访问裁决在 controller guard）。
  */
@@ -237,7 +237,7 @@ describe('MikroTenantGovernanceRepository.exportTenantData (NFR-6)', () => {
     }
   });
 
-  it('drops a member whose user row is missing (对齐 Drizzle innerJoin 语义)', async () => {
+  it('drops a member whose user row is missing (对齐旧实现 innerJoin 语义)', async () => {
     const { repo, spies } = makeRepo();
     spies.findOne.mockResolvedValueOnce(orgRow);
     spies.find

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, createPosts, createUsers, runSeed } from './seed';
 
 /**
- * ORM 修宪案 B · 切片 4-α（S-d6）——seed 数据面 Drizzle→Mikro 换轨的**镜像断言**（非弱化）。
+ * ORM 修宪案 B · 切片 4-α（S-d6）——seed 数据面旧 ORM→Mikro 换轨的**镜像断言**（非弱化）。
  * 用假 `em`（`findOne/insert/nativeUpdate/nativeDelete/find`）直调导出的 `createUsers/createPosts/
  * cleanup/runSeed`，逐例钉：① 操作形态（findFirst→findOne·insert→em.insert·update→nativeUpdate·
  * delete→nativeDelete）；② **保真红线**——insert 载荷**不含 createdAt/emailVerified**（靠 DB 默认填充），
@@ -72,7 +72,7 @@ describe('seed createUsers (S-d6)', () => {
     expect(payload.role).toBe('ADMIN');
     expect(typeof payload.password).toBe('string');
     expect(payload.password).not.toBe('secret-admin'); // bcrypt 已散列
-    // 保真红线：createdAt/emailVerified 交由 DB 默认（对齐旧 Drizzle insert）；updatedAt NOT NULL 无默认须显式。
+    // 保真红线：createdAt/emailVerified 交由 DB 默认（对齐旧实现 insert）；updatedAt NOT NULL 无默认须显式。
     expect(payload).not.toHaveProperty('createdAt');
     expect(payload).not.toHaveProperty('emailVerified');
     expect(payload.updatedAt).toBeInstanceOf(Date);
@@ -95,7 +95,7 @@ describe('seed createUsers (S-d6)', () => {
     expect(entity).toBe(User);
     expect(where).toEqual({ email: 'op@example.com' });
     expect(set.role).toBe('ADMIN');
-    expect(set.updatedAt).toBeInstanceOf(Date); // 镜像旧 Drizzle $onUpdate 自动 bump
+    expect(set.updatedAt).toBeInstanceOf(Date); // 镜像旧实现 $onUpdate 自动 bump
     expect(typeof set.password).toBe('string');
   });
 

@@ -25,7 +25,7 @@ export const TABLE_OWNERSHIP: Record<string, string> = {
   workspace: 'workspaces',
   post: 'posts',
   tenantSubscription: 'subscriptions',
-  // database 基础设施：ES 端口（DrizzleEventStore）独占写面，业务仓储不得直写 event（§6-丙）
+  // database 基础设施：ES 端口（原事件存储适配）独占写面，业务仓储不得直写 event（§6-丙）
   event: 'database',
 };
 

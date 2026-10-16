@@ -29,7 +29,7 @@ jobs:
       OPEN_API_VERSION: ${{ vars.OPEN_API_VERSION || '3.1.0' }}
       
       # Database（codegen 不连库，仅需通过 Joi 的 postgres|postgresql scheme 校验；
-      # 旧值 mongodb:// 为 Prisma 时代古董，迁 Drizzle+PG 后一直卡死本 workflow）
+      # 旧值 mongodb:// 为 Prisma 时代古董，迁 MikroORM+PG 后一直卡死本 workflow）
       DATABASE_URL: ${{ vars.DATABASE_URL || 'postgres://swagger:swagger@localhost:5432/swagger' }}
       
       # Auth

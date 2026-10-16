@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { MIKRO_MIGRATION_ENTITIES } from './mikro/migration/migration-entities';
 import { TABLE_OWNERSHIP, WRITE_EXCEPTIONS } from './table-ownership';
 
 /**
@@ -12,7 +13,7 @@ import { TABLE_OWNERSHIP, WRITE_EXCEPTIONS } from './table-ownership';
  * 本上下文 owned 集，或命中 `WRITE_EXCEPTIONS` 显式例外。
  * 读侧（select/join）不受约束（CQRS read-model 固有跨上下文聚合）。
  *
- * 已知局限（如实声明）：仅识别「直接以表名 / Mikro 实体名作首参」的写调用（Drizzle
+ * 已知局限（如实声明）：仅识别「直接以表名 / Mikro 实体名作首参」的写调用（旧 ORM
  * `insert/update/delete(table)` 与 MikroORM `nativeInsert/nativeUpdate/nativeDelete(Entity)`）；
  * 经变量别名/动态表名/`persist·remove` 的写不在 grep 级覆盖面内（防过度机制化，不引 AST 工具链）。
  * Mikro 迁移（ORM 修宪案 B）后写面出现 `nativeX(Entity)` 形态，故本守卫探测同步扩到该形态
@@ -58,7 +59,7 @@ describe('表所有权纪律守卫（写侧严格 · microservice-readiness #1�
 
       const source = readFileSync(file, 'utf8');
       for (const match of source.matchAll(WRITE_CALL)) {
-        // Drizzle 路径传 schema 导出名（已小写起首）·Mikro 路径传 PascalCase 实体名——统一首字母小写归一。
+        // 旧实现路径传 schema 导出名（已小写起首）·Mikro 路径传 PascalCase 实体名——统一首字母小写归一。
         const table = match[2].charAt(0).toLowerCase() + match[2].slice(1);
         const owner = TABLE_OWNERSHIP[table];
         // 未登记标识符（relations 别名、链式中间量等）不参与判定
@@ -85,13 +86,13 @@ describe('表所有权纪律守卫（写侧严格 · microservice-readiness #1�
     }
   });
 
-  it('owned 集覆盖 schema 全部业务表导出名（防新表漏登记）', () => {
-    // 与 schema.ts 顶层 pgTable 导出对齐；relations/enum 不参与。
-    const schemaSource = readFileSync(join(SRC_ROOT, 'database/schema.ts'), 'utf8');
-    const tableExports = [...schemaSource.matchAll(/export const (\w+) = pgTable\(/g)].map(
-      (m) => m[1],
-    );
-    for (const table of tableExports) {
+  it('owned 集覆盖迁移实体全部业务表（防新表漏登记）', () => {
+    // ORM 修宪案 B · Phase 2（彻底去旧 ORM）：业务表清单的 SSOT 从旧 `schema.ts`（pgTable 导出）
+    // 迁至 `MIKRO_MIGRATION_ENTITIES`（忠实全模型 13 表）；实体 PascalCase 名首字母小写 ⇄ owned 集键
+    // （与写面 `nativeX(Entity)` 探测归一口径一致）。relations/enum 不成表、不参与。
+    for (const schema of MIKRO_MIGRATION_ENTITIES) {
+      const name = schema.name as string;
+      const table = name.charAt(0).toLowerCase() + name.slice(1);
       expect(TABLE_OWNERSHIP[table], `表 ${table} 未登记 owned 集`).toBeDefined();
     }
   });

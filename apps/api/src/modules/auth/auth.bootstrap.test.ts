@@ -33,9 +33,10 @@ const makeService = (overrides?: Record<string, unknown>) => {
   };
   const service = new AuthBootstrapService(
     configService as never,
-    { db: {} } as never,
-    // 切片 3b 新增 `mikroOrmService` 形参：本测缺省不设 `BA_ADAPTER` ⇒ 走 drizzle 轨·此桩永不被调。
-    { createAuthAdapter: async () => ({}) } as never,
+    // ORM 修宪案 B · Phase 2 彻底去旧 ORM：旧 `db`（原数据库服务）形参退场。
+    // 本测只验 bootstrap 装配（不真查库），`createAuthAdapter` 返回**适配器工厂函数**（`database`
+    // 为 function → BA 走自定义 adapter 分支，不触 Kysely 初始化），避免无真库时的异步拒绝。
+    { createAuthAdapter: async () => () => ({ id: 'test-adapter' }) } as never,
     { checkSeats: async () => {} } as never,
     authInstance as never,
     httpAdapterHost as never,

@@ -3,7 +3,7 @@
 > 状态: **已确认**（人裁决定稿 · P7；§9 六点全部裁决）| 版本: 0.1.0 | 日期: 2026-10-13
 > 归属: `docs/specs/`（项目宪法层 · 人/团队平面）| 性质: **重写型**（正文整体重写 + 变更戳 + 演变单列）
 > 关联: [vision.md](./vision.md)（愿景·宪法顶层，本文以其为纲）· [tooling-standards.md](./tooling-standards.md)（工具选型与命令 SSOT，本文**只引用不复制**）· [architecture.md](./architecture.md)（结构 SSOT）
-> 来源: 提炼自 `oh-my-env/spec/engineering-spec.md` §2–§5 + `experience/` 经验（E-001 授权粒度 / E-003 四区 / E-004 重写型），适配本 NestJS+Node+Drizzle+CQRS 模板
+> 来源: 提炼自 `oh-my-env/spec/engineering-spec.md` §2–§5 + `experience/` 经验（E-001 授权粒度 / E-003 四区 / E-004 重写型），适配本 NestJS+Node+MikroORM+CQRS 模板
 > 受众: **人 + Agent**（`读者: Agent`——本文约束 agent 协作与门禁行为，须遵循）
 
 规范用语：**须**=强制 · **应**=强烈建议 · **宜**=建议 · **不得**=禁止。
@@ -76,7 +76,7 @@
   - 全局 / 不可逆 → **人签核**；
   - 局部可逆 → **轻量自审**（作者对照完成判据自查即可）。
 - 本项目**不可逆 / 高危动作清单**（须人签核，不得由 agent 自行执行）：
-  1. 数据库 schema 变更与迁移（`drizzle:generate` 产出的 SQL 须人工审 → `drizzle:migrate`；`drizzle:push --force` 仅限 dev）；
+  1. 数据库 schema 变更与迁移（`migration:generate` 产出的迁移 SQL 须人工审 → `migration:run` 应用；破坏性 dev 重建 `db:reset`＝`mikro-migrate.ts --fresh` 仅限 dev·切勿指向生产）；
   2. 删除依赖 / 删除代码 / 大范围重构（尤其据 fallow 结论者——**必须二次人工核验**，见 tooling-standards §4.7）；
   3. 修改门禁 / CI / husky 钩子 / commitlint / Biome 规则本身；
   4. 修改 `docs/specs/` 宪法条款、公共 API 契约、DI 注入形态（§4.3 陷阱）；
@@ -107,13 +107,13 @@
 
 - 判据分两步：**clarity**（能否分辨 done，模糊会诱发 premature completion）+ **demand**（要求多高，驱动 legwork）；最强判据既**可核验**又**穷尽**（「每项都核过」>「产出清单」）。
 - 示例：
-  - 「迁移完成」= generate 的 SQL 已人工审 **+** migrate 实机成功 **+** `pnpm run ci` 全绿，而非「跑过命令」；
+  - 「迁移完成」= `migration:generate` 的 SQL 已人工审 **+** `migration:run` 实机成功 **+** `pnpm run ci` 全绿，而非「跑过命令」；
   - 「fallow 清理完成」= 每条候选已二判（真实修 / 假阳性加 `fallow-ignore` / 存疑留痕）**+** check/test/build/启动冒烟回归全绿（tooling-standards §4.7 步骤）。
 - **调试**：先造一个能对确切症状变红的**紧反馈环**（red-capable / 确定性 / 快 / agent 可跑）；**无红环不进入假设**（§5.1 工程纪律）。
 
 ## 7. 演进与能力漂移
 
-- 写纪律**须标注环境假设**（本模板当前基线：Node ≥22 + pnpm 11 / Nest 12 / Fastify 5 / TS 5.9 / Drizzle 0.44，见 tooling-standards §2）。
+- 写纪律**须标注环境假设**（本模板当前基线：Node ≥22 + pnpm 11 / Nest 12 / Fastify 5 / TS 5.9 / MikroORM 7.2，见 tooling-standards §2）。
 - 区分**补偿**（随模型/工具能力提升会「溶解」）与**纪律**（任何能力档位都约束行为：人机分工、反馈环、证据链、契约、审计门）。
 - 本文本身为重写型：随复盘整体重写受影响章节，不整体重排。
 

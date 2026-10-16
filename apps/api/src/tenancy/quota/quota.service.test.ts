@@ -5,7 +5,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * 桩 `QuotaStore`（§9.5.4①B 端口倒置后·服务不再感知 Drizzle/schema）。
+ * 桩 `QuotaStore`（§9.5.4①B 端口倒置后·服务不再感知 ORM/schema）。
  * `sub` 控当前生效订阅视图（null=无 active 行）；`used` 控成员数。
  */
 function makeService(opts: { sub?: ActiveSubscriptionView | null; used?: number } = {}) {
