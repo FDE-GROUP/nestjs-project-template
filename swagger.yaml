@@ -198,18 +198,23 @@ paths:
           description: Page size (1-100)
           schema:
             example: 20
-        - name: offset
+        - name: cursor
           required: false
           in: query
-          description: Offset (rows to skip)
+          description: >-
+            Opaque base64url cursor from a previous page (omit for the first
+            page).
           schema:
-            example: 0
+            example: WyIyMDI2LTAxLTAyVDAzOjA0OjA1LjAwMFoiLCJ1dWlkLWFiYyJd
+            type: string
       responses:
         '200':
           description: Posts owned by the active tenant.
+        '400':
+          description: Malformed cursor.
         '403':
           description: No active tenant context.
-      summary: List posts in the active tenant
+      summary: List posts in the active tenant (cursor-paginated)
       tags: &ref_4
         - posts
     post:
