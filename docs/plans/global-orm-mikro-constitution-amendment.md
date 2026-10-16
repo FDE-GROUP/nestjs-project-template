@@ -43,7 +43,7 @@
   ✅ **已落地（人签核开工「1」·Agent 照建议代裁留痕 2026-10-16·定名＝`posts`·详见 §5.3）**：纯增量双轨·未触高危清单 1/2/3/4（零 schema 迁移/零依赖增删/零门禁/零 `docs/specs`）。验收判据达成——`posts.module.ts` 的 `POST_REPOSITORY` 唯一改绑 `MikroPostRepository`·`DrizzlePostRepository` 类与其单测**不改动仍绿**；env-gated 真库 `tenant-isolation.e2e` **5/5 EXIT=0** 证读写全走 Mikro（create 201 / list 命中经 `em`·跨租隔离不破）；默认 `ci` 基线 358 不动（新单测 +11 → **353 passed | 16 skipped (369)**）。
 - **切片 3 · BA 面接链切换**——auth/tenancy/users 的数据面换自持 adapter；迁移链**交接**：以现存 PG schema 为基线生成 Mikro init migration，`drizzle/` 冻结保留不删（口径类比「push 管理的库不能直接 migrate」的既有教训）。
   完成判据：真库 migrate + seed 往返绿；`verify:prod-boot` 200；gated e2e 全链（sign-up/sign-in/session/organization）进防线脚本。
-  🟡 **部分落地（人签核范围「仅 3a」·基线法 Agent 代裁·多租户优先·2026-10-16·详见 §5.5）**：**3a（迁移链交接）已完成**——忠实全模型实体集（13 表·含 FK/enum/index/unique）+ 迁移专用装配（独立于 `orm.ts`/app boot）+ 生成 init 迁移工件 + scratch 库与 Drizzle 现 schema **结构级逐表对拍全 PASS·零漂移**；**真库基线登记已于人一次性明示签核后执行**（§5.6·`checkSchema` 预检绿 + `logMigration` 基线·零数据表 DDL·`nestjs_practice` 纳入 Mikro 迁移链·`drizzle/` 冻结）。**3b（BA adapter 接链单点切换）已实现落地（§5.8·v0.10.0·`BA_ADAPTER` 双轨·缺省 drizzle·gated e2e 除 `tenant-hard-delete.e2e`（另案·既有 harness 缺陷·非本片引入）外全绿）**·**3c（app 仓储分批切）未开工**。
+  🟡 **部分落地（人签核范围「仅 3a」·基线法 Agent 代裁·多租户优先·2026-10-16·详见 §5.5）**：**3a（迁移链交接）已完成**——忠实全模型实体集（13 表·含 FK/enum/index/unique）+ 迁移专用装配（独立于 `orm.ts`/app boot）+ 生成 init 迁移工件 + scratch 库与 Drizzle 现 schema **结构级逐表对拍全 PASS·零漂移**；**真库基线登记已于人一次性明示签核后执行**（§5.6·`checkSchema` 预检绿 + `logMigration` 基线·零数据表 DDL·`nestjs_practice` 纳入 Mikro 迁移链·`drizzle/` 冻结）。**3b（BA adapter 接链单点切换）已实现落地（§5.8·v0.10.0·`BA_ADAPTER` 双轨·缺省 drizzle·gated e2e 除 `tenant-hard-delete.e2e`（另案·既有 harness 缺陷·非本片引入）外全绿）**·**3c（app 仓储分批切）开工方案已起草（§5.9·v0.11.0-draft·直查钉死 9 处非-BA 触面·含「先补运行时实体」的范围/排序岔口·待签核·未开工）**。
 - **切片 4 · contract：删旧 + 宪法修订**——删 `drizzle-orm`/`drizzle-kit`/`postgres` 依赖与残留 import；修订 `docs/specs/tooling-standards.md` §2（ORM/驱动/迁移三行）、§3 禁条（候选文案 `MikroORM + PostgreSQL（禁 Prisma/TypeORM/Drizzle 回迁）`·现条原文为「禁 Prisma / TypeORM / MongoDB 等第二套 ORM/DB —— 统一 Drizzle + PostgreSQL」·定稿归人）、§4.3（S9 形态在 defineEntity 下的退役声明·Q2）、§4.4 迁移流程、§4.8 如涉及门禁脚本、`workflow.md` §3 高危清单第 1 条命令口径、`AGENTS.md` §2/§3 指针；同步 `drizzle-migration-guide.md` 等运维文档。**本切片整体属高危，逐项人签核后方可执行。**
   完成判据：全仓 `drizzle` 命中仅剩历史文档与冻结的 `drizzle/` 目录；宪法/索引/入口三层口径一致。
 - **切片 5 · 可选裁决点（Q3/Q4 已裁＝不做·本切片整体不执行）**——租户全局 Filters / RLS 采纳（Q3·勘察 §3-3「叠甲」论）· **人裁暂不采纳**；Kysely 逃生舱引入（Q4）· **人裁不引入**。→ 保留为本切片的历史占位；若将来需 Filters/RLS 加固或 Kysely，另开独立片单独审计，不随本案默认带出。
@@ -237,6 +237,40 @@
 
 **过渡态**：app-orm 实体集已单一化（Post + BA7）；但运行时有损实体 vs 迁移忠实实体（13 表）双描述仍并存·合并单一 SSOT 待切片 4。
 
+### §5.9 切片 3c 开工方案（拟·直查钉死现状·待签核·未执行）
+
+> **性质**：本草案零代码·零迁移·**未动任何生产装配**·未改 `docs/specs`/门禁；仅**勘察钉死现状 + 列归人裁点供签核**（沿 §5.7 之于 3b 的体例）。签核后方决定实现范围与是否动装配。
+
+**现状（本轮 2026-10-16 直查·Grep 全量非测试态）**：app 侧**非-BA** Drizzle 触面 **9 处**（不含 BA 接链〔3b 双轨·drizzle 分支留切片 4 清〕与 posts 双轨）：
+
+| # | 文件 | 涉及表 | 已有运行时实体 | 性质/难度 |
+|---|---|---|---|---|
+| 1 | `tenancy/infrastructure/drizzle-platform-identity.lookup.ts` | user | ✅ BA | 单表读·易 |
+| 2 | `tenancy/infrastructure/drizzle-tenant-status.store.ts` | organization | ✅ BA | 单表读·易 |
+| 3 | `modules/tenants/.../suspend-user.command-handler.ts` | session | ✅ BA | 命令内直连 drizzle（非仓储）·中 |
+| 4 | `tenancy/infrastructure/drizzle-quota.store.ts` | member✅ / **tenant_subscription❌** | 部分 | 须补实体 |
+| 5 | `tenancy/infrastructure/drizzle-user-status.store.ts` | user✅ / **user_status❌** | 部分 | 须补实体 |
+| 6 | `modules/tenants/.../drizzle-user-governance.repository.ts` | user✅ / **user_status❌** | 部分 | 须补实体 |
+| 7 | `modules/workspaces/.../drizzle-workspace.repository.ts` | **workspace❌** | ❌ | 须补实体 |
+| 8 | `database/drizzle-event-store.ts` | **event❌** | ❌ | ES append-only·须补实体 |
+| 9 | `modules/tenants/.../drizzle-tenant-governance.repository.ts` | invitation/member/org/post/**tenant_subscription**/user/**workspace** | 多❌ | 跨租户复杂查询+分页+原生 SQL·**最难** |
+
+**核心发现（决定 3c 真身）**：MikroORM **运行时实体仅 BA 7（`entities.ts`）+ Post（`post.entity.ts`）**；那 13 张表的「迁移忠实实体」仅存于 `migration/migration-entities.ts`（282 行·仅供迁移基线 `Migration20261016055354`·**非运行时**）。故 **4 张非-BA 表（`workspace`/`user_status`/`event`/`tenant_subscription`）无运行时实体** → 3c 切这些仓储 **须先为其补运行时 Mikro 实体**，此举**正撞上切片 4「合并单一实体 SSOT」的核心议题**，且触发已知高危坑（`common_pitfalls`：*有损实体作迁移基线会静默 DROP FK/索引/列*·见 §5.5 / 记忆）。3c 因此**不是可直接闷头实现的一片**——存在归人裁决的**范围/排序岔口**。
+
+**归人裁点（开工前须定·按建议给推荐·问责归人 P2）**：
+1. **范围/排序岔口（首要）**：3c 依赖「先补运行时实体」，与切片 4「合并单一 SSOT」同一议题。三选一——**(a·推荐)** 3c 采「先易后难」分两个子片：**3c-i** 只切**已有实体已覆盖**的仓储（#1 platform-identity / #2 tenant-status 走 BA `user`/`organization` 实体·#3 suspend-user 走 BA `session` 实体——**零补实体·纯搬仓储·贴切片 2 律**），**3c-ii**  workspace/user_status/event/tenant_subscription 的**补实体 + 切换连同切片 4 的 SSOT 合并一起做**（避免先建有损新实体再合并的双份工）；**(b)** 3c 内含全部补实体（先建 4 表运行时实体·再逐仓储搬·把切片 4 的 SSOT 合并提前到 3c）；**(c)** 重排（先做切片 4 SSOT 合并·定单一 SSOT·再回头切 3c 全部仓储）。推荐 **(a)**：边界最清·3c-i 立即拿到切片 2 战果·不提前动迁移基线（高危 1）。
+2. **补实体的保真律（若采含补实体的分支）**：新运行时实体须**忠实镜像**物理 schema（FK/index/enum/unique·**勿采有损**），且**不得反用作迁移基线**（避免 §5.5 坑复发）。是否以 `migration-entities.ts` 为**单一源**派生运行时实体（**消双描述·直接收编切片 4 的 SSOT 合并**）？归人。
+3. **`tenant-governance.repository`（跨租户复杂读+分页+原生 SQL）**：MikroORM 侧逃生走 `em.execute`/QueryBuilder（Q4 已裁不引 Kysely）——整片搬 / 缓搬（保留 Drizzle 至切片 4 后）？其「刻意不注入租户上下文·平台级天然全量·由 `PlatformOperatorGuard` 前置把守」的隔离语义须**逐字保真**搬运取证。归人。
+4. **`drizzle-event-store`（ES append-only）**：切换涉及 `DomainEventPublisher`/UoW 收口点（§2 目标·`onFlush` 拉 `pullDomainEvents`）——随本片 / 独立片？归人。
+5. **分批粒度与验收**：沿切片 2 律（expand 双轨不删旧·既有测不改仍绿·真库 gated e2e 隔离不破·默认 `ci` 基线 353/369 不动·新增单测另计）；**每子片独立过审计门·独立签核**。
+6. **开工签核**：3c 面广（9 仓储·含补实体岔口）·不可逆性中低（双轨可回滚）→ 仍须人**明示签核**方可动装配；补实体 + 反用于迁移基线者触**高危清单 1（schema 迁移）**须**逐项人签核**·Agent 不得自行执行。
+
+**触面清单（开工时预判·待裁点1 定档后精化）**：3c-i（易·零补实体）→ `drizzle-platform-identity.lookup` / `drizzle-tenant-status.store` / `suspend-user.command-handler` 改绑 Mikro 仓储 + 新增对应 Mikro 单测；3c-ii（补实体·触高危 1）→ workspace/user_status/event/tenant_subscription 四表运行时实体 + 五仓储（含 tenant-governance 复杂查询·跨租户天然全量语义）。schema/**依赖**/**门禁**/**`docs/specs`** 是否改，视分支而定。
+
+**回滚点**：沿切片 2 律——双轨并存·旧 Drizzle 仓储类与其单测不删不改（每子片一键 revert 单点 commit 或改绑回 Drizzle）；补实体分支若采（b)/(c) 触高危 1·回滚需重建·与 §5.6 迁移基线**正交**（切换仓储不改已登记 `mikro_migrations`）。
+
+**风险/诚实面**：有损 vs 忠实双描述在补实体时收敛为单一 SSOT（若采分支 a 之 3c-ii 留待切片 4）；跨租户复杂查询搬 MikroORM 依赖原生 SQL 逃生舱与 `EntityCaseNamingStrategy` 对齐（与 §5.6 基线同源）；**genericOAuth 外部回调 dance 仍未起 IdP**（沿切片 0 口径·不强验·不得 overclaim）。**本草案仅勘察·未选定分支·未执行任何实现**。
+
 ---
 
 ## 6. 完成判据（可核验 + 穷尽）
@@ -267,8 +301,9 @@
 | 2026-10-16 | 0.9.0-draft | 人「同意」→ 起草切片 3b 开工方案供签核（**未执行**） | **新增 §5.7「切片 3b 开工方案（拟·待签核·未执行）」**：直查钉死现状（单一切换点 `auth.implement.ts:90` 由 `drizzleAdapter(drizzleService.db,{provider,schema})`→`mikroAuthAdapter(orm)`·适配器已就绪需 `MikroORM` 实例·`MikroOrmService` 现仅暴露 `fork()` 需加取 orm 出口·`MIKRO_APP_ENTITIES=[Post]` 不足以覆盖 BA 需并入 `MIKRO_ENTITIES` 7 表·`auth.bootstrap.ts:46` 需值注入）；列 5 项归人裁点（双轨旗标 vs 直切·实体集并入 vs 独立 orm·orm 出口形态·验收口径含一致性套件是否强制/gated e2e 范围/genericOAuth 仍未起 IdP·开工签核）+ 触面清单/回滚点/风险。**零代码零迁移·未动任何生产装配**·未改 `docs/specs`/门禁·真库基线（§5.6）不受影响（适配器选择与迁移基线正交） |
 | 2026-10-16 | 0.9.1-draft | 人「你裁定就行」→ §5.7 五归人裁点 Agent 代裁留痕（照建议自裁·问责归人 P2·**未开工**） | §5.7 追加「Agent 代裁」块：裁点1 采 env 旗标 `BA_ADAPTER=mikro|drizzle`（免重部署回滚·drizzle 路径+schema import 留至切片 4）；裁点2 并入单一 app-orm（`MIKRO_APP_ENTITIES=[Post,...MIKRO_ENTITIES]`·不建独立 BA-orm·懒建保 DB-free）；裁点3 `createAuthAdapter():Promise<factory>` 不泄 orm/em·`CreateAuth` 转 async；裁点4 一致性套件续 env-gated 不入默认 ci（本片跑一次 EXIT=0）+ gated 真库 e2e 全链 EXIT=0 + `verify:prod-boot` 200 + 基线 353/369 不动 + genericOAuth 仍不起 IdP 不强验；裁点5 **仅裁定方案取值·非开工授权**·改生产 auth 装配仍待人明示签核。**零代码零迁移·未动生产装配**·未改 `docs/specs`/门禁 |
 | 2026-10-16 | 0.10.0 | 人「签核开工·照裁定实现」（AskUserQuestion）→ 实现切片 3b（非草案落地） | **切片 3b 落地（BA 数据面接链单点切换·未触高危 1/2/3/4）**：`MIKRO_APP_ENTITIES=[Post,...MIKRO_ENTITIES]`（BA 7 表并入单一 app-orm）+ `MikroOrmService.createAuthAdapter()`（不泄 orm/em）+ `CreateAuth` 转 async + `BA_ADAPTER` 双轨旗标（缺省 drizzle·`auth.implement.ts` 单点择适配器·`drizzleAdapter`+`schema` import 不删）+ `auth.bootstrap.ts` 值注入 MikroOrmService（S9）·`auth.module.ts`/schema/依赖/门禁/`docs/specs` 零改·两单测补 async+形参占位。验收：tsc 0·check 0·默认 `ci` 353/369 基线不动·一致性 9/9 EXIT=0·gated e2e `BA_ADAPTER=mikro` auth-http-surface 3/3 + tenant-isolation 5/5 + seat-quota 1/1 全绿·prod-boot 双轨 200（mikro 轨坐实并入实体集建连）。**发现相邻既有缺陷 `tenant-hard-delete.e2e`**（裸 `ref.init()` 无 HTTP adapter·`AuthBootstrapService.onApplicationBootstrap` 必抛）→ 三重取证（mikro=drizzle 同失败 + stash 回 HEAD 同失败）坐实非本片引入·归 module-auth-http-surface 遗留 harness·**另案登记不越界夹带**。新增 §5.8 实现记录·§3 切片 3 标 3b 落地·未删旧/未改宪法/门禁·真库基线（§5.6）正交不受影响 |
+| 2026-10-16 | 0.11.0-draft | 人「同意，继续」→ 起草切片 3c 开工方案供签核（**未执行**） | **新增 §5.9「切片 3c 开工方案（拟·待签核·未执行）」**：Grep 全量非测试态直查钉死 app 侧**非-BA Drizzle 触面 9 处**（platform-identity/tenant-status/suspend-user 走已有 BA 实体·quota/user-status/user-governance/workspace/event-store/tenant-governance 需补实体）；**核心发现**：`workspace`/`user_status`/`event`/`tenant_subscription` 四表**无运行时 Mikro 实体**（仅 `migration-entities.ts` 13 表忠实实体作迁移基线）→3c 切这些仓储必先补实体·**撞上切片 4「合并单一 SSOT」议题**且触发已知高危坑（有损实体作基线静默 DROP）。列 6 项归人裁点（首要=范围/排序岔口 a/b/c·推荐 a「先易后难」：3c-i 只切已有实体覆盖的仓储·3c-ii 连同切片 4 SSOT 合并；补实体保真律·tenant-governance 复杂查询整/缓搬·EventStore 归属·分批粒度·开工签核）+ 触面清单/回滚点/风险。**零代码零迁移·未动任何生产装配**·未改 `docs/specs`/门禁·未选定分支 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-16 / v0.10.0 变更（**切片 1 已落地 + 门禁接入已人签核路线 A + 切片 2 已落地（expand 双轨·定名＝`posts`）+ 切片 3a 已落地（迁移链交接·基线法 Agent 代裁·多租户优先）**：自持 v7 adapter + 零装饰器实体 + EntityCaseNamingStrategy + raw `em.execute` 寻址；验收 authFlow in-repo 8/8 EXIT=0 + 真行×3 存照；`supportsDates:false` 为 raw 形态对 pinpoint③ 的取反；独立 `pnpm run ci:db`（未劫持默认 `ci`/pre-push）+ `assertScratchDb` scratch 库名断言安全前置；**切片 2**：`posts` 数据面单点改绑 `MikroPostRepository`（读写全走 em · 懒建保 DB-free · `DrizzlePostRepository` 类与单测不删不改作双轨/回滚点）·新增单测 11 例 + env-gated `tenant-isolation.e2e` 真库 5/5 EXIT=0·默认 `ci` 基线 358 不动（总 369）。路线 B/C（入默认 `ci` / 远程 CI+PG service）未采；除 `posts` 外生产装配未换（仍 Drizzle·跨切面 DrizzleService/EventStore 暂留）；**切片 3a 已落地（迁移链交接·基线法 Agent 代裁·多租户优先）**：新建**迁移专用忠实全模型**实体集（13 表·`database/mikro/migration/`·含 FK 关系/enum/index/unique·与切片 1/2 有损实体零交集）+ 迁移装配独立于 `orm.ts`/app boot（`extensions:[Migrator]`）+ 生成 init 迁移工件 + snapshot + 离线对拍脚本 `scripts/mikro-migration-baseline.ts`；scratch 库与 Drizzle 现 schema 结构级逐表对拍 **13/13 PASS·零漂移**；`entities.ts`/`post.entity.ts`/`orm.ts` 零改动→默认 `ci` 基线 353/369 不动·`drizzle/` 冻结不删；**真库基线登记已于人一次性明示签核后执行（§5.6·`checkSchema` 预检绿 + `logMigration` 基线·零数据表 DDL·`nestjs_practice` 已纳入 Mikro 迁移链）**·**3b 已实现落地（§5.8·`BA_ADAPTER` 双轨·缺省 drizzle·生产翻转归运维另定·`auth.implement.ts` 单点择适配器·双轨不删旧）**·未含 3c（app 侧非-BA 仓储未切）；切片 3c/4 开工前仍须人**逐次明示签核**（§4 高危清单 1/2/3/4·Agent 不得自行执行）。
+正文已于 2026-10-16 / v0.11.0-draft 变更（**切片 3b 已落地 + 切片 3c 开工方案已起草（§5.9·待签核·未执行）**：**切片 1 已落地 + 门禁接入已人签核路线 A + 切片 2 已落地（expand 双轨·定名＝`posts`）+ 切片 3a 已落地（迁移链交接·基线法 Agent 代裁·多租户优先）**：自持 v7 adapter + 零装饰器实体 + EntityCaseNamingStrategy + raw `em.execute` 寻址；验收 authFlow in-repo 8/8 EXIT=0 + 真行×3 存照；`supportsDates:false` 为 raw 形态对 pinpoint③ 的取反；独立 `pnpm run ci:db`（未劫持默认 `ci`/pre-push）+ `assertScratchDb` scratch 库名断言安全前置；**切片 2**：`posts` 数据面单点改绑 `MikroPostRepository`（读写全走 em · 懒建保 DB-free · `DrizzlePostRepository` 类与单测不删不改作双轨/回滚点）·新增单测 11 例 + env-gated `tenant-isolation.e2e` 真库 5/5 EXIT=0·默认 `ci` 基线 358 不动（总 369）。路线 B/C（入默认 `ci` / 远程 CI+PG service）未采；除 `posts` 外生产装配未换（仍 Drizzle·跨切面 DrizzleService/EventStore 暂留）；**切片 3a 已落地（迁移链交接·基线法 Agent 代裁·多租户优先）**：新建**迁移专用忠实全模型**实体集（13 表·`database/mikro/migration/`·含 FK 关系/enum/index/unique·与切片 1/2 有损实体零交集）+ 迁移装配独立于 `orm.ts`/app boot（`extensions:[Migrator]`）+ 生成 init 迁移工件 + snapshot + 离线对拍脚本 `scripts/mikro-migration-baseline.ts`；scratch 库与 Drizzle 现 schema 结构级逐表对拍 **13/13 PASS·零漂移**；`entities.ts`/`post.entity.ts`/`orm.ts` 零改动→默认 `ci` 基线 353/369 不动·`drizzle/` 冻结不删；**真库基线登记已于人一次性明示签核后执行（§5.6·`checkSchema` 预检绿 + `logMigration` 基线·零数据表 DDL·`nestjs_practice` 已纳入 Mikro 迁移链）**·**3b 已实现落地（§5.8·`BA_ADAPTER` 双轨·缺省 drizzle·生产翻转归运维另定·`auth.implement.ts` 单点择适配器·双轨不删旧）**·未含 3c（app 侧非-BA 仓储未切）；切片 3c/4 开工前仍须人**逐次明示签核**（§4 高危清单 1/2/3/4·Agent 不得自行执行）。
