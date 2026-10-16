@@ -36,6 +36,7 @@
 | Lint + 格式化 | **Biome** | ^2.5.15 | 单工具替代 ESLint+Prettier（文件级） | 强制（唯一） |
 | 代码库智能/静态分析 | **fallow** | 3.33.1 | 前置分析器（非判决）：跨文件仓库图给出未用代码/重复/循环/复杂度/架构边界的**候选线索**；结论须二次人工核验 | 推荐（经 `pnpm dlx`） |
 | 本地 CI 编排 | **scripts/ci.ts**（node:child_process） | — | 一键全量门禁：`check`→`build`→`test` + fallow 佐证；pre-push 自动触发，**替代远程 CI** | 强制 |
+| 一次性测试库供给 | **Testcontainers**（`testcontainers` + `@testcontainers/postgresql`） | ^12.2.1 | `scripts/ci-fullstack.ts`（`pnpm run test:fullstack`，经 `ci:db` 串入）：拉一次性 PG（`postgres:16-alpine`·随机端口）→ 重放基线迁移建 schema → 跑 env-gated 全栈 e2e + BA 一致性套件，用完即焚零足迹；Ryuk 禁用（清理兜底=finally stop + 启动前标签清扫）；**默认 `ci` 仍 DB-free 不变量不动** | 推荐（带 DB 验收面） |
 | Git Hooks | **husky** | ^9.1.7 | pre-commit → `lint:fix`；pre-push → `ci` | 强制 |
 | 提交校验 | **commitlint** | ^21.2.3 | Conventional Commits | 强制 |
 | 日志 | **pino**（+ pino-pretty） | ^10.4.0 | 结构化日志；dev pino-pretty、prod pino/file 落文件（Datadog 已移除） | 强制 |

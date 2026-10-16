@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { createValidationPipe } from '@app/common/validation-pipe';
 import {
   Account,
   Invitation,
@@ -72,6 +73,8 @@ gated('seats 配额 hook 全栈 e2e（真·BA HTTP 入组通道 · env-gated）'
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    // 与生产入口同装配（global-ci-fullstack-pg 切片 A′：校验管单源见 common/validation-pipe.ts）。
+    app.useGlobalPipes(createValidationPipe());
     await app.init();
     mikro = app.get(MikroOrmService);
   }, 120000);

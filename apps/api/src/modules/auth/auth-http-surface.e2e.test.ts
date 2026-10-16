@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { createValidationPipe } from '@app/common/validation-pipe';
 import { Account, Session, User } from '@app/database/mikro/entities';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -35,6 +36,8 @@ gated('BA HTTP 面全链 e2e（真·原生端点经真 HTTP·env-gated）', () =
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    // 与生产入口同装配（global-ci-fullstack-pg 切片 A′：校验管单源见 common/validation-pipe.ts）。
+    app.useGlobalPipes(createValidationPipe());
     await app.init();
     mikro = app.get(MikroOrmService);
   }, 120000);

@@ -10,9 +10,9 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { FastifyInstance } from 'fastify';
 import * as yaml from 'js-yaml';
-import { I18nValidationPipe } from 'nestjs-i18n';
 import { AppModule } from './app.module';
 import { requestIdHook } from './common/request-id.hook';
+import { createValidationPipe } from './common/validation-pipe';
 import { ConfigService } from './config/config.service';
 import { assertDataResidency, resolveEnforceMode } from './config/data-residency';
 
@@ -79,21 +79,8 @@ async function bootstrap() {
     defaultVersion: '1',
   });
 
-  // Setup global request validation
-  // `I18nValidationPipe` (nestjs-i18n) validates and emits raw i18n keys; the localized
-  // text is rendered by the I18nValidationExceptionFilter registered in CommonModule
-  // (which preserves the standard error shape and only translates `message`). Locale is
-  // resolved from the `accept-language` header, falling back to `zh`.
-  app.useGlobalPipes(
-    new I18nValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    }),
-  );
+  // Setup global request validation（装配单源见 common/validation-pipe.ts：生产与 gated e2e 共用）
+  app.useGlobalPipes(createValidationPipe());
   // cause fastify update, temp adapt
   const fastifyInstance = app.getHttpAdapter().getInstance() as unknown as FastifyInstance;
 

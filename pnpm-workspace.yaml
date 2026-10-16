@@ -9,3 +9,8 @@ allowBuilds:
   '@swc/core': true
   esbuild: true
   '@scarf/scarf': false
+  # testcontainers 的可选原生面（SSH 传输/docker-compose 解析）：本仓只用本地 Docker + PG 模块，
+  # 不碰 SSH/compose——显式拒建（ssh2 对 cpu-features 自带 try/catch 降级，protobufjs 仅收尾脚本）。
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

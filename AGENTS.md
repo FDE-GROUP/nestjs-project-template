@@ -30,6 +30,7 @@ pnpm run build             # 构建（先 build:libs 再 build:nest --builder sw
 pnpm run test              # 测试（Vitest）；check = Biome（lint+format）
 pnpm run ci                # L1 门禁：check → build → test（+ fallow 佐证）
 pnpm run ci:quick          # 轻量：check + test
+pnpm run ci:db             # 带 DB 全链：check → test → Testcontainers 一次性 PG 跑 gated e2e + BA 一致性套件（用完即焚）
 pnpm run verify:prod-boot  # prod 回归防线：构建后真起服验 /health 200
 pnpm run migration:generate / migration:run / db:setup   # 迁移/数据
 ```

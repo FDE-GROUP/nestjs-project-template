@@ -3,9 +3,9 @@ import { Body, Controller, Module, Post } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { IsEmail, IsNotEmpty } from 'class-validator';
-import { I18nValidationPipe } from 'nestjs-i18n';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CommonModule } from '../common/common.module';
+import { createValidationPipe } from '../common/validation-pipe';
 import { AppI18nModule } from './i18n.module';
 
 // 本地 probe DTO：自 module-users-surface-reduction（Users 面收紧删 CreateUserDto）起，
@@ -40,14 +40,8 @@ describe('Validation i18n localization (contract)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [ProbeModule] }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
-    app.useGlobalPipes(
-      new I18nValidationPipe({
-        whitelist: true,
-        transform: true,
-        forbidNonWhitelisted: true,
-        transformOptions: { enableImplicitConversion: true },
-      }),
-    );
+    // 与生产入口共用单一装配源（global-ci-fullstack-pg 切片 A′ 消双源漂移）。
+    app.useGlobalPipes(createValidationPipe());
     await app.init();
   });
 

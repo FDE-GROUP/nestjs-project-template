@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
+import { createValidationPipe } from '@app/common/validation-pipe';
 import { Invitation, Member, Organization, User } from '@app/database/mikro/entities';
 import { Event, TenantSubscription, Workspace } from '@app/database/mikro/four-tables';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
@@ -102,6 +103,8 @@ gated('按租户硬删全栈 e2e（真库 FK cascade + 事件补删 · env-gated
     // 为 undefined 会崩；`createNestApplication(FastifyAdapter)` + `init()` 才实例化适配器（无需 listen）。
     // CqrsModule 在生命周期（init）才把 @CommandHandler 注册进 CommandBus，经 CommandBus 驱动的本测必须 init。
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    // 与生产入口同装配（global-ci-fullstack-pg 切片 A′：校验管单源见 common/validation-pipe.ts）。
+    app.useGlobalPipes(createValidationPipe());
     await app.init();
     mikro = app.get(MikroOrmService);
     commandBus = app.get(CommandBus);

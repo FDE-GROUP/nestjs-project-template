@@ -39,7 +39,7 @@ S10 已交付「能拆」的编译期接缝（core 框架无关 + 端口倒置 +
 3. **错误契约增量扩展**：`ErrorResponse` 保形加 `code`（稳定业务错误码）+ 校验/业务失败共用扁平 `errors[]`（RFC 9457 思想，不换响应壳）——补 repowiki 已记录的「无错误码」短板。
 4. **Codegen-only 导出模块**：HTTP-only AppModule 变体直接 boot 出 OpenAPI spec，去掉「先起 7009」依赖（我方 DB-free compile 整树已验证可行，阻力最小）。
 5. **分页规范**：列表端点统一 Stripe 风格游标（`has_more` + 编码 cursor），offset 为例外——立为 tooling/architecture 标准后再逐端点迁移（expand–contract）。
-6. **（挂专项）全栈 CI 拼 PG**：以 Testcontainers 自动拉起真库跑 env-gated e2e，替代手工 `nestjs_e2e` 库——归既有「全栈 CI」专项，不另立项。
+6. **（挂专项）全栈 CI 拼 PG**：以 Testcontainers 自动拉起真库跑 env-gated e2e，替代手工 `nestjs_e2e` 库——归既有「全栈 CI」专项，不另立项。**〔2026-10-17 已兑现〕**另立 [global-ci-fullstack-pg](./global-ci-fullstack-pg.md) 专项落地：`pnpm run ci:db`/`test:fullstack` 一键一次性 PG（本项原注「不另立项」由专项正式立案取代）。
 
 ## 3. 影响面与风险
 

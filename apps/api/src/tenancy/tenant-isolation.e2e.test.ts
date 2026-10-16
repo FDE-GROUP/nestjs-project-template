@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { createValidationPipe } from '@app/common/validation-pipe';
 import { Account, Member, Organization, Session, User } from '@app/database/mikro/entities';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { Post } from '@app/database/mikro/post.entity';
@@ -28,7 +29,7 @@ import { AppModule } from '../app.module';
  *
  * 断言含 S11 双层全局墙的**语义分层**：无 session → **401**（会话墙先于租户墙）；有 session 但未
  * set-active（无 `activeOrganizationId`）→ **403**（租户墙 fail-closed）；跨租户互不可见 + 越界写
- * 强制盖可信租户 + 伪造 `x-workspace-id` 选择器读恒 0 行（FR-5/NFR-1 红线）。
+ * 越界写经严格管 400 拒入（切片 A′ 后与生产同装配）+ 伪造 `x-workspace-id` 选择器读恒 0 行（FR-5/NFR-1 红线）。
  *
  * **默认跳过**：需一个已建好 schema 的真实 Postgres。仅当 `E2E_DATABASE_URL` 存在时运行（作开关），
  * 真正连接串取 `DATABASE_URL`（两者应指向同一个库），故不破默认 CI 的 DB-free 不变量。本地执行见
@@ -70,6 +71,8 @@ gated('租户隔离全栈 e2e（真·Better Auth 登录编排 · 无认证桩 ·
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    // 与生产入口同装配（global-ci-fullstack-pg 首跑拓出：无全局管时 @Query DTO 默认值失效 → limit undefined）。
+    app.useGlobalPipes(createValidationPipe());
     await app.init();
     mikro = app.get(MikroOrmService);
   }, 120000);
@@ -180,24 +183,26 @@ gated('租户隔离全栈 e2e（真·Better Auth 登录编排 · 无认证桩 ·
     expect(lb.body).not.toContain('E2E-REAL-ALPHA');
   });
 
-  it('负向·越界写：真会话携伪造 body organizationId/workspaceId → 仍盖可信租户，对端绝不可见', async () => {
+  it('负向·越界写：真会话携伪造 body organizationId/workspaceId → 严格管 400 拒入，victim 租户仍不可见', async () => {
     const a = await signUpThenSignIn('w');
     await createOrgAndActivate(a, 'w');
     const victim = await signUpThenSignIn('victim');
     await createOrgAndActivate(victim, 'victim');
 
+    // 生产真相（切片 A′ 补齐全局管后订正断言）：CreatePostDto 无租户字段，
+    // whitelist+forbidNonWhitelisted 在 handler 前即 400 拒入——原「201+盖归属」是无管 harness
+    // 下的非生产语义。仓储层「强制盖可信租户」兜底仍由隔离单测锁（双防线：拒入在前、盖归属在后）。
     const res = await createPost(a.cookie, {
       title: 'E2E-REAL-WRITE-A',
       published: true,
       organizationId: victim.orgId,
       workspaceId: 'ws_forged',
     });
-    expect(res.statusCode).toBe(201);
+    expect(res.statusCode).toBe(400);
 
-    // org(a) 归属由可信 ctx 强制：a 可见自己刚创建的帖子。
+    // a 未因 400 创建成功；victim 租户**绝不应**看到这条试图伪造归属到它的帖子。
     const la = await listPosts(a.cookie);
-    expect(la.body).toContain('E2E-REAL-WRITE-A');
-    // 关键：victim 租户**绝不应**看到这条试图伪造归属到它的帖子（跨租写重定向失效）。
+    expect(la.body).not.toContain('E2E-REAL-WRITE-A');
     const lv = await listPosts(victim.cookie);
     expect(lv.body).not.toContain('E2E-REAL-WRITE-A');
   });
