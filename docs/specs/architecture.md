@@ -75,6 +75,30 @@ expressed as domain events subscribed via `@EventsHandler`. `auth`, `stripe` and
 `storage` are kept as thin adapters today; `auth` is the designated slot to be
 DDD/ES-ified later without disturbing the `users` pattern.
 
+## Constant Contract Placement
+
+A constant's home is decided by its **qualification as a contract**, not by reuse count:
+
+1. **Contract-qualified**: any constant read across context boundaries, process boundaries
+   (HTTP responses / event envelopes), or the durability stream (outbox/relay) must live in
+   the contract dictionary layer — event names in `DOMAIN_EVENTS`, business error codes in
+   `ERROR_CODES`—single-sourced literals, each **bidirectionally locked** by its mechanism
+   (rehydration registry / error-code response tests). New constants of this class always
+   go into the dictionary first.
+2. **Context-owned enums**: domain state-machine enums (`TENANT_STATUS`, `SUBSCRIPTION_STATUS`,
+   PLANS, etc.) stay inside their **owning context**; if the enum is part of an event payload,
+   it cohabits with the event class under the producing context on the core side (consumers
+   importing it are importing the contract itself—legitimate). Never hoist them into any
+   global hub in the name of centralization.
+3. **Non-contract constants stay out**: result-object literals and read-model internal shapes
+   (`as const` implementation details) do not become contracts by virtue of reuse—no
+   centralizing, no promoting.
+
+Corollary: **no global `constants/` hub** (every context evolution would have to touch the
+hub = a cross-cutting god module, violating vertical slices); anti-scattering is enforced by
+mechanism (single-source dictionaries + lock tests + relay rejecting unknown types), not by
+directory centralization.
+
 ## Tech Stack
 
 - **Runtime**: Node LTS ≥22 (ESM, `"type": "module"`) + pnpm (package manager)
