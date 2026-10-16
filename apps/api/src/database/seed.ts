@@ -3,14 +3,32 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import { randomUUID } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
+import type { EntityManager } from '@mikro-orm/core';
 import * as bcrypt from 'bcryptjs';
-import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import { organization, post, Role, user } from './schema';
+import { Organization, User } from './mikro/entities';
+import { initMikroOrm } from './mikro/orm';
+import { MIKRO_APP_ENTITIES, Post } from './mikro/post.entity';
 
-const client = postgres(process.env.DATABASE_URL as string);
-const db = drizzle(client, { schema: { user, post, organization } });
+/**
+ * ORM 修宪案 B · 切片 4-α（S-d6）——seed 数据面由 Drizzle 换轨为 **MikroORM**（只换通道·不改行为）。
+ *
+ * 保真律（对齐 §5.20 · 真库对拍校正）：
+ * - **`createdAt` 靠 DB 默认（`defaultNow()`）填充**：`em.insert` 不发该列——与旧 Drizzle 一致（真库实证
+ *   `user.createdAt` 有 `DEFAULT now()`·插入省略即落库为当前时间）。
+ * - **`updatedAt` 必须显式写**：真库 `user/post.updatedAt` 为 `NOT NULL` 且**无 DB 默认**（Drizzle 的
+ *   `$onUpdate` 是查询构建期行为、非 DB 触发器）·故 insert 显式盖 `new Date()`（还原旧轨落库产生有效
+ *   updatedAt 的可观测结果·否则 23502 NOT NULL 违约）。
+ * - **`role` 文本经 PG coerced 入 enum 列**（`roleEnum('role',['USER','ADMIN'])`·沿 §5.18 `role` default 实证）；
+ *   直接写 `'ADMIN'`/`'USER'` 文本，不再 `import { Role } from './schema'`（去除对 Drizzle schema 的最后一处 seed 依赖）。
+ * - **`SEED_CLEANUP` / 弱口令兜底（`ADMIN_PASSWORD||admin123` · `USER_PASSWORD||user123`）逐字不变**——
+ *   属 module-config-env-surface-contract 归人项，本批不夹带改 fail-loud。
+ * - **运行器＝`tsx`**（`db:seed`）：seed 现值导入整条 Mikro 轨（`./mikro/orm`→`./entities`/`./four-tables`…
+ *   扩展名省略），Node 原生 type-stripping **不解析扩展名省略的相对 ESM 导入**（原 `node seed.ts` 亦不例外），
+ *   故改用仓内既有 `tsx` 运行（不改行为·仅换装载器·SWC 编译链不受影响）。核心逻辑抽为 `runSeed(em, options)`
+ *   （供镜测直调·fake em），`main()` 只负责 dotenv（顶部先行·R-η Node-ESM 时序）→ `initMikroOrm` 懒建 app-orm
+ *   （`MIKRO_APP_ENTITIES` 涵盖 User/Organization/Post）→ fork em → `runSeed` → `orm.close()`。
+ */
 
 interface SeedOptions {
   includeTestData?: boolean;
@@ -33,7 +51,7 @@ interface UserData {
 }
 
 // Parse command line arguments
-function parseArgs(): SeedOptions {
+export function parseArgs(): SeedOptions {
   const args = process.argv.slice(2);
   const options: SeedOptions = {
     includeTestData: true,
@@ -64,7 +82,7 @@ function parseArgs(): SeedOptions {
   return options;
 }
 
-async function createUsers(options: SeedOptions) {
+export async function createUsers(em: EntityManager, options: SeedOptions): Promise<void> {
   console.log('👥 Creating users...');
 
   const adminPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 10);
@@ -74,31 +92,36 @@ async function createUsers(options: SeedOptions) {
   // exists, else a non-default operator email would fail closed with no operator at all.
   const operatorEmail = process.env.PLATFORM_OPERATOR_EMAIL || 'admin@example.com';
 
-  const existingAdmin = await db.query.user.findFirst({
-    where: eq(user.email, operatorEmail),
-  });
+  const existingAdmin = await em.findOne(User, { email: operatorEmail });
 
   if (existingAdmin) {
-    await db
-      .update(user)
-      .set({
+    // 镜像旧 Drizzle `db.update(user).set({...}).where(eq(user.email, ...))`：原生 UPDATE·显式盖 updatedAt
+    // （旧 Drizzle `$onUpdate` 在查询构建期自动 bump updatedAt·此处如实还原该可观测行为）。
+    await em.nativeUpdate(
+      User,
+      { email: operatorEmail },
+      {
         password: adminPassword,
         name: 'Admin User',
         firstName: 'Admin',
         lastName: 'User',
-        role: Role.ADMIN,
-      })
-      .where(eq(user.email, operatorEmail));
+        role: 'ADMIN',
+        updatedAt: new Date(),
+      },
+    );
   } else {
-    await db.insert(user).values({
+    // `em.insert` 只发给定列·`createdAt`/`emailVerified` 省略落 DB 默认；`updatedAt` NOT NULL 无 DB 默认须显式写。
+    // 类型层 Mikro 要求非空列（emailVerified/createdAt）·本 seed 刻意不写（落 DB 默认）·按本仓既有 Mikro 逃生惯用法 `as never` 收口。
+    await em.insert(User, {
       id: randomUUID(),
       name: 'Admin User',
       email: operatorEmail,
       password: adminPassword,
       firstName: 'Admin',
       lastName: 'User',
-      role: Role.ADMIN,
-    });
+      role: 'ADMIN',
+      updatedAt: new Date(),
+    } as never);
   }
 
   console.log(`✅ Seeded platform operator: ${operatorEmail}`);
@@ -107,7 +130,7 @@ async function createUsers(options: SeedOptions) {
   if (options.includeTestData && userCount > 1) {
     const userPassword = await bcrypt.hash(process.env.USER_PASSWORD || 'user123', 10);
 
-    const usersToCreate: (UserData & { id: string; name: string })[] = [];
+    const usersToCreate: (UserData & { id: string; name: string; updatedAt: Date })[] = [];
     for (let i = 1; i < userCount; i++) {
       usersToCreate.push({
         id: randomUUID(),
@@ -117,12 +140,13 @@ async function createUsers(options: SeedOptions) {
         firstName: 'User',
         lastName: `${i}`,
         role: 'USER' as const,
+        updatedAt: new Date(),
       });
     }
 
     if (usersToCreate.length > 0) {
       try {
-        await db.insert(user).values(usersToCreate);
+        await em.insert(User, usersToCreate as never);
         console.log(`✅ Created ${usersToCreate.length} additional users`);
         for (const u of usersToCreate) console.log(`   - ${u.email}`);
       } catch (error) {
@@ -133,7 +157,7 @@ async function createUsers(options: SeedOptions) {
   }
 }
 
-async function createPosts(options: SeedOptions) {
+export async function createPosts(em: EntityManager, options: SeedOptions): Promise<void> {
   if (!options.includeTestData) {
     console.log('⚙  Skipping posts creation (test data disabled)');
     return;
@@ -141,7 +165,8 @@ async function createPosts(options: SeedOptions) {
 
   // NOT NULL tightened: every post must belong to a tenant.
   // Find an existing organization to own the seeded posts; skip if none.
-  const [org] = await db.select({ id: organization.id }).from(organization).limit(1);
+  const orgs = await em.find(Organization, {}, { limit: 1 });
+  const org = orgs[0];
   if (!org) {
     console.log('⚠  No organization found – skipping post seeding (create an org first)');
     return;
@@ -163,8 +188,8 @@ async function createPosts(options: SeedOptions) {
       published: true,
     },
     {
-      title: 'Introduction to Drizzle',
-      content: 'Drizzle is a TypeScript ORM for SQL.',
+      title: 'Introduction to MikroORM',
+      content: 'MikroORM is a TypeScript ORM for SQL.',
       published: false,
     },
     {
@@ -183,9 +208,15 @@ async function createPosts(options: SeedOptions) {
 
   if (postsToCreate.length > 0) {
     try {
-      await db
-        .insert(post)
-        .values(postsToCreate.map((p) => ({ id: randomUUID(), organizationId: orgId, ...p })));
+      await em.insert(
+        Post,
+        postsToCreate.map((p) => ({
+          id: randomUUID(),
+          organizationId: orgId,
+          updatedAt: new Date(),
+          ...p,
+        })) as never,
+      );
       console.log(`✅ Created ${postsToCreate.length} posts`);
       for (const p of postsToCreate) console.log(`   - ${p.title}`);
     } catch (error) {
@@ -195,18 +226,26 @@ async function createPosts(options: SeedOptions) {
   }
 }
 
-async function cleanup() {
+export async function cleanup(em: EntityManager): Promise<void> {
   if (process.env.SEED_CLEANUP === 'true') {
     console.log('🧹 Cleaning up existing data...');
     try {
-      await db.delete(post);
-      await db.delete(user);
+      // 全表删·删序 post→user（post FK 引用 user·先删子表·与旧 Drizzle `db.delete` 一致）。
+      await em.nativeDelete(Post, {});
+      await em.nativeDelete(User, {});
       console.log('✅ Cleanup completed');
     } catch (error) {
       console.error('❌ Error during cleanup:', error);
       throw error;
     }
   }
+}
+
+/** seed 三段编排（可注入 em·供镜测直调）：cleanup → createUsers → createPosts。 */
+export async function runSeed(em: EntityManager, options: SeedOptions): Promise<void> {
+  await cleanup(em);
+  await createUsers(em, options);
+  await createPosts(em, options);
 }
 
 async function main() {
@@ -216,10 +255,9 @@ async function main() {
   console.log('🌱 Starting database seeding...');
   console.log('📋 Seed options:', options);
 
+  const orm = await initMikroOrm(process.env.DATABASE_URL as string, MIKRO_APP_ENTITIES);
   try {
-    await cleanup();
-    await createUsers(options);
-    await createPosts(options);
+    await runSeed(orm.em.fork(), options);
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`✅ Database seeding completed successfully in ${duration}s!`);
@@ -227,14 +265,17 @@ async function main() {
     console.error('❌ Error during seeding:', error);
     console.error('Stack trace:', error instanceof Error ? error.stack : 'Unknown error');
     throw error;
+  } finally {
+    await orm.close();
   }
 }
 
-main()
-  .catch((e) => {
+// 入口守卫：仅当被 `node .../seed.ts`（`db:seed`）直接执行时才跑 main；被单测 import 时不触发 DB 连接。
+const isDirectRun =
+  typeof process.argv[1] === 'string' && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  main().catch((e) => {
     console.error('Error during seeding:', e);
     process.exit(1);
-  })
-  .finally(async () => {
-    await client.end();
   });
+}

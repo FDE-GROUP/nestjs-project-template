@@ -37,7 +37,7 @@
     "drizzle:migrate": "drizzle-kit migrate",
     "drizzle:push": "drizzle-kit push",
     "drizzle:studio": "drizzle-kit studio",
-    "db:seed": "node apps/api/src/database/seed.ts",
+    "db:seed": "tsx apps/api/src/database/seed.ts",
     "db:reset": "pnpm run drizzle:push -- --force && pnpm run db:seed",
     "db:setup": "pnpm run drizzle:push && pnpm run db:seed",
     "openapi:export": "pnpm run build && node dist/apps/api/src/openapi-codegen.js"
