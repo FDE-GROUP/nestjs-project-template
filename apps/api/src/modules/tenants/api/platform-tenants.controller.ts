@@ -6,6 +6,7 @@ import type {
   TenantDiagnostics,
 } from '@app/modules/tenants/application/read-models/platform-tenant.read-model';
 import type { TenantDataExport } from '@app/modules/tenants/application/read-models/tenant-data-export.read-model';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
 import { TenantExempt } from '@core/saas-kit/tenancy/tenant-exempt.decorator';
 import {
@@ -78,7 +79,8 @@ export class PlatformTenantsController {
     const row = await this.queryBus.execute<GetPlatformTenantQuery, PlatformTenantRow | null>(
       new GetPlatformTenantQuery(id),
     );
-    if (!row) throw new NotFoundException('Tenant not found');
+    if (!row)
+      throw new NotFoundException('Tenant not found', { errorCode: ERROR_CODES.TENANCY_NOT_FOUND });
     return row;
   }
 
@@ -90,7 +92,8 @@ export class PlatformTenantsController {
     const diag = await this.queryBus.execute<GetTenantDiagnosticsQuery, TenantDiagnostics | null>(
       new GetTenantDiagnosticsQuery(id),
     );
-    if (!diag) throw new NotFoundException('Tenant not found');
+    if (!diag)
+      throw new NotFoundException('Tenant not found', { errorCode: ERROR_CODES.TENANCY_NOT_FOUND });
     return diag;
   }
 
@@ -105,7 +108,8 @@ export class PlatformTenantsController {
     const payload = await this.queryBus.execute<ExportTenantDataQuery, TenantDataExport | null>(
       new ExportTenantDataQuery(id),
     );
-    if (!payload) throw new NotFoundException('Tenant not found');
+    if (!payload)
+      throw new NotFoundException('Tenant not found', { errorCode: ERROR_CODES.TENANCY_NOT_FOUND });
     return payload;
   }
 
@@ -122,7 +126,8 @@ export class PlatformTenantsController {
       SuspendTenantCommand,
       TenantApplicationReadModel | null
     >(new SuspendTenantCommand(id, user.id));
-    if (!result) throw new NotFoundException('Tenant not found');
+    if (!result)
+      throw new NotFoundException('Tenant not found', { errorCode: ERROR_CODES.TENANCY_NOT_FOUND });
     return result;
   }
 
@@ -139,7 +144,8 @@ export class PlatformTenantsController {
       ResumeTenantCommand,
       TenantApplicationReadModel | null
     >(new ResumeTenantCommand(id, user.id));
-    if (!result) throw new NotFoundException('Tenant not found');
+    if (!result)
+      throw new NotFoundException('Tenant not found', { errorCode: ERROR_CODES.TENANCY_NOT_FOUND });
     return result;
   }
 
@@ -157,7 +163,8 @@ export class PlatformTenantsController {
       DeleteTenantCommand,
       TenantApplicationReadModel | null
     >(new DeleteTenantCommand(id, user.id));
-    if (!result) throw new NotFoundException('Tenant not found');
+    if (!result)
+      throw new NotFoundException('Tenant not found', { errorCode: ERROR_CODES.TENANCY_NOT_FOUND });
     return result;
   }
 
@@ -184,7 +191,8 @@ export class PlatformTenantsController {
       DeleteTenantPermanentlyCommand,
       TenantHardDeleteResult | null
     >(new DeleteTenantPermanentlyCommand(id, user.id));
-    if (!result) throw new NotFoundException('Tenant not found');
+    if (!result)
+      throw new NotFoundException('Tenant not found', { errorCode: ERROR_CODES.TENANCY_NOT_FOUND });
     return result;
   }
 }

@@ -6,6 +6,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { ERROR_CODES } from '../../shared-kernel/errors/error-codes';
 import { TenantContextService } from '../tenant-context.service';
 import { REQUIRED_PERMISSIONS_KEY, toPermissionMap } from './permissions';
 import { TENANT_PERMISSION_CHECKER, type TenantPermissionChecker } from './tenant-permission.port';
@@ -35,7 +36,9 @@ export class TenantPermissionGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     // Fail-closed: a tenant-scoped route requires an active tenant (FR-5 seed).
     if (!this.tenantContext.tenantId) {
-      throw new ForbiddenException('No active tenant context');
+      throw new ForbiddenException('No active tenant context', {
+        errorCode: ERROR_CODES.TENANCY_NO_ACTIVE_CONTEXT,
+      });
     }
 
     const required = this.reflector.getAllAndOverride<string[]>(REQUIRED_PERMISSIONS_KEY, [
@@ -50,7 +53,9 @@ export class TenantPermissionGuard implements CanActivate {
     // shape, then delegate the allow/deny decision to the port (fail-closed → 403).
     const allowed = await this.checker.hasPermission(req.headers, toPermissionMap(required));
     if (!allowed) {
-      throw new ForbiddenException(`Missing tenant permission: ${required.join(', ')}`);
+      throw new ForbiddenException(`Missing tenant permission: ${required.join(', ')}`, {
+        errorCode: ERROR_CODES.TENANCY_PERMISSION_DENIED,
+      });
     }
     return true;
   }

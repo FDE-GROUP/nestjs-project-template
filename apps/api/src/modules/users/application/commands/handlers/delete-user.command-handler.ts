@@ -1,4 +1,5 @@
 import { EVENT_STORE, type EventStore } from '@core/saas-kit/shared-kernel/domain/event-store.port';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { Inject, Logger, NotFoundException } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { USER_REPOSITORY, type UserRepository } from '../../../domain/repositories/user.repository';
@@ -18,7 +19,9 @@ export class DeleteUserCommandHandler implements ICommandHandler<DeleteUserComma
   async execute(command: DeleteUserCommand): Promise<void> {
     const existing = await this.users.findById(command.userId);
     if (!existing) {
-      throw new NotFoundException(`User with ID ${command.userId} not found`);
+      throw new NotFoundException(`User with ID ${command.userId} not found`, {
+        errorCode: ERROR_CODES.USER_NOT_FOUND,
+      });
     }
     // Hard delete (PIPL). FK cascades handle account/session; consent is set-null by schema.
     await this.users.remove(command.userId);

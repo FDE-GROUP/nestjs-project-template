@@ -3,6 +3,7 @@ import {
   DOMAIN_EVENT_PUBLISHER,
   type DomainEventPublisher,
 } from '@core/saas-kit/shared-kernel/domain/event-publisher.port';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { TenantRejectedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-rejected.event';
 import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
@@ -44,7 +45,12 @@ export class RejectTenantCommandHandler implements ICommandHandler<RejectTenantC
         from: current,
         error: 'not_pending',
       });
-      throw new ConflictException(`Only pending applications can be rejected (status: ${current})`);
+      throw new ConflictException(
+        `Only pending applications can be rejected (status: ${current})`,
+        {
+          errorCode: ERROR_CODES.TENANCY_NOT_PENDING,
+        },
+      );
     }
     const removed = await this.provisioning.remove(command.organizationId);
     if (removed) {

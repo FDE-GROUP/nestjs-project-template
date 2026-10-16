@@ -1,5 +1,6 @@
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import type { TenantPermissionChecker } from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 
@@ -20,7 +21,10 @@ export class BetterAuthTenantPermissionChecker implements TenantPermissionChecke
     permissions: Record<string, string[]>,
   ): Promise<boolean> {
     const auth = this.authInstance.get();
-    if (!auth) throw new ForbiddenException('Auth instance not initialized');
+    if (!auth)
+      throw new ForbiddenException('Auth instance not initialized', {
+        errorCode: ERROR_CODES.AUTH_PROVIDER_UNAVAILABLE,
+      });
     // BA 返回 `{ success: boolean }`（非成员时附 `error` 信封）；两种结果均归一为布尔供守卫裁决。
     const result = await auth.api.hasPermission({
       headers: headers as unknown as Headers,

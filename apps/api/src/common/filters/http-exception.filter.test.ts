@@ -1,12 +1,15 @@
 import { requestStorage } from '@core/saas-kit/shared-kernel/context/request-context';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import {
   type ArgumentsHost,
   ForbiddenException,
   HttpException,
   HttpStatus,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
+import type { ResponseErrorDetail } from '../errors/response-error-detail';
 import { HttpExceptionFilter } from './http-exception.filter';
 
 /**
@@ -120,5 +123,57 @@ describe('HttpExceptionFilter · errorCode 透传', () => {
     filter.catch(new HttpException({ message: 'm', errorCode: 123 }, HttpStatus.BAD_REQUEST), host);
 
     expect('errorCode' in (sent.body as object)).toBe(false);
+  });
+
+  it('子类 string + options 形（Nest 12 createBody 嵌入 response 对象）透传', () => {
+    const filter = createFilter();
+    const { host, sent } = createHost({ url: '/auth', method: 'GET', id: 2 });
+
+    filter.catch(
+      new UnauthorizedException('session expired', { errorCode: ERROR_CODES.AUTH_SESSION_INVALID }),
+      host,
+    );
+
+    expect(sent.body?.errorCode).toBe('AUTH:SESSION_INVALID');
+    expect(sent.body?.message).toBe('session expired');
+    expect(sent.body?.error).toBe('Unauthorized');
+  });
+
+  it('base HttpException(msg, 402, { errorCode }) 走实例属性兜底', () => {
+    const filter = createFilter();
+    const { host, sent } = createHost({ url: '/seat', method: 'POST', id: 3 });
+
+    filter.catch(
+      new HttpException('Seat quota exceeded', HttpStatus.PAYMENT_REQUIRED, {
+        errorCode: ERROR_CODES.BILLING_SEAT_LIMIT_EXCEEDED,
+      }),
+      host,
+    );
+
+    expect(sent.body?.errorCode).toBe('BILLING:SEAT_LIMIT_EXCEEDED');
+    expect(sent.body?.message).toBe('Seat quota exceeded');
+    expect(sent.status).toBe(402);
+  });
+
+  it('object response 携带 errors[] 结构化明细时透传', () => {
+    const filter = createFilter();
+    const { host, sent } = createHost({ url: '/complex', method: 'POST', id: 4 });
+
+    const details: ResponseErrorDetail[] = [
+      { path: 'email', message: 'invalid email' },
+      { path: 'name', message: 'too short' },
+    ];
+    filter.catch(new ForbiddenException({ message: 'validation failed', errors: details }), host);
+
+    expect(sent.body?.errors).toEqual(details);
+  });
+
+  it('未携带 errors[] 时响应体不含该键（可选字段非破坏）', () => {
+    const filter = createFilter();
+    const { host, sent } = createHost({ url: '/simple', method: 'GET', id: 5 });
+
+    filter.catch(new ForbiddenException('plain'), host);
+
+    expect('errors' in (sent.body as object)).toBe(false);
   });
 });

@@ -9,6 +9,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
+import type { ResponseErrorDetail } from '../errors/response-error-detail';
 
 interface ErrorResponse {
   statusCode: number;
@@ -20,6 +21,8 @@ interface ErrorResponse {
   requestId: string;
   /** 业务错误码：仅当异常以 object response 形态携带 `errorCode` 时透传（不引入自定义异常类）。 */
   errorCode?: string;
+  /** 结构化字段级明细：仅当异常以 object response 形态携带 `errors[]` 时透传（与校验面同形·可选加法）。 */
+  errors?: ResponseErrorDetail[];
 }
 
 @Catch()
@@ -37,6 +40,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message: string | string[] = 'Internal server error';
     let error = 'Internal Server Error';
     let errorCode: string | undefined;
+    let details: ResponseErrorDetail[] | undefined;
 
     if (exception instanceof HttpException) {
       const exceptionResponse = exception.getResponse();
@@ -49,8 +53,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
         if (typeof exceptionResponseObj.errorCode === 'string') {
           errorCode = exceptionResponseObj.errorCode;
         }
+        // 结构化明细（业务子错误可选携带·与校验产出点同形）
+        if (Array.isArray(exceptionResponseObj.errors)) {
+          details = exceptionResponseObj.errors as ResponseErrorDetail[];
+        }
       } else {
         message = exceptionResponse as string;
+      }
+      // Nest 12 原生 `errorCode`：子类经 `createBody` 已入响应体对象；基类 `HttpException(msg, status, { errorCode })`
+      // 的 `getResponse()` 为裸串（走不到上面的 object 分支），故从实例属性兜底（覆盖 402 seat 超限等）。
+      const nativeErrorCode = (exception as HttpException & { errorCode?: string }).errorCode;
+      if (typeof nativeErrorCode === 'string' && errorCode === undefined) {
+        errorCode = nativeErrorCode;
       }
     } else if (exception instanceof Error) {
       message = exception.message;
@@ -64,6 +78,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       path: request.url,
       requestId: currentRequestId() ?? String(request.id ?? 'req-unknown'),
       ...(errorCode !== undefined ? { errorCode } : {}),
+      ...(details !== undefined ? { errors: details } : {}),
     };
 
     if (status >= 500) {

@@ -1,3 +1,4 @@
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import {
   USER_STATUS,
   UserStatusService,
@@ -32,6 +33,7 @@ export class ResumeUserCommandHandler implements ICommandHandler<ResumeUserComma
       });
       throw new ConflictException(
         `Illegal user transition: ${result.from ?? 'active'} -> ${result.to}`,
+        { errorCode: ERROR_CODES.USER_ILLEGAL_TRANSITION },
       );
     }
     this.audit.logUserGovernance('resume', command.userId, command.operatorId, {

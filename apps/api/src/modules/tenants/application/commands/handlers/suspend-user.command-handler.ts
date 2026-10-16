@@ -1,5 +1,6 @@
 import { Session } from '@app/database/mikro/entities';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import {
   USER_STATUS,
   UserStatusService,
@@ -38,6 +39,7 @@ export class SuspendUserCommandHandler implements ICommandHandler<SuspendUserCom
       });
       throw new ConflictException(
         `Illegal user transition: ${result.from ?? 'active'} -> ${result.to}`,
+        { errorCode: ERROR_CODES.USER_ILLEGAL_TRANSITION },
       );
     }
     // FR-10 immediate global失权: invalidate every active session of the suspended user.

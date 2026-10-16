@@ -90,6 +90,11 @@ describe('Validation i18n localization (contract)', () => {
     expect(body.requestId.length).toBeGreaterThan(0);
     // 不为校验失败预填 errorCode（裁决点丙）
     expect('errorCode' in body).toBe(false);
+    // errors[]（丙裁）：字段级结构化明细存在，path=property，message 与顶层译文同源
+    expect(Array.isArray(body.errors)).toBe(true);
+    expect(body.errors.length).toBeGreaterThan(0);
+    expect(body.errors[0].path).toBe('email');
+    expect(body.errors[0].message).toContain('请输入正确的邮箱');
   });
 
   it('localizes to en via accept-language', async () => {

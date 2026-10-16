@@ -4,6 +4,7 @@ import { UpdateWorkspaceCommand } from '@core/saas-kit/modules/workspaces/applic
 import { ListWorkspacesQuery } from '@core/saas-kit/modules/workspaces/application/queries/list-workspaces.query';
 import type { WorkspaceReadModel } from '@core/saas-kit/modules/workspaces/application/read-models/workspace.read-model';
 import type { Page } from '@core/saas-kit/shared-kernel/domain/pagination';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { RequirePermissions } from '@core/saas-kit/tenancy/rbac/require-permissions.decorator';
 import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
@@ -84,7 +85,10 @@ export class WorkspacesController {
     const result = await this.commandBus.execute<UpdateWorkspaceCommand, WorkspaceReadModel | null>(
       new UpdateWorkspaceCommand(id, dto.name, dto.slug),
     );
-    if (!result) throw new NotFoundException('Workspace not found');
+    if (!result)
+      throw new NotFoundException('Workspace not found', {
+        errorCode: ERROR_CODES.WORKSPACE_NOT_FOUND,
+      });
     return result;
   }
 
@@ -98,6 +102,9 @@ export class WorkspacesController {
     const deleted = await this.commandBus.execute<DeleteWorkspaceCommand, boolean>(
       new DeleteWorkspaceCommand(id),
     );
-    if (!deleted) throw new NotFoundException('Workspace not found');
+    if (!deleted)
+      throw new NotFoundException('Workspace not found', {
+        errorCode: ERROR_CODES.WORKSPACE_NOT_FOUND,
+      });
   }
 }

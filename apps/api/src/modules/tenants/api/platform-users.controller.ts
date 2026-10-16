@@ -4,6 +4,7 @@ import type {
   PlatformUserPage,
   UserGovernanceResult,
 } from '@app/modules/tenants/application/read-models/platform-user.read-model';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
 import { TenantExempt } from '@core/saas-kit/tenancy/tenant-exempt.decorator';
 import {
@@ -72,7 +73,8 @@ export class PlatformUsersController {
     const result = await this.commandBus.execute<SuspendUserCommand, UserGovernanceResult | null>(
       new SuspendUserCommand(id, user.id, dto?.reason),
     );
-    if (!result) throw new NotFoundException('User not found');
+    if (!result)
+      throw new NotFoundException('User not found', { errorCode: ERROR_CODES.USER_NOT_FOUND });
     return result;
   }
 
@@ -88,7 +90,8 @@ export class PlatformUsersController {
     const result = await this.commandBus.execute<ResumeUserCommand, UserGovernanceResult | null>(
       new ResumeUserCommand(id, user.id),
     );
-    if (!result) throw new NotFoundException('User not found');
+    if (!result)
+      throw new NotFoundException('User not found', { errorCode: ERROR_CODES.USER_NOT_FOUND });
     return result;
   }
 }

@@ -6,7 +6,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-
+import { ERROR_CODES } from '../../shared-kernel/errors/error-codes';
 import { TenantContextService } from '../tenant-context.service';
 import { QUOTA_KEY, type QuotaRequirement } from './quota.decorator';
 import { QuotaService } from './quota.service';
@@ -37,7 +37,10 @@ export class QuotaGuard implements CanActivate {
     if (!requirement) return true;
 
     const tenantId = this.tenantContext.tenantId;
-    if (!tenantId) throw new ForbiddenException('No active tenant context');
+    if (!tenantId)
+      throw new ForbiddenException('No active tenant context', {
+        errorCode: ERROR_CODES.TENANCY_NO_ACTIVE_CONTEXT,
+      });
 
     await this.quota.assertSeats(tenantId, requirement.seats ?? 1);
     return true;

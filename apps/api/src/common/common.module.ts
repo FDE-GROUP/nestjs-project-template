@@ -1,8 +1,9 @@
 import { currentRequestId } from '@core/saas-kit/shared-kernel/context/request-context';
 import { type ExecutionContext, Global, Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
-import { I18nValidationExceptionFilter } from 'nestjs-i18n';
+import { type I18nValidationException, I18nValidationExceptionFilter } from 'nestjs-i18n';
 import { LoggerModule } from '../logger/logger.module';
+import { fromValidationErrors, type ResponseErrorDetail } from './errors/response-error-detail';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
@@ -10,12 +11,15 @@ import { TransformInterceptor } from './interceptors/transform.interceptor';
 // Localized validation errors keep the exact same response contract as the generic
 // filter below (statusCode / message / error / timestamp / path / requestId) — only
 // `message` content changes from raw i18n keys to translated strings.
+// `errors[]`（就绪预备 #3·丙裁）与 HttpExceptionFilter 产出点同形：顶层 `message` 逐字保留（兼容），
+// 另从 exc.errors（class-validator 树）展平字段级明细（path + 译文 message）。
 const validationErrorBodyFormatter = (
   host: ExecutionContext,
-  exception: { getStatus(): number },
+  exception: Pick<I18nValidationException, 'getStatus' | 'errors'>,
   error: unknown,
 ) => {
   const request = host.switchToHttp().getRequest<{ url: string; id?: string | number }>();
+  const details: ResponseErrorDetail[] = fromValidationErrors(exception.errors ?? []);
   return {
     statusCode: exception.getStatus(),
     message: error,
@@ -24,6 +28,7 @@ const validationErrorBodyFormatter = (
     path: request.url,
     // 与 HttpExceptionFilter / LoggingInterceptor 同一兜底链口径（不为校验失败预填 errorCode 码）
     requestId: currentRequestId() ?? String(request.id ?? 'req-unknown'),
+    ...(details.length > 0 ? { errors: details } : {}),
   };
 };
 

@@ -1,4 +1,5 @@
 import { ConfigService } from '@app/config/config.service';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -39,6 +40,7 @@ export class StorageService {
     if (file.size > this.maxFileSize) {
       throw new BadRequestException(
         `File size exceeds the limit of ${this.maxFileSize / 1024 / 1024}MB`,
+        { errorCode: ERROR_CODES.STORAGE_FILE_TOO_LARGE },
       );
     }
 
@@ -46,6 +48,7 @@ export class StorageService {
     if (!this.allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException(
         `File type not allowed. Allowed types: ${this.allowedMimeTypes.join(', ')}`,
+        { errorCode: ERROR_CODES.STORAGE_FILE_TYPE_NOT_ALLOWED },
       );
     }
   }
@@ -81,7 +84,9 @@ export class StorageService {
 
       return result;
     } catch (error) {
-      throw new BadRequestException(`Failed to upload file: ${error.message}`);
+      throw new BadRequestException(`Failed to upload file: ${error.message}`, {
+        errorCode: ERROR_CODES.STORAGE_UPLOAD_FAILED,
+      });
     } finally {
       // Clean up temporary files
       if (fs.existsSync(tmpFilePath)) {

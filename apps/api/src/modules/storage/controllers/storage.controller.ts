@@ -1,3 +1,4 @@
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { TenantExempt } from '@core/saas-kit/tenancy/tenant-exempt.decorator';
 import {
   BadRequestException,
@@ -43,14 +44,18 @@ export class StorageController {
   async uploadFile(@Req() req: FastifyRequest): Promise<FileUploadResultDto> {
     // Handle raw multipart upload using Fastify's built-in multipart support
     if (!req.isMultipart()) {
-      throw new BadRequestException('Request is not multipart');
+      throw new BadRequestException('Request is not multipart', {
+        errorCode: ERROR_CODES.STORAGE_NOT_MULTIPART,
+      });
     }
 
     try {
       const data = await req.file();
 
       if (!data) {
-        throw new BadRequestException('No file uploaded');
+        throw new BadRequestException('No file uploaded', {
+          errorCode: ERROR_CODES.STORAGE_NO_FILE,
+        });
       }
 
       this.logger.log(`Uploading file: ${data.filename}`);
@@ -64,7 +69,9 @@ export class StorageController {
       });
     } catch (error) {
       this.logger.error('Error uploading file', error);
-      throw new BadRequestException(`Failed to upload file: ${error.message}`);
+      throw new BadRequestException(`Failed to upload file: ${error.message}`, {
+        errorCode: ERROR_CODES.STORAGE_UPLOAD_FAILED,
+      });
     }
   }
 

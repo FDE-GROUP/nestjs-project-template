@@ -6,6 +6,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { ERROR_CODES } from '../shared-kernel/errors/error-codes';
 import { IS_PUBLIC_KEY } from './public.decorator';
 import { TenantContextService } from './tenant-context.service';
 import { IS_TENANT_EXEMPT_KEY } from './tenant-exempt.decorator';
@@ -41,7 +42,9 @@ export class TenantScopeGuard implements CanActivate {
       return true;
     }
     if (!this.tenant.tenantId) {
-      throw new ForbiddenException('No active tenant context');
+      throw new ForbiddenException('No active tenant context', {
+        errorCode: ERROR_CODES.TENANCY_NO_ACTIVE_CONTEXT,
+      });
     }
     return true;
   }

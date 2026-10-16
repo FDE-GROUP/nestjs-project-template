@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
-
+import { ERROR_CODES } from '../../shared-kernel/errors/error-codes';
 import { type ActiveSubscriptionView, QUOTA_STORE, type QuotaStore } from './quota.store';
 import { FREE_PLAN } from './tenant-plans';
 
@@ -62,6 +62,7 @@ export class QuotaService {
       throw new HttpException(
         `Seat quota exceeded: ${verdict.used}+${adding} > ${verdict.limit}`,
         HttpStatus.PAYMENT_REQUIRED,
+        { errorCode: ERROR_CODES.BILLING_SEAT_LIMIT_EXCEEDED },
       );
     }
   }

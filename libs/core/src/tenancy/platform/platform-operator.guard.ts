@@ -6,6 +6,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ERROR_CODES } from '../../shared-kernel/errors/error-codes';
 import { UserStatusService } from '../lifecycle/user-status.service';
 import { type RequestSessionReader, SESSION_READER } from '../session/request-session.port';
 import { PLATFORM_SETTINGS, type PlatformSettings } from './platform-config.port';
@@ -42,16 +43,28 @@ export class PlatformOperatorGuard implements CanActivate {
 
     const view = await this.session.read(req);
     const userId = view?.userId;
-    if (!userId) throw new UnauthorizedException('Missing or invalid session');
+    if (!userId)
+      throw new UnauthorizedException('Missing or invalid session', {
+        errorCode: ERROR_CODES.AUTH_SESSION_INVALID,
+      });
 
     // FR-10: a suspended platform user loses platform-layer access too.
-    if (await this.userStatus.isBlocked(userId)) throw new ForbiddenException('Account suspended');
+    if (await this.userStatus.isBlocked(userId))
+      throw new ForbiddenException('Account suspended', {
+        errorCode: ERROR_CODES.AUTH_ACCOUNT_SUSPENDED,
+      });
 
     const operatorEmail = this.settings.operatorEmail()?.trim().toLowerCase();
-    if (!operatorEmail) throw new ForbiddenException('Platform operator not configured');
+    if (!operatorEmail)
+      throw new ForbiddenException('Platform operator not configured', {
+        errorCode: ERROR_CODES.TENANCY_OPERATOR_NOT_CONFIGURED,
+      });
 
     const email = (await this.identity.emailOf(userId))?.toLowerCase();
-    if (!email || email !== operatorEmail) throw new ForbiddenException('Platform operator only');
+    if (!email || email !== operatorEmail)
+      throw new ForbiddenException('Platform operator only', {
+        errorCode: ERROR_CODES.TENANCY_OPERATOR_ONLY,
+      });
     return true;
   }
 }

@@ -1,3 +1,4 @@
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
 import { IS_PUBLIC_KEY } from '@core/saas-kit/tenancy/public.decorator';
 import {
@@ -58,15 +59,24 @@ export class SessionGuard implements CanActivate {
 
     const req = context.switchToHttp().getRequest<SessionRequest>();
     const auth = this.authInstance.get();
-    if (!auth) throw new UnauthorizedException('Auth instance not initialized');
+    if (!auth)
+      throw new UnauthorizedException('Auth instance not initialized', {
+        errorCode: ERROR_CODES.AUTH_PROVIDER_UNAVAILABLE,
+      });
 
     const result = await resolveRequestSession(auth, req);
-    if (!result?.user?.id) throw new UnauthorizedException('Missing or invalid session');
+    if (!result?.user?.id)
+      throw new UnauthorizedException('Missing or invalid session', {
+        errorCode: ERROR_CODES.AUTH_SESSION_INVALID,
+      });
 
     // S6 · FR-10: platform-suspended users are fail-closed at the user layer too
     // (defense-in-depth alongside session hard-invalidation — catches a re-login bypass).
     const userId = String(result.user.id);
-    if (await this.userStatus.isBlocked(userId)) throw new ForbiddenException('Account suspended');
+    if (await this.userStatus.isBlocked(userId))
+      throw new ForbiddenException('Account suspended', {
+        errorCode: ERROR_CODES.AUTH_ACCOUNT_SUSPENDED,
+      });
 
     req.sessionUser = { id: userId, email: String(result.user.email ?? '') };
     return true;

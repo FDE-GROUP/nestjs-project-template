@@ -1,3 +1,4 @@
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
 import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
@@ -31,6 +32,7 @@ export class DeleteTenantCommandHandler implements ICommandHandler<DeleteTenantC
       });
       throw new ConflictException(
         `Illegal tenant transition: ${result.from ?? 'active'} -> ${result.to}`,
+        { errorCode: ERROR_CODES.TENANCY_ILLEGAL_TRANSITION },
       );
     }
     this.audit.logTenantGovernance('delete', command.organizationId, command.operatorId, {

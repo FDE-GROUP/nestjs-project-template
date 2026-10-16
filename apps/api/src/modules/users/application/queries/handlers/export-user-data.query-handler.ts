@@ -1,5 +1,6 @@
 import { Account, Consent, Session, User } from '@app/database/mikro/entities';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { Inject, NotFoundException } from '@nestjs/common';
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import type { UserDataExportReadModel } from '../../read-models/user-data-export.read-model';
@@ -44,7 +45,9 @@ export class ExportUserDataQueryHandler
       ],
     });
     if (!userRow) {
-      throw new NotFoundException(`User with ID ${query.userId} not found`);
+      throw new NotFoundException(`User with ID ${query.userId} not found`, {
+        errorCode: ERROR_CODES.USER_NOT_FOUND,
+      });
     }
 
     // account：排除 password/accessToken/refreshToken/idToken。

@@ -1,4 +1,5 @@
 import { ConfigService } from '@app/config/config.service';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import type {
   CreateCheckoutInput,
@@ -64,6 +65,7 @@ export class PaymentService {
     if (!provider) {
       throw new ServiceUnavailableException(
         `No payment provider configured (required: "${wanted}"). Enable stripe/alipay/wechat_pay.`,
+        { errorCode: ERROR_CODES.BILLING_PROVIDER_NOT_CONFIGURED },
       );
     }
     return provider;

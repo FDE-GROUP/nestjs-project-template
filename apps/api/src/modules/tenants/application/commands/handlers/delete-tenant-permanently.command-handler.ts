@@ -1,5 +1,6 @@
 // S9 铁律：EVENT_STORE 为 Symbol token 必须值导入；EventStore 纯类型面可 import type
 import { EVENT_STORE, type EventStore } from '@core/saas-kit/shared-kernel/domain/event-store.port';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException, Inject } from '@nestjs/common';
@@ -41,6 +42,7 @@ export class DeleteTenantPermanentlyCommandHandler
       });
       throw new ConflictException(
         `Tenant ${command.organizationId} is not in deleted terminal state (current: ${existing.status}); soft-delete first`,
+        { errorCode: ERROR_CODES.TENANCY_NOT_DELETED_TERMINAL },
       );
     }
 

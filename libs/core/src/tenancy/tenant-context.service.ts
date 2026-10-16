@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ERROR_CODES } from '../shared-kernel/errors/error-codes';
 import { type TenantContext, tenantStorage } from './tenant-context';
 
 /**
@@ -37,7 +38,10 @@ export class TenantContextService {
   /** Fail-closed: require an active tenant, else 403. For tenant-scoped endpoints. */
   requireTenantId(): string {
     const tenantId = tenantStorage.getStore()?.tenantId;
-    if (!tenantId) throw new ForbiddenException('Missing active tenant context');
+    if (!tenantId)
+      throw new ForbiddenException('Missing active tenant context', {
+        errorCode: ERROR_CODES.TENANCY_NO_ACTIVE_CONTEXT,
+      });
     return tenantId;
   }
 }
