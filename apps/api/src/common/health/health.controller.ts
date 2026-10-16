@@ -3,6 +3,8 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 // S9 铁律：HealthCheckService 为构造函数注入的类，必须值导入（import type 会擦除 design:paramtypes）
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
+// 限流豁免（module-common-rate-limit 甲裁）：探活/CI verify-prod-boot 不得被锁。
+import { SkipThrottle } from '@nestjs/throttler';
 
 /**
  * 存活探针（module-common-health-probe · softkit 借鉴正向项 #1）：Dockerfile `HEALTHCHECK`
@@ -14,6 +16,7 @@ import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
  * 追加 indicators，是配置不是重写。
  */
 @Public()
+@SkipThrottle()
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {

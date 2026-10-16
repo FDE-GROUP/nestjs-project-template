@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { CommonModule } from './common/common.module';
 import { HealthModule } from './common/health/health.module';
+// 限流全局墙（module-common-rate-limit 甲裁）：必须排在 AuthModule 之前——APP_GUARD 执行序
+// 按模块注册序 = 限流(最廉价拒绝) → 会话墙 401 → 租户墙 403。
+import { RateLimitModule } from './common/rate-limit.module';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 // ORM 修宪案 B · 切片 2：app-Mikro 装配根（@Global·懒建·不劫持 DB-free 装配冒烟）。
@@ -21,6 +24,7 @@ import { TenancyModule } from './tenancy/tenancy.module';
 @Module({
   imports: [
     ConfigModule,
+    RateLimitModule,
     LoggerModule,
     DatabaseModule,
     MikroOrmModule,

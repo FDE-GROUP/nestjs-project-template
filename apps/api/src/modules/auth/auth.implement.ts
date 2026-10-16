@@ -10,26 +10,15 @@ import { createAuthMiddleware } from 'better-auth/api';
 import { toNodeHandler } from 'better-auth/node';
 import { type GenericOAuthConfig, genericOAuth, organization } from 'better-auth/plugins';
 import type { FastifyReply, FastifyRequest } from 'fastify';
+// 限流信任链解析单源已出至 common/trusted-proxies（module-common-rate-limit 乙裁：
+// 同一 env 喂 BA 限流 + Nest 限流墙双链，防双链漂移）。
+import { parseTrustedProxies } from '../../common/trusted-proxies';
 import type { ConfigService } from '../../config/config.service';
 import type { MikroOrmService } from '../../database/mikro/mikro-orm.service';
 import { createSeatsQuotaPlugin } from './seats-quota.hook';
 
 export type AuthRequest = FastifyRequest & { originalUrl?: string; url?: string };
 export type AuthResponse = FastifyReply;
-
-/**
- * 限流信任链解析（module-auth-ip-trust·甲）：`AUTH_TRUSTED_PROXIES` 逗号分隔 CIDR 列表
- * → BA `advanced.ipAddress.trustedProxies`；未配/空 → undefined（不传，保持库安全默认：
- * 只信单值 XFF）。库实锤：限流 key = getIP|path，生产拿不到可信 IP 则全体用户落
- * `no-trusted-ip` 共享桶（登录面 3 次/10s 整站误杀）。
- */
-export function parseTrustedProxies(value?: string): string[] | undefined {
-  const list = (value ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return list.length > 0 ? list : undefined;
-}
 
 /**
  * BA 内置 org 授权 HTTP 面封堵谓词（module-rbac-casl 甲裁·严格拆）：
@@ -96,12 +85,13 @@ export async function CreateAuth(
   // 整面 404 的第二层缺陷（实机 mount 到 /api/1.0 坐实），module-auth-http-surface v0.3 订正。
   const basePath = `/${appConfig.apiPrefix}/v1/auth`;
 
-  // 乙1·生产缺配显性化：反代部署未配 trustedProxies 时限流落共享桶——启动日志一响，
+  // 乙1·生产缺配显性化（双链同源后一响盖两面）：反代部署未配 trustedProxies 时
+  // BA 限流与 Nest 限流墙（Fastify req.ip·module-common-rate-limit）同落共享桶——启动日志一响，
   // 不拦启动（直连部署未必有反代，无 PIPL 级法定依据不做 fail-closed）。
   const trustedProxies = parseTrustedProxies(process.env.AUTH_TRUSTED_PROXIES);
   if (process.env.NODE_ENV === 'production' && !trustedProxies) {
     new Logger('CreateAuth').warn(
-      'AUTH_TRUSTED_PROXIES 未配置：若经反向代理部署，Better Auth 限流将把所有用户归入共享桶（no-trusted-ip）导致登录面整站误杀——请配置代理网段 CIDR（逗号分隔）',
+      'AUTH_TRUSTED_PROXIES 未配置：若经反向代理部署，Better Auth 限流与 Nest 限流墙（req.ip）将把所有用户归入共享桶（no-trusted-ip）导致登录面/全路由面整站误杀——请配置代理网段 CIDR（逗号分隔）',
     );
   }
 

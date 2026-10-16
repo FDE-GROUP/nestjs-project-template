@@ -11,6 +11,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { FastifyInstance } from 'fastify';
 import * as yaml from 'js-yaml';
 import { AppModule } from './app.module';
+import { buildFastifyHttpOptions } from './common/fastify-http-options';
 import { requestIdHook } from './common/request-id.hook';
 import { createValidationPipe } from './common/validation-pipe';
 import { ConfigService } from './config/config.service';
@@ -20,9 +21,11 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   // Create Fastify-based NestJS application
+  // trustProxy 与 BA 限流同源（AUTH_TRUSTED_PROXIES·module-common-rate-limit 乙裁）：
+  // 反代后 req.ip 解出真客户端，Nest 限流墙按真 IP 分桶，防共享桶整站误杀。
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: true }),
+    new FastifyAdapter(buildFastifyHttpOptions(process.env.AUTH_TRUSTED_PROXIES)),
   );
 
   // Get application configuration
