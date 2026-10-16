@@ -1,5 +1,5 @@
-import { DrizzleService } from '@app/database/drizzle.service';
-import { session } from '@app/database/schema';
+import { Session } from '@app/database/mikro/entities';
+import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import {
   USER_STATUS,
   UserStatusService,
@@ -7,7 +7,6 @@ import {
 import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
-import { eq } from 'drizzle-orm';
 import type { UserGovernanceResult } from '../../read-models/platform-user.read-model';
 import { SuspendUserCommand } from '../suspend-user.command';
 
@@ -22,7 +21,7 @@ export class SuspendUserCommandHandler implements ICommandHandler<SuspendUserCom
   constructor(
     @Inject(UserStatusService) private readonly status: UserStatusService,
     @Inject(PlatformAuditService) private readonly audit: PlatformAuditService,
-    @Inject(DrizzleService) private readonly drizzle: DrizzleService,
+    @Inject(MikroOrmService) private readonly mikro: MikroOrmService,
   ) {}
 
   async execute(command: SuspendUserCommand): Promise<UserGovernanceResult | null> {
@@ -42,7 +41,8 @@ export class SuspendUserCommandHandler implements ICommandHandler<SuspendUserCom
       );
     }
     // FR-10 immediate global失权: invalidate every active session of the suspended user.
-    await this.drizzle.db.delete(session).where(eq(session.userId, command.userId));
+    const em = await this.mikro.fork();
+    await em.nativeDelete(Session, { userId: command.userId });
     this.audit.logUserGovernance('suspend', command.userId, command.operatorId, {
       from: result.previous,
       to: result.status,

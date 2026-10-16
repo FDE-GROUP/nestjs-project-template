@@ -1,4 +1,4 @@
-import type { DrizzleService } from '@app/database/drizzle.service';
+import type { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import {
   USER_STATUS,
@@ -15,18 +15,18 @@ import { SuspendUserCommandHandler } from './suspend-user.command-handler';
 function deps(result: unknown) {
   const transition = vi.fn().mockResolvedValue(result);
   const audit = { logUserGovernance: vi.fn() };
-  // db.delete(...).where(...) → awaitable no-op
-  const where = vi.fn(() => Promise.resolve());
-  const del = vi.fn(() => ({ where }));
-  const drizzle = { db: { delete: del } } as unknown as DrizzleService;
+  // mikro.fork() → em.nativeDelete(...) → awaitable（FR-10 session 硬删改走 MikroORM）
+  const nativeDelete = vi.fn().mockResolvedValue(1);
+  const fork = vi.fn(async () => ({ nativeDelete }));
+  const mikro = { fork } as unknown as MikroOrmService;
   return {
     transition,
     status: { transition } as unknown as UserStatusService,
     audit: audit as unknown as PlatformAuditService,
     auditSpy: audit.logUserGovernance,
-    del,
-    where,
-    drizzle,
+    nativeDelete,
+    fork,
+    mikro,
   };
 }
 
@@ -37,7 +37,7 @@ describe('SuspendUserCommandHandler (S6 · FR-10 暂停 + session 硬删)', () =
       previous: TENANT_STATUS.ACTIVE,
       status: USER_STATUS.SUSPENDED,
     });
-    const handler = new SuspendUserCommandHandler(d.status, d.audit, d.drizzle);
+    const handler = new SuspendUserCommandHandler(d.status, d.audit, d.mikro);
     await expect(handler.execute(new SuspendUserCommand('u1', 'op-1', 'fraud'))).resolves.toEqual({
       userId: 'u1',
       status: USER_STATUS.SUSPENDED,
@@ -46,7 +46,7 @@ describe('SuspendUserCommandHandler (S6 · FR-10 暂停 + session 硬删)', () =
       reason: 'fraud',
       actorId: 'op-1',
     });
-    expect(d.del).toHaveBeenCalledTimes(1); // FR-10 immediate session invalidation
+    expect(d.nativeDelete).toHaveBeenCalledTimes(1); // FR-10 immediate session invalidation
     expect(d.auditSpy).toHaveBeenCalledWith('suspend', 'u1', 'op-1', {
       from: TENANT_STATUS.ACTIVE,
       to: USER_STATUS.SUSPENDED,
@@ -55,9 +55,9 @@ describe('SuspendUserCommandHandler (S6 · FR-10 暂停 + session 硬删)', () =
 
   it('returns null on not-found without deleting sessions or auditing', async () => {
     const d = deps({ kind: 'not-found' });
-    const handler = new SuspendUserCommandHandler(d.status, d.audit, d.drizzle);
+    const handler = new SuspendUserCommandHandler(d.status, d.audit, d.mikro);
     await expect(handler.execute(new SuspendUserCommand('ghost', 'op-1'))).resolves.toBeNull();
-    expect(d.del).not.toHaveBeenCalled();
+    expect(d.nativeDelete).not.toHaveBeenCalled();
     expect(d.auditSpy).not.toHaveBeenCalled();
   });
 
@@ -67,11 +67,11 @@ describe('SuspendUserCommandHandler (S6 · FR-10 暂停 + session 硬删)', () =
       from: TENANT_STATUS.DELETED,
       to: USER_STATUS.SUSPENDED,
     });
-    const handler = new SuspendUserCommandHandler(d.status, d.audit, d.drizzle);
+    const handler = new SuspendUserCommandHandler(d.status, d.audit, d.mikro);
     await expect(handler.execute(new SuspendUserCommand('u1', 'op-1'))).rejects.toBeInstanceOf(
       ConflictException,
     );
-    expect(d.del).not.toHaveBeenCalled();
+    expect(d.nativeDelete).not.toHaveBeenCalled();
     expect(d.auditSpy).toHaveBeenCalledWith('suspend', 'u1', 'op-1', {
       from: TENANT_STATUS.DELETED,
       to: USER_STATUS.SUSPENDED,

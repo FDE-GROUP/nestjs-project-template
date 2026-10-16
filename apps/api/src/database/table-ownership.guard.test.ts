@@ -12,8 +12,11 @@ import { TABLE_OWNERSHIP, WRITE_EXCEPTIONS } from './table-ownership';
  * 本上下文 owned 集，或命中 `WRITE_EXCEPTIONS` 显式例外。
  * 读侧（select/join）不受约束（CQRS read-model 固有跨上下文聚合）。
  *
- * 已知局限（如实声明）：仅识别「直接以 schema 导出名作参数」的写调用；
- * 经变量别名/动态表名的写不在 grep 级覆盖面内（防过度机制化，不引 AST 工具链）。
+ * 已知局限（如实声明）：仅识别「直接以表名 / Mikro 实体名作首参」的写调用（Drizzle
+ * `insert/update/delete(table)` 与 MikroORM `nativeInsert/nativeUpdate/nativeDelete(Entity)`）；
+ * 经变量别名/动态表名/`persist·remove` 的写不在 grep 级覆盖面内（防过度机制化，不引 AST 工具链）。
+ * Mikro 迁移（ORM 修宪案 B）后写面出现 `nativeX(Entity)` 形态，故本守卫探测同步扩到该形态
+ * （实体 PascalCase 首字母小写 ⇄ schema 导出名）——保持写侧纪律不随换 ORM 而漏检。
  */
 
 const SRC_ROOT = join(__dirname, '..');
@@ -40,7 +43,8 @@ function collectSources(dir: string): string[] {
   return out;
 }
 
-const WRITE_CALL = /\.(insert|update|delete)\(\s*([A-Za-z_][A-Za-z0-9_]*)\b/g;
+const WRITE_CALL =
+  /\.(insert|update|delete|nativeInsert|nativeUpdate|nativeDelete)\(\s*([A-Za-z_][A-Za-z0-9_]*)\b/g;
 
 describe('表所有权纪律守卫（写侧严格 · microservice-readiness #1）', () => {
   const violations: string[] = [];
@@ -54,7 +58,8 @@ describe('表所有权纪律守卫（写侧严格 · microservice-readiness #1�
 
       const source = readFileSync(file, 'utf8');
       for (const match of source.matchAll(WRITE_CALL)) {
-        const table = match[2];
+        // Drizzle 路径传 schema 导出名（已小写起首）·Mikro 路径传 PascalCase 实体名——统一首字母小写归一。
+        const table = match[2].charAt(0).toLowerCase() + match[2].slice(1);
         const owner = TABLE_OWNERSHIP[table];
         // 未登记标识符（relations 别名、链式中间量等）不参与判定
         if (!owner) continue;

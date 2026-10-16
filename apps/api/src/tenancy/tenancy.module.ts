@@ -20,10 +20,10 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthSessionReader } from './infrastructure/auth-session.reader';
 import { BetterAuthTenantPermissionChecker } from './infrastructure/ba-tenant-permission.checker';
 import { ConfigPlatformSettings } from './infrastructure/config-platform.settings';
-import { DrizzlePlatformIdentityLookup } from './infrastructure/drizzle-platform-identity.lookup';
 import { DrizzleQuotaStore } from './infrastructure/drizzle-quota.store';
-import { DrizzleTenantStatusStore } from './infrastructure/drizzle-tenant-status.store';
 import { DrizzleUserStatusStore } from './infrastructure/drizzle-user-status.store';
+import { MikroPlatformIdentityLookup } from './infrastructure/mikro-platform-identity.lookup';
+import { MikroTenantStatusStore } from './infrastructure/mikro-tenant-status.store';
 
 /**
  * Multi-tenancy能力模块（global-tenancy S0/S1/S2/S3/S4 · 混合复用骨架）。
@@ -57,10 +57,10 @@ import { DrizzleUserStatusStore } from './infrastructure/drizzle-user-status.sto
     QuotaService,
     QuotaGuard,
     // §9.5.4①B 端口倒置：core 服务经端口消费持久化，Drizzle 适配由本（参考）应用装配。
-    { provide: TENANT_STATUS_STORE, useClass: DrizzleTenantStatusStore },
+    { provide: TENANT_STATUS_STORE, useClass: MikroTenantStatusStore },
     { provide: USER_STATUS_STORE, useClass: DrizzleUserStatusStore },
     { provide: QUOTA_STORE, useClass: DrizzleQuotaStore },
-    { provide: PLATFORM_IDENTITY_LOOKUP, useClass: DrizzlePlatformIdentityLookup },
+    { provide: PLATFORM_IDENTITY_LOOKUP, useClass: MikroPlatformIdentityLookup },
     // §9.5.4①B · P1b 会话端口倒置：core 经端口消费会话/RBAC，Better Auth 实例适配由参考应用装配。
     { provide: SESSION_READER, useClass: AuthSessionReader },
     { provide: TENANT_PERMISSION_CHECKER, useClass: BetterAuthTenantPermissionChecker },
