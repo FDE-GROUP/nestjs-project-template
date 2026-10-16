@@ -9,15 +9,18 @@
  * 卡点语义：超限抛 402（Payment Required·语义=需升级档位），与 `QuotaService.assertSeats`
  * 的 S7 错误体口径一致。hook 校验与实际插入间的并发窄口按 plan §4-丙接受为软性商业限制。
  * invitation 表查询为**读侧**（表所有权纪律条款②：读宽松·写卡 owner）。
+ *
+ * ORM 修宪案 B · 切片 3d（S-d3）：invitation 读由 Drizzle `select().from().where().limit()` 改走
+ * **Mikro `em.findOne(Invitation,…,{fields})`**（expand 双轨·仅改数据通道·不改裁决行为）。`fork()` 只在
+ * **命中 matcher 的实际请求内**调用（插件构造时仅存 `mikro` 引用不建连）→ 保持 `app-boot.smoke`/
+ * `verify:prod-boot` 的 DB-free 不变量。`QuotaService.checkSeats` 早在 3c-ii-A 即已走 Mikro（本片不动）。
  */
 
+import { Invitation } from '@app/database/mikro/entities';
+import type { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import type { QuotaService } from '@core/saas-kit/tenancy/quota/quota.service';
 import type { BetterAuthPlugin } from 'better-auth';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
-import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type * as schema from '../../database/schema';
-import { invitation } from '../../database/schema';
 
 /** 成员行数增加的端点面（accept-invitation 为现网唯一真实通道，余为防御预留）。 */
 const MEMBERSHIP_INCREMENT_PATHS =
@@ -25,7 +28,8 @@ const MEMBERSHIP_INCREMENT_PATHS =
 
 export interface SeatsQuotaHookDeps {
   readonly quota: Pick<QuotaService, 'checkSeats'>;
-  readonly db: PostgresJsDatabase<typeof schema>;
+  /** Mikro 连接持有者（懒建·仅 `fork()`·测试以 `{ fork }` 假象注入）。 */
+  readonly mikro: Pick<MikroOrmService, 'fork'>;
 }
 
 /** 解析本次增量事件的目标租户；无法判定时返回 null（放行·交由 BA 自身校验拒绝畸形请求）。 */
@@ -37,11 +41,11 @@ async function resolveTargetOrg(
   if (path === '/organization/accept-invitation') {
     const invitationId = (ctx.body as { invitationId?: string } | undefined)?.invitationId;
     if (!invitationId) return null;
-    const [row] = await deps.db
-      .select({ organizationId: invitation.organizationId, status: invitation.status })
-      .from(invitation)
-      .where(eq(invitation.id, invitationId))
-      .limit(1);
+    const em = await deps.mikro.fork();
+    // 读侧宽松（表所有权②）：只取 organizationId/status 两列·invitation 属 tenants 上下文·本处仅读。
+    const row = await em.findOne(Invitation, { id: invitationId } as never, {
+      fields: ['organizationId', 'status'],
+    });
     // 邀请不存在/已消费：放行让 BA 走自身错误路径（404/400），配额层不越权裁决
     if (!row || row.status !== 'pending') return null;
     return row.organizationId;

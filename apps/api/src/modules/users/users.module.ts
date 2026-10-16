@@ -5,7 +5,7 @@ import { DeleteUserCommandHandler } from './application/commands/handlers/delete
 import { ExportUserDataQueryHandler } from './application/queries/handlers/export-user-data.query-handler';
 import { USER_REPOSITORY } from './domain/repositories/user.repository';
 import { UserRegisteredEventHandler } from './infrastructure/dispatchers/user-domain-events.dispatcher';
-import { DrizzleUserRepository } from './infrastructure/repositories/drizzle-user.repository';
+import { MikroUserRepository } from './infrastructure/repositories/mikro-user.repository';
 
 // 暴露面收紧（module-users-surface-reduction）：Create/GetUser(s) handler 随端点删除；
 // domain/infrastructure 契约面（port/adapter/聚合/事件）按 §2.2 全保留。
@@ -21,7 +21,9 @@ const EventHandlers = [UserRegisteredEventHandler];
     ...QueryHandlers,
     ...EventHandlers,
     // Dependency inversion: domain owns the port, infrastructure provides the adapter.
-    { provide: USER_REPOSITORY, useClass: DrizzleUserRepository },
+    // ORM 修宪案 B · 切片 3d（S-d1）：`USER_REPOSITORY` 绑定改指 MikroUserRepository（expand 双轨·
+    // 旧 DrizzleUserRepository 类不删作回滚点·MikroOrmService 由 @Global MikroOrmModule 供给）。
+    { provide: USER_REPOSITORY, useClass: MikroUserRepository },
   ],
   exports: [],
 })

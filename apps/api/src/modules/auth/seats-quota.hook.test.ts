@@ -1,30 +1,34 @@
+import { Invitation } from '@app/database/mikro/entities';
+import type { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
+import type { EntityManager } from '@mikro-orm/core';
 import { APIError } from 'better-auth/api';
 import { describe, expect, it, vi } from 'vitest';
 import { createSeatsQuotaPlugin, type SeatsQuotaHookDeps } from './seats-quota.hook';
 
-/** 假 invitation 查询链（drizzle select().from().where().limit() 形态的最小面）。 */
-function fakeDb(rows: Array<{ organizationId: string; status: string }>) {
-  const select = vi.fn(() => ({
-    from: () => ({
-      where: () => ({
-        limit: () => Promise.resolve(rows),
-      }),
-    }),
-  }));
-  return { select, db: { select } as unknown as SeatsQuotaHookDeps['db'] };
+/**
+ * 假 Mikro 连接面（ORM 修宪案 B 切片 3d·S-d3）：`mikro.fork()` 返一个只实现 `findOne` 的假 `em`。
+ * invitation 读从 Drizzle `select().from().where().limit()` 改走 `em.findOne(Invitation,…,{fields})`，
+ * 命中行→返回首行（否则 `null`）——行为与旧 Drizzle 版非弱化对齐（同一裁决口径·仅换数据通道）。
+ */
+function fakeMikro(row: { organizationId: string; status: string } | null) {
+  const findOne = vi.fn().mockResolvedValue(row);
+  const em = { findOne } as unknown as EntityManager;
+  const fork = vi.fn().mockResolvedValue(em);
+  const mikro = { fork } as unknown as MikroOrmService;
+  return { findOne, fork, mikro };
 }
 
 function makeDeps(opts: {
-  rows?: Array<{ organizationId: string; status: string }>;
+  row?: { organizationId: string; status: string } | null;
   verdict?: { ok: boolean; used: number; limit: number };
 }) {
-  const { select, db } = fakeDb(opts.rows ?? []);
+  const { findOne, fork, mikro } = fakeMikro(opts.row ?? null);
   const checkSeats = vi.fn().mockResolvedValue(opts.verdict ?? { ok: true, used: 1, limit: 5 });
   const deps: SeatsQuotaHookDeps = {
-    db,
+    mikro,
     quota: { checkSeats } as unknown as SeatsQuotaHookDeps['quota'],
   };
-  return { deps, select, checkSeats };
+  return { deps, findOne, fork, checkSeats };
 }
 
 function getHook(deps: SeatsQuotaHookDeps) {
@@ -74,7 +78,7 @@ describe('seats-quota plugin hook（S7 收尾·BA 成员增量配额接线）', 
   describe('handler 裁决面', () => {
     it('超限 → 402（S7 assertSeats 同口径错误体）', async () => {
       const { deps, checkSeats } = makeDeps({
-        rows: [{ organizationId: 'org-1', status: 'pending' }],
+        row: { organizationId: 'org-1', status: 'pending' },
         verdict: { ok: false, used: 5, limit: 5 },
       });
       const { handler } = getHook(deps);
@@ -89,7 +93,7 @@ describe('seats-quota plugin hook（S7 收尾·BA 成员增量配额接线）', 
 
     it('未超限 → 放行', async () => {
       const { deps, checkSeats } = makeDeps({
-        rows: [{ organizationId: 'org-1', status: 'pending' }],
+        row: { organizationId: 'org-1', status: 'pending' },
         verdict: { ok: true, used: 2, limit: 5 },
       });
       const { handler } = getHook(deps);
@@ -99,13 +103,31 @@ describe('seats-quota plugin hook（S7 收尾·BA 成员增量配额接线）', 
       expect(checkSeats).toHaveBeenCalledWith('org-1', 1);
     });
 
-    it('邀请不存在/已消费 → 放行交由 BA 自身错误路径（配额层不越权裁决）', async () => {
-      const cases: Array<Array<{ organizationId: string; status: string }>> = [
-        [],
-        [{ organizationId: 'org-1', status: 'accepted' }],
+    it('读侧投影：仅取 organizationId/status（invitation 属 tenants 上下文·读宽松·不越 SELECT 面）', async () => {
+      const { deps, findOne, fork } = makeDeps({
+        row: { organizationId: 'org-1', status: 'pending' },
+      });
+      const { handler } = getHook(deps);
+      await handler({ path: '/organization/accept-invitation', body: { invitationId: 'inv-1' } });
+      // 懒 fork：仅在命中 matcher 的请求内建 em（保 DB-free 不变量）。
+      expect(fork).toHaveBeenCalledTimes(1);
+      const [entity, where, options] = findOne.mock.calls[0] as [
+        unknown,
+        Record<string, unknown>,
+        { fields: string[] },
       ];
-      for (const rows of cases) {
-        const { deps, checkSeats } = makeDeps({ rows });
+      expect(entity).toBe(Invitation);
+      expect(where).toEqual({ id: 'inv-1' });
+      expect(options.fields).toEqual(['organizationId', 'status']);
+    });
+
+    it('邀请不存在/已消费 → 放行交由 BA 自身错误路径（配额层不越权裁决）', async () => {
+      const cases: Array<{ organizationId: string; status: string } | null> = [
+        null,
+        { organizationId: 'org-1', status: 'accepted' },
+      ];
+      for (const row of cases) {
+        const { deps, checkSeats } = makeDeps({ row });
         const { handler } = getHook(deps);
         await expect(
           handler({ path: '/organization/accept-invitation', body: { invitationId: 'inv-x' } }),

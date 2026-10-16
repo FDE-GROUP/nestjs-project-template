@@ -193,7 +193,8 @@ export async function CreateAuth(
       }),
       // S7 收尾（vision §7 阶段 2 商业闭环）：成员增量端点（accept-invitation 为现网唯一真实
       // HTTP 通道）经插件级 before-hook 走 seats 配额前置校验，超限 402（详 seats-quota.hook.ts）。
-      createSeatsQuotaPlugin({ quota, db: drizzleService.db }),
+      // ORM 修宪案 B 切片 3d（S-d3）：invitation 读改走 Mikro（懒 fork·DB-free 不变量保持）。
+      createSeatsQuotaPlugin({ quota, mikro: mikroOrmService }),
     ],
     account: {
       accountLinking: {

@@ -34,6 +34,11 @@ export const User = defineEntity({
     password: p.string().nullable(),
     firstName: p.string().nullable(),
     lastName: p.string().nullable(),
+    // 业务字段 `role`（schema.ts `roleEnum` 列 NOT NULL default 'USER'）——ORM 修宪案 B 切片 3d（S-d1）
+    // 为 `MikroUserRepository` 读写用户聚合所需。声明带 `.default('USER')` 沿 isOwner/handle 惯例：既让
+    // 一致性套件（BA core signUp 不写 role）经 DB 默认落值、又不干扰 Mikro 轨写入显式 role 文本（PG 将
+    // 'USER'/'ADMIN' 文本 coerced 入 enum 列）。仅运行时 app-orm 面消费，不参与迁移 DDL 生成（忠实全模型另在 migration-entities）。
+    role: p.string().default('USER'),
     // test-utils additional-fields 一致性用例（type:'date'）
     dateField: p.datetime().nullable(),
     createdAt: p.datetime(),
@@ -133,6 +138,27 @@ export const Invitation = defineEntity({
   },
 });
 
+/**
+ * PIPL 同意台账（C1 · FR-7/D7）——与 `schema.ts` 的 `consent` 表逐列对齐（列名 camelCase 走
+ * `EntityCaseNamingStrategy`）。ORM 修宪案 B 切片 3d（S-d4）为 `ExportUserDataQueryHandler` 的只读
+ * 投影补入运行时 app-orm；`evidence`（IP/UA 审计料）属导出应排除的凭据面，实体保留列但读面靠 `fields` 投影剔除。
+ */
+export const Consent = defineEntity({
+  name: 'Consent',
+  tableName: 'consent',
+  properties: {
+    id: p.string().primary(),
+    userId: p.string().nullable(),
+    purpose: p.string(),
+    version: p.string(),
+    grantedAt: p.datetime(),
+    revokedAt: p.datetime().nullable(),
+    evidence: p.string().nullable(),
+    createdAt: p.datetime(),
+    updatedAt: p.datetime().nullable(),
+  },
+});
+
 export const MIKRO_ENTITIES = [
   User,
   Account,
@@ -141,6 +167,9 @@ export const MIKRO_ENTITIES = [
   Organization,
   Member,
   Invitation,
+  // PIPL 同意台账（schema.ts `consent` 表·C1/FR-7）——切片 3d（S-d4 用户数据导出读面）补入运行时
+  // app-orm。BA 核心 adapter 不路由该模型（不入 `BY_MODEL`），仅供 `em.find(Consent, …, {fields})` 只读投影。
+  Consent,
 ];
 
 /** 模型名（小写）→ entity schema。BA 传下的 `model` 是物理/表名，`modelKey` 是规范模型名。 */

@@ -1,88 +1,117 @@
-import { DrizzleService } from '@app/database/drizzle.service';
-import { account, consent, session, user } from '@app/database/schema';
+import { Account, Consent, Session, User } from '@app/database/mikro/entities';
+import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { Inject, NotFoundException } from '@nestjs/common';
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { eq } from 'drizzle-orm';
 import type { UserDataExportReadModel } from '../../read-models/user-data-export.read-model';
 import { ExportUserDataQuery } from '../export-user-data.query';
 
 /**
- * Handler for PIPL right-to-access. Selects personal-data columns ONLY —
- * password / tokens / session token / consent evidence are excluded at the
- * projection layer (never rely on downstream masking).
+ * ORM 修宪案 B · 切片 3d（S-d4）—— PIPL 右-access 用户数据导出读面的 **MikroORM 适配**（原地换轨·旧
+ * Drizzle 数据访问逻辑随本文件替换·回滚点＝git 历史 + §5.18 记录）。
+ *
+ * **R-B1 安全红线（凭据永不落 SELECT）**：四表（user/account/session/consent）读全部走 `em.find`/`findOne`
+ * 的 **`fields` 白名单投影**——凭据列（`user.password`/`user.isOwner`、`account.{password,accessToken,
+ * refreshToken,idToken}`、`session.{token,ipAddress,userAgent}`、`consent.evidence`）**不在投影列表内**，
+ * 依 3c-ii-B 探针结论在生成的 SQL SELECT 面即被排除（非取回后删）。缺省不投影时 QB `select .*` 会取回，
+ * 故投影必做。与旧 Drizzle 版 `columns`/`select({...})` 显式列集**逐列对齐**（导出语义零漂移）。
+ *
+ * `Consent` 运行时实体系切片 3d 补入 app-orm（见 `entities.ts`）·此处只读投影·不写。
  */
 @QueryHandler(ExportUserDataQuery)
 export class ExportUserDataQueryHandler
   implements IQueryHandler<ExportUserDataQuery, UserDataExportReadModel>
 {
-  constructor(@Inject(DrizzleService) private readonly drizzle: DrizzleService) {}
+  constructor(@Inject(MikroOrmService) private readonly mikro: MikroOrmService) {}
 
   // fallow-ignore-next-line unused-class-member -- contract method invoked by the @nestjs/cqrs QueryBus
   async execute(query: ExportUserDataQuery): Promise<UserDataExportReadModel> {
-    const userRow = await this.drizzle.db.query.user.findFirst({
-      where: eq(user.id, query.userId),
-      columns: {
-        id: true,
-        email: true,
-        name: true,
-        handle: true,
-        image: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        emailVerified: true,
-        createdAt: true,
-        updatedAt: true,
-        // explicitly NOT selected: password, isOwner (business flag, not personal data)
-      },
+    const em = await this.mikro.fork();
+
+    // user：仅个人数据列（凭据 password/isOwner/dateField 一律排除）。
+    const userRow = await em.findOne(User, { id: query.userId } as never, {
+      fields: [
+        'id',
+        'email',
+        'name',
+        'handle',
+        'image',
+        'firstName',
+        'lastName',
+        'role',
+        'emailVerified',
+        'createdAt',
+        'updatedAt',
+      ],
     });
     if (!userRow) {
       throw new NotFoundException(`User with ID ${query.userId} not found`);
     }
 
-    const accountRows = await this.drizzle.db
-      .select({
-        id: account.id,
-        providerId: account.providerId,
-        accountId: account.accountId,
-        scope: account.scope,
-        accessTokenExpiresAt: account.accessTokenExpiresAt,
-        refreshTokenExpiresAt: account.refreshTokenExpiresAt,
-        createdAt: account.createdAt,
-        updatedAt: account.updatedAt,
-      })
-      .from(account)
-      .where(eq(account.userId, query.userId));
+    // account：排除 password/accessToken/refreshToken/idToken。
+    const accountRows = await em.find(Account, { userId: query.userId } as never, {
+      fields: [
+        'id',
+        'providerId',
+        'accountId',
+        'scope',
+        'accessTokenExpiresAt',
+        'refreshTokenExpiresAt',
+        'createdAt',
+        'updatedAt',
+      ],
+    });
 
-    const sessionRows = await this.drizzle.db
-      .select({
-        id: session.id,
-        provider: session.provider,
-        expiresAt: session.expiresAt,
-        createdAt: session.createdAt,
-        updatedAt: session.updatedAt,
-      })
-      .from(session)
-      .where(eq(session.userId, query.userId));
+    // session：排除 token/ipAddress/userAgent/activeOrganizationId。
+    const sessionRows = await em.find(Session, { userId: query.userId } as never, {
+      fields: ['id', 'provider', 'expiresAt', 'createdAt', 'updatedAt'],
+    });
 
-    const consentRows = await this.drizzle.db
-      .select({
-        id: consent.id,
-        purpose: consent.purpose,
-        version: consent.version,
-        grantedAt: consent.grantedAt,
-        revokedAt: consent.revokedAt,
-        createdAt: consent.createdAt,
-        updatedAt: consent.updatedAt,
-      })
-      .from(consent)
-      .where(eq(consent.userId, query.userId));
+    // consent：排除 evidence（IP/UA 审计料·内部合规留痕不外泄）。
+    const consentRows = await em.find(Consent, { userId: query.userId } as never, {
+      fields: ['id', 'purpose', 'version', 'grantedAt', 'revokedAt', 'createdAt', 'updatedAt'],
+    });
 
     return {
-      user: userRow,
-      accounts: accountRows,
-      sessions: sessionRows,
-      consents: consentRows,
+      user: {
+        id: userRow.id,
+        email: userRow.email,
+        name: userRow.name,
+        // handle 真实列 NOT NULL DEFAULT ''（Mikro 侧仅为 BA authFlow 测试面声明可空·运行期不触发 ?? ''）。
+        handle: userRow.handle ?? '',
+        image: userRow.image ?? null,
+        firstName: userRow.firstName ?? null,
+        lastName: userRow.lastName ?? null,
+        role: userRow.role,
+        emailVerified: userRow.emailVerified,
+        createdAt: userRow.createdAt,
+        updatedAt: userRow.updatedAt ?? userRow.createdAt,
+      },
+      accounts: accountRows.map((a) => ({
+        id: a.id,
+        providerId: a.providerId,
+        accountId: a.accountId,
+        scope: a.scope ?? null,
+        accessTokenExpiresAt: a.accessTokenExpiresAt ?? null,
+        refreshTokenExpiresAt: a.refreshTokenExpiresAt ?? null,
+        createdAt: a.createdAt,
+        updatedAt: a.updatedAt ?? a.createdAt,
+      })),
+      sessions: sessionRows.map((s) => ({
+        id: s.id,
+        provider: s.provider ?? null,
+        expiresAt: s.expiresAt,
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt ?? s.createdAt,
+      })),
+      consents: consentRows.map((c) => ({
+        id: c.id,
+        purpose: c.purpose,
+        version: c.version,
+        grantedAt: c.grantedAt,
+        revokedAt: c.revokedAt ?? null,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt ?? c.createdAt,
+      })),
     };
   }
 }
