@@ -1,20 +1,20 @@
-import type { Page } from '@core/saas-kit/shared-kernel/domain/pagination';
+import type { CursorPage } from '@core/saas-kit/shared-kernel/domain/pagination';
 import { describe, expect, it, vi } from 'vitest';
 import type { PostRecord } from '../../../domain/repositories/post.repository';
 import { ListPostsQuery } from '../list-posts.query';
 import { ListPostsQueryHandler } from './list-posts.query-handler';
 
 /**
- * posts 列表 query handler 透传测（业务面补分页片·DoD ④）：
- * 锁定 handler 把 PageRequest 原样交给 port，Page 信封原样交回总线。
+ * posts 列表 query handler 透传测（就绪预备切片 B·游标版）：
+ * 锁定 handler 把 CursorPageRequest 原样交给 port，CursorPage 信封原样交回总线。
  */
-describe('ListPostsQueryHandler · page passthrough', () => {
-  it('forwards query.request to the port and returns its Page envelope untouched', async () => {
-    const page: Page<PostRecord> = { items: [], total: 0, limit: 4, offset: 8 };
+describe('ListPostsQueryHandler · cursor page passthrough', () => {
+  it('forwards query.request to the port and returns its CursorPage envelope untouched', async () => {
+    const page: CursorPage<PostRecord> = { items: [], hasMore: true, nextCursor: 'cur-1' };
     const list = vi.fn().mockResolvedValue(page);
     const handler = new ListPostsQueryHandler({ list } as never);
 
-    const request = { limit: 4, offset: 8 };
+    const request = { limit: 4, cursor: 'prev' };
     const result = await handler.execute(new ListPostsQuery(request));
 
     expect(list).toHaveBeenCalledWith(request);

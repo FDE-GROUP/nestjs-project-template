@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { createPage, type Page, type PageRequest } from './pagination';
+import {
+  createCursorPage,
+  createPage,
+  decodeCursor,
+  encodeCursor,
+  type Page,
+  type PageRequest,
+} from './pagination';
 
 /** 分页契约单测（module-common-pagination-contract·丙裁：唯一构造点的形状纪律）。 */
 describe('Page<T> 契约（shared-kernel）', () => {
@@ -23,5 +30,57 @@ describe('Page<T> 契约（shared-kernel）', () => {
       limit: 20,
       offset: 100,
     });
+  });
+});
+
+/** 游标分页契约单测（就绪预备切片 B·丁裁 (createdAt,id)·浅复制纪律 + 编解码往返）。 */
+describe('CursorPage<T> 契约（shared-kernel）', () => {
+  it('createCursorPage 全形（items/hasMore/nextCursor）', () => {
+    const page = createCursorPage(['a', 'b'], true, 'cur-1');
+    expect(page).toEqual({ items: ['a', 'b'], hasMore: true, nextCursor: 'cur-1' });
+  });
+
+  it('hasMore=false 且不传 nextCursor 时响应形不含 nextCursor 键', () => {
+    const page = createCursorPage([], false);
+    expect(page).toEqual({ items: [], hasMore: false });
+    expect('nextCursor' in page).toBe(false);
+  });
+
+  it('items 浅复制：源数组事后 mutation 不泄漏', () => {
+    const source = [{ id: 1 }];
+    const page = createCursorPage(source, true, 'x');
+    source.push({ id: 2 });
+    expect(page.items).toHaveLength(1);
+  });
+});
+
+describe('游标编解码（opaque base64url）', () => {
+  it('encode→decode 往返保持复合键 (createdAt,id)', () => {
+    const key = { createdAt: '2026-01-02T03:04:05.000Z', id: 'uuid-abc' };
+    const cursor = encodeCursor(key);
+    // 不透明：仅为 base64url 字符集
+    expect(cursor).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(decodeCursor(cursor)).toEqual(key);
+  });
+
+  it('非 base64url 可解码乱码 → 抛错', () => {
+    expect(() => decodeCursor('%%%not-base64%%%')).toThrow(/Invalid cursor/);
+  });
+
+  it('合法 base64url 但载荷非 [date,id] → 抛错', () => {
+    const bogus = Buffer.from(JSON.stringify({ nope: 1 })).toString('base64url');
+    expect(() => decodeCursor(bogus)).toThrow(/Invalid cursor/);
+  });
+
+  it('数组长度对但日期不可析 → 抛错', () => {
+    const bogus = Buffer.from(JSON.stringify(['not-a-date', 'id1'])).toString('base64url');
+    expect(() => decodeCursor(bogus)).toThrow(/unparseable date/);
+  });
+
+  it('数组长度对但段非字符串/空 id → 抛错', () => {
+    const bogus = Buffer.from(JSON.stringify(['2026-01-01T00:00:00.000Z', ''])).toString(
+      'base64url',
+    );
+    expect(() => decodeCursor(bogus)).toThrow(/malformed segments/);
   });
 });

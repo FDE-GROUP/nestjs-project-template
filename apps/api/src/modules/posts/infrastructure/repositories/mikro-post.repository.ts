@@ -2,13 +2,16 @@ import { randomUUID } from 'node:crypto';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { Post } from '@app/database/mikro/post.entity';
 import {
-  createPage,
-  type Page,
-  type PageRequest,
+  type CursorKey,
+  type CursorPage,
+  type CursorPageRequest,
+  createCursorPage,
+  decodeCursor,
+  encodeCursor,
 } from '@core/saas-kit/shared-kernel/domain/pagination';
 import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { QueryOrder } from '@mikro-orm/core';
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import type {
   PostDraft,
   PostRecord,
@@ -53,22 +56,56 @@ export class MikroPostRepository implements PostRepository {
     };
   }
 
-  async list(request: PageRequest): Promise<Page<PostRecord>> {
+  async list(request: CursorPageRequest): Promise<CursorPage<PostRecord>> {
     const { organizationId, workspaceId } = this.scope();
     // `where` 为真实谓词对象（organizationId 必含·去之则回归测红）。`as never` 仅系调用边界 cast——
     // `orm.ts` 以 `entities as never` 装配（切片 1 同源惯例）使 `em` 泛参解析为 defineEntity builder 推断
     // 类型而非 companion interface·两者在可空/默认列上 `FilterQuery` 宽化不致；cast 不改运行时谓词。
-    const where = workspaceId ? { organizationId, workspaceId } : { organizationId };
+    const tenantFilter = workspaceId ? { organizationId, workspaceId } : { organizationId };
+
+    // 首页无 cursor：仅按租户谓词取。续页：以不透明 cursor 解出复合键 (createdAt,id)，
+    // 键集谓词 `createdAt < cDate OR (createdAt = cDate AND id < cId)`（与 ORDER BY DESC 同比较语义·无重无漏）。
+    let where: Record<string, unknown> = tenantFilter;
+    if (request.cursor) {
+      let key: CursorKey;
+      try {
+        key = decodeCursor(request.cursor);
+      } catch {
+        // cursor 字符集已过 DTO 闸·此处仅拦「合法 base64url 但载荷非 [date,id]」→ 400（先于 fork·不查库）
+        throw new BadRequestException('Invalid pagination cursor');
+      }
+      const cursorDate = new Date(key.createdAt);
+      where = {
+        $and: [
+          tenantFilter,
+          {
+            $or: [
+              { createdAt: { $lt: cursorDate } },
+              { createdAt: { $eq: cursorDate }, id: { $lt: key.id } },
+            ],
+          },
+        ],
+      };
+    }
+
     const em = await this.mikro.fork();
-    const [entities, total] = await em.findAndCount(Post, where as never, {
-      orderBy: { createdAt: QueryOrder.DESC },
-      limit: request.limit,
-      offset: request.offset,
+    // 多取一条（limit+1）探下一页·免 COUNT 全量查询。
+    const entities = await em.find(Post, where as never, {
+      orderBy: { createdAt: QueryOrder.DESC, id: QueryOrder.DESC },
+      limit: request.limit + 1,
     });
-    return createPage(
-      entities.map((entity) => this.toRecord(entity)),
-      total,
-      request,
+
+    const hasMore = entities.length > request.limit;
+    const pageEntities = hasMore ? entities.slice(0, request.limit) : entities;
+    const last = pageEntities[pageEntities.length - 1];
+    const nextCursor =
+      hasMore && last
+        ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
+        : undefined;
+    return createCursorPage(
+      pageEntities.map((entity) => this.toRecord(entity)),
+      hasMore,
+      nextCursor,
     );
   }
 

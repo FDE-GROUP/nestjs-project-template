@@ -1,16 +1,17 @@
 import type { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { Post } from '@app/database/mikro/post.entity';
+import { encodeCursor } from '@core/saas-kit/shared-kernel/domain/pagination';
 import type { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import type { EntityManager } from '@mikro-orm/core';
 import { QueryOrder } from '@mikro-orm/core';
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MikroPostRepository } from './mikro-post.repository';
 
 /**
- * 切片 2 双轨**镜像断言**：与 `原 posts 仓储镜像测试` 同一套隔离律（S2 FR-5 / S3 D2·§8-6），
- * 只是把旧 ORM 谓词对象换成 Mikro `FilterQuery` 平面对象。fake `em` 由 `MikroOrmService.fork()` 供给——
- * 关键不变量：`requireTenantId()` fail-closed **先于** `fork()`（无租户→403 且绝不取 em/查库）。
+ * 切片 2 双轨**镜像断言** + 就绪预备切片 B（游标分页）：posts 隔离律不变（S2 FR-5 / S3 D2·§8-6），
+ * `list` 由 offset(`findAndCount`) 换为 keyset(`find` limit+1 探页)。fake `em` 由 `MikroOrmService.fork()`
+ * 供给——关键不变量：`requireTenantId()` fail-closed **先于** `fork()`（无租户→403 且绝不取 em/查库）。
  */
 function makeRepo(tenantId: string | null, workspaceId?: string) {
   const requireTenantId = vi.fn(() => {
@@ -19,18 +20,31 @@ function makeRepo(tenantId: string | null, workspaceId?: string) {
   });
   const tenant = { requireTenantId, workspaceId } as unknown as TenantContextService;
 
-  const findAndCount = vi.fn().mockResolvedValue([[], 0]);
+  const find = vi.fn().mockResolvedValue([]);
   const findOne = vi.fn().mockResolvedValue(null);
   const create = vi.fn((_entity: unknown, data: Record<string, unknown>) => data);
   const flush = vi.fn().mockResolvedValue(undefined);
   const persist = vi.fn(() => ({ flush }));
-  const em = { findAndCount, findOne, create, persist } as unknown as EntityManager;
+  const em = { find, findOne, create, persist } as unknown as EntityManager;
   const fork = vi.fn().mockResolvedValue(em);
   const mikro = { fork } as unknown as MikroOrmService;
 
   return {
     repo: new MikroPostRepository(mikro, tenant),
-    spies: { requireTenantId, fork, findAndCount, findOne, create, persist, flush },
+    spies: { requireTenantId, fork, find, findOne, create, persist, flush },
+  };
+}
+
+function postEntity(id: string, createdAt: Date) {
+  return {
+    id,
+    title: 'T',
+    content: null,
+    published: false,
+    organizationId: 'orgA',
+    workspaceId: null,
+    createdAt,
+    updatedAt: createdAt,
   };
 }
 
@@ -39,26 +53,26 @@ describe('MikroPostRepository · tenant isolation (S2 · FR-5)', () => {
 
   it('fail-closed: list() refuses and never forks an em when no tenant is bound', async () => {
     const { repo, spies } = makeRepo(null);
-    await expect(repo.list({ limit: 20, offset: 0 })).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(repo.list({ limit: 20 })).rejects.toBeInstanceOf(ForbiddenException);
     expect(spies.fork).not.toHaveBeenCalled();
-    expect(spies.findAndCount).not.toHaveBeenCalled();
+    expect(spies.find).not.toHaveBeenCalled();
   });
 
-  it('list() ALWAYS filters by the active tenant (red if the organizationId is dropped)', async () => {
+  it('list() first page ALWAYS filters by the active tenant + peeks limit+1 (no cursor)', async () => {
     const { repo, spies } = makeRepo('orgA');
-    await repo.list({ limit: 10, offset: 5 });
-    expect(spies.findAndCount).toHaveBeenCalledTimes(1);
-    const [entity, where, options] = spies.findAndCount.mock.calls[0] as [
+    await repo.list({ limit: 10 });
+    expect(spies.find).toHaveBeenCalledTimes(1);
+    const [entity, where, options] = spies.find.mock.calls[0] as [
       unknown,
       Record<string, unknown>,
       Record<string, unknown>,
     ];
     expect(entity).toBe(Post);
+    // 首页无 cursor：谓词即裸租户对象（organizationId 必含·去之则回归红）
     expect(where).toEqual({ organizationId: 'orgA' });
     expect(options).toMatchObject({
-      limit: 10,
-      offset: 5,
-      orderBy: { createdAt: QueryOrder.DESC },
+      limit: 11, // request.limit + 1（探页·免 COUNT）
+      orderBy: { createdAt: QueryOrder.DESC, id: QueryOrder.DESC },
     });
   });
 
@@ -90,52 +104,16 @@ describe('MikroPostRepository · compound workspace scope (S3 · D2/§8-6)', () 
 
   it('list() with an active workspace narrows the tenant filter by workspaceId', async () => {
     const { repo, spies } = makeRepo('orgA', 'wsA1');
-    await repo.list({ limit: 20, offset: 0 });
-    const [, where] = spies.findAndCount.mock.calls[0] as [unknown, Record<string, unknown>];
+    await repo.list({ limit: 20 });
+    const [, where] = spies.find.mock.calls[0] as [unknown, Record<string, unknown>];
     expect(where).toEqual({ organizationId: 'orgA', workspaceId: 'wsA1' });
   });
 
   it('list() without a workspace selector stays tenant-scoped (no workspace clause)', async () => {
     const { repo, spies } = makeRepo('orgA');
-    await repo.list({ limit: 20, offset: 0 });
-    const [, where] = spies.findAndCount.mock.calls[0] as [unknown, Record<string, unknown>];
+    await repo.list({ limit: 20 });
+    const [, where] = spies.find.mock.calls[0] as [unknown, Record<string, unknown>];
     expect(where).toEqual({ organizationId: 'orgA' });
-  });
-
-  it('list() returns the Page<T> envelope via createPage (治理面同形)', async () => {
-    const { repo, spies } = makeRepo('orgA');
-    const createdAt = new Date('2026-01-01T00:00:00.000Z');
-    const updatedAt = new Date('2026-01-02T00:00:00.000Z');
-    const entities = [
-      {
-        id: 'p1',
-        title: 'T',
-        content: null,
-        published: false,
-        organizationId: 'orgA',
-        workspaceId: null,
-        createdAt,
-        updatedAt,
-      },
-    ];
-    spies.findAndCount.mockResolvedValueOnce([entities, 7]);
-
-    const page = await repo.list({ limit: 3, offset: 6 });
-
-    expect(page.total).toBe(7);
-    expect(page.limit).toBe(3);
-    expect(page.offset).toBe(6);
-    expect(page.items).toHaveLength(1);
-    expect(page.items[0]).toEqual({
-      id: 'p1',
-      title: 'T',
-      content: null,
-      published: false,
-      organizationId: 'orgA',
-      workspaceId: null,
-      createdAt,
-      updatedAt,
-    });
   });
 
   it('findById() with a workspace scopes by id + tenant + workspace (互不可见)', async () => {
@@ -159,5 +137,95 @@ describe('MikroPostRepository · compound workspace scope (S3 · D2/§8-6)', () 
     const data = spies.create.mock.calls[0][1] as Record<string, unknown>;
     expect(data.organizationId).toBe('orgA');
     expect(data.workspaceId).toBeNull();
+  });
+});
+
+describe('MikroPostRepository · 游标分页语义（就绪预备切片 B）', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('多取一条 → hasMore=true 且 nextCursor=末项复合键（items 裁至 limit）', async () => {
+    const { repo, spies } = makeRepo('orgA');
+    const e1 = postEntity('p1', new Date('2026-01-03T00:00:00.000Z'));
+    const e2 = postEntity('p2', new Date('2026-01-02T00:00:00.000Z'));
+    const e3 = postEntity('p3', new Date('2026-01-01T00:00:00.000Z')); // peek 触发 hasMore
+    spies.find.mockResolvedValueOnce([e1, e2, e3]);
+
+    const page = await repo.list({ limit: 2 });
+
+    expect(page.hasMore).toBe(true);
+    expect(page.items).toHaveLength(2);
+    expect(page.items.map((i) => i.id)).toEqual(['p1', 'p2']);
+    expect(page.nextCursor).toBe(encodeCursor({ createdAt: '2026-01-02T00:00:00.000Z', id: 'p2' }));
+  });
+
+  it('取不满 limit → hasMore=false 且无 nextCursor 键', async () => {
+    const { repo, spies } = makeRepo('orgA');
+    spies.find.mockResolvedValueOnce([postEntity('p1', new Date('2026-01-01T00:00:00.000Z'))]);
+
+    const page = await repo.list({ limit: 5 });
+
+    expect(page.hasMore).toBe(false);
+    expect(page.items).toHaveLength(1);
+    expect('nextCursor' in page).toBe(false);
+  });
+
+  it('空结果集 → hasMore=false·items 空', async () => {
+    const { repo } = makeRepo('orgA');
+    const page = await repo.list({ limit: 10 });
+    expect(page).toEqual({ items: [], hasMore: false });
+  });
+
+  it('续页 cursor → 复合键集谓词 $and[tenant, $or(createdAt<, createdAt= AND id<)]', async () => {
+    const { repo, spies } = makeRepo('orgA');
+    const cursor = encodeCursor({ createdAt: '2026-01-02T00:00:00.000Z', id: 'p2' });
+
+    await repo.list({ limit: 3, cursor });
+
+    const [, where, options] = spies.find.mock.calls[0] as [
+      unknown,
+      Record<string, unknown>,
+      Record<string, unknown>,
+    ];
+    expect(options).toMatchObject({ limit: 4 });
+    expect(where).toEqual({
+      $and: [
+        { organizationId: 'orgA' },
+        {
+          $or: [
+            { createdAt: { $lt: new Date('2026-01-02T00:00:00.000Z') } },
+            {
+              createdAt: { $eq: new Date('2026-01-02T00:00:00.000Z') },
+              id: { $lt: 'p2' },
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('续页 + workspace → 谓词租户段携 workspaceId', async () => {
+    const { repo, spies } = makeRepo('orgA', 'wsA1');
+    const cursor = encodeCursor({ createdAt: '2026-01-02T00:00:00.000Z', id: 'p2' });
+
+    await repo.list({ limit: 3, cursor });
+
+    const call = spies.find.mock.calls[0] as [
+      unknown,
+      Record<string, unknown>,
+      Record<string, unknown>,
+    ];
+    const segments = call[1].$and as Record<string, unknown>[];
+    expect(segments[0]).toEqual({ organizationId: 'orgA', workspaceId: 'wsA1' });
+  });
+
+  it('畸形 cursor（合法 base64url·载荷非 [date,id]）→ BadRequestException 且先于 fork（不查库）', async () => {
+    const { repo, spies } = makeRepo('orgA');
+    const bogus = Buffer.from(JSON.stringify({ nope: 1 })).toString('base64url');
+
+    await expect(repo.list({ limit: 3, cursor: bogus })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(spies.fork).not.toHaveBeenCalled();
+    expect(spies.find).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,4 @@
-import type { Page, PageRequest } from '@core/saas-kit/shared-kernel/domain/pagination';
+import type { CursorPage, CursorPageRequest } from '@core/saas-kit/shared-kernel/domain/pagination';
 
 /**
  * Post repository port (domain-owned, dependency inversion).
@@ -31,8 +31,8 @@ export interface PostRecord {
 }
 
 export interface PostRepository {
-  /** Posts within the active tenant only, newest first（分页信封·与治理面 Page<T> 同形）。 */
-  list(request: PageRequest): Promise<Page<PostRecord>>;
+  /** Posts within the active tenant only, newest first（游标分页信封·(createdAt,id) 复合降序·就绪预备切片 B）。 */
+  list(request: CursorPageRequest): Promise<CursorPage<PostRecord>>;
   /** A single post within the active tenant, or null (never leaks another tenant's row). */
   findById(id: string): Promise<PostRecord | null>;
   /** Creates a post stamped with the active tenant. */

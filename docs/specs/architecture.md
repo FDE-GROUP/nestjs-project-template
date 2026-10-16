@@ -92,6 +92,26 @@ DTOs are imported **by value** in controllers (not `import type`) so SWC preserv
 `biome.json` disables the auto-fix that would otherwise rewrite these imports back to
 `import type` and silently break validation.
 
+## Pagination Contract
+
+Two envelopes live in `shared-kernel/domain/pagination.ts` (pure, framework-free) and are the
+only sanctioned list-result shapes — build list endpoints on them, never ad-hoc `{rows, count}`:
+
+- **`CursorPage<T>` (`items` + `hasMore` + optional opaque `nextCursor`) is the DEFAULT for new
+  list endpoints.** It is keyset pagination over a deterministic total order — the reference
+  binding is `(createdAt DESC, id DESC)` (id is the unique tiebreaker for same-timestamp rows) —
+  so it stays correct and index-friendly as data grows, with no `OFFSET` scan. The cursor is an
+  opaque base64url of the sort key: it hides storage internals and is **not** an authorization
+  substitute (tenancy guards still run). Malformed cursors are a 400, surfaced by the adapter's
+  `decodeCursor`, after the DTO has already gated the character set.
+- **`Page<T>` (offset: `items` + `total` + echoed `limit`/`offset`) is the exception**, retained
+  for admin/governance surfaces that need a total count or arbitrary-page jump. It is not
+  removed; migrating an offset endpoint to cursor is a deliberate, per-endpoint breaking change.
+
+Both are constructed only via `createPage` / `createCursorPage` (the single shape-discipline point,
+which shallow-copies `items`). Requests enter through `ListPageDto` / `ListCursorDto` on the API
+side and reach the port as `PageRequest` / `CursorPageRequest`.
+
 ## Deployment
 
 - **Development**: Node + pnpm + Docker PostgreSQL (`docker-compose.dev.yml`)

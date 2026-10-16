@@ -1,4 +1,4 @@
-import type { Page } from '@core/saas-kit/shared-kernel/domain/pagination';
+import type { CursorPage } from '@core/saas-kit/shared-kernel/domain/pagination';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import {
   Body,
@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ListPageDto } from '../../../common/dto/list-page.dto';
+import { ListCursorDto } from '../../../common/dto/list-cursor.dto';
 import { CreatePostCommand } from '../application/commands/create-post.command';
 import { ListPostsQuery } from '../application/queries/list-posts.query';
 import type { PostReadModel } from '../application/read-models/post.read-model';
@@ -35,11 +35,14 @@ export class PostsController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'List posts in the active tenant' })
+  @ApiOperation({ summary: 'List posts in the active tenant (cursor-paginated)' })
   @ApiResponse({ status: 200, description: 'Posts owned by the active tenant.' })
+  @ApiResponse({ status: 400, description: 'Malformed cursor.' })
   @ApiResponse({ status: 403, description: 'No active tenant context.' })
-  list(@Query() request: ListPageDto): Promise<Page<PostReadModel>> {
-    return this.queryBus.execute<ListPostsQuery, Page<PostReadModel>>(new ListPostsQuery(request));
+  list(@Query() request: ListCursorDto): Promise<CursorPage<PostReadModel>> {
+    return this.queryBus.execute<ListPostsQuery, CursorPage<PostReadModel>>(
+      new ListPostsQuery(request),
+    );
   }
 
   @Post()

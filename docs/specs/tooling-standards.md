@@ -146,6 +146,12 @@
 - **部署声明 = 可执行契约，必须真跑对拍**：改 `Dockerfile`/`docker-compose*.yml`/`.github/workflows/*` 后，验收口径为实跑结果（`docker build` EXIT=0 → **裸** `docker run`（不补 `-e HOST` 等纠正变量）真起服命中 `/api/v1/health` 200 → `docker inspect --format='{{.State.Health.Status}}'` 为 `healthy` → compose 全图 `Up (healthy)`），**不得以「配置就位」「构建通过」代替**；Actions 面以真实 run 结论为证。同型教训：声明的路由与代码实现脱节、探针工具不存在，均属「声明有、实现无」且静态门禁全绿无征兆。
 - **镜像内不留不可用死面**：若某声明隐含能力而产物实际不支持（如 runner 携迁移工具 `scripts/mikro-migrate.ts`/`mikro-migration-create.ts`，其经 `tsx` 需 `apps/api/src/**.ts` 源与 dev 依赖而产物镜像无源文件 → 容器内迁移跑不通），**删净并在文档写明能力边界**（迁移归运维机/CI），不加「看起来能用」的兼容配置。
 
+### 4.11 分页契约纪律
+- **两种信封为列表结果唯一合法形**（单源 `libs/core/src/shared-kernel/domain/pagination.ts`·纯 TS 零依赖）：`CursorPage<T>`（游标）与 `Page<T>`（offset）；绝不临时自造 `{rows, count}`。
+- **新列表端点缺省用游标**（兑现 [global-readiness-error-pagination](../plans/global-readiness-error-pagination.md) 切 B·立 readiness §4-④「游标默认」标准）：键集分页基于确定性全序 `(createdAt DESC, id DESC)`，`nextCursor` 为排序键的**不透明 base64url**（防实现细节泄漏·**非授权替代**·租户守卫照旧）。`Page<T>`（offset）仅作需全量计数/任意跳页的治理面例外，不删除。
+- **只经 `createPage` / `createCursorPage` 构造**（唯一形状纪律点·对 `items` 浅复制）；入参走应用侧 `ListPageDto`/`ListCursorDto`（校验/默认值属 class-validator 依赖·core 不引），port 只收已裁决的 `PageRequest`/`CursorPageRequest`。
+- **畸形游标 = 400**：DTO 先闸 base64url 字符集，适配层 `decodeCursor` 再拦「合法编码但载荷不合法」→`BadRequestException`（先于取 em、不查库）。
+
 ## 5. Biome 规范
 
 - 命令：`pnpm run check`（校验）、`check:fix`/`lint:fix`/`format`（写回）。pre-commit 触发 `lint:fix`。

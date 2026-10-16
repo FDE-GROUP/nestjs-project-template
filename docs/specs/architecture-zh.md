@@ -86,6 +86,22 @@ Controller 中的 DTO 必须**按值导入**（而非 `import type`），SWC 才
 `ValidationPipe` 保留 `design:paramtypes`。`biome.json` 中已对 `*.controller.ts`
 关闭 `useImportType`，防止 auto-fix 把这些导入改回 `import type` 而悄悄摧毁校验。
 
+## 分页契约
+
+`shared-kernel/domain/pagination.ts`（纯 TS、框架无关）内含两种信封，是列表结果**唯一**
+被认可的形式——列表端点基于它们构建，绝不临时自造 `{rows, count}`：
+
+- **`CursorPage<T>`（`items` + `hasMore` + 可选不透明 `nextCursor`）为新列表端点的默认选择。**
+  它是基于确定性全序的键集（keyset）分页——参考绑定为 `(createdAt DESC, id DESC)`（`id` 作同刻
+  并发行的唯一兜底）——故随数据增长仍保持正确且对索引友好，无 `OFFSET` 扫描。游标是排序键
+  的不透明 base64url：隐藏存储内部结构，且**不是**授权的替代品（租户守卫照旧生效）。畸形游标为 400，
+  由适配层 `decodeCursor` 报出（DTO 已先把字符集关卡）。
+- **`Page<T>`（offset：`items` + `total` + 回显 `limit`/`offset`）为例外**，保留给需要全量计数或
+  任意跳页的治理面。它**不**被删除；将 offset 端点迁为游标是一次有意为之、逐端点的破坏性变更。
+
+两者只经 `createPage` / `createCursorPage`（唯一形状纪律点，对 `items` 浅复制）构造。请求在 API 侧经
+`ListPageDto` / `ListCursorDto` 进入，到 port 时形为 `PageRequest` / `CursorPageRequest`。
+
 ## 部署
 
 - **开发**：Node + pnpm + Docker PostgreSQL（`docker-compose.dev.yml`）
