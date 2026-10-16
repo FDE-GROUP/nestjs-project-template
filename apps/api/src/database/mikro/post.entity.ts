@@ -1,5 +1,6 @@
 import { defineEntity, p } from '@mikro-orm/core';
 import { MIKRO_ENTITIES } from './entities';
+import { MIKRO_FOUR_TABLE_ENTITIES } from './four-tables';
 
 /**
  * ORM 修宪案 B · 切片 2 —— posts 参考上下文试迁移的 **零装饰器** MikroORM v7 实体（expand 双轨）。
@@ -54,8 +55,9 @@ export const Post = defineEntity({
  * app-Mikro 实例承载的实体集（单一连接池）。
  * 切片 2：仅 `Post`（posts 试迁移·与 BA 面解耦）。
  * 切片 3b（ORM 修宪案 B）：BA 接链单点切换后，BA 七表（`MIKRO_ENTITIES`）并入**同一** app-orm。
- * `mikroAuthAdapter` 全程 raw `em.execute` 按物理表名寻址、不依赖关系元数据→并入对既有 posts
- * 读写零影响；表集与 `Post` 互斥无交叉；**懒建语义不变**→`app-boot.smoke`（不触发 `ensure()`）仍 DB-free。
- * 忠实迁移实体集（含 FK/enum/index·13 表）另见 `migration/migration-entities.ts`·与这里有损运行时实体并存（双描述过渡态·留切片 4 收口）。
+ * 切片 3c-ii（γ）：四表运行时扁平实体（`MIKRO_FOUR_TABLE_ENTITIES`·workspace/user_status/
+ * tenant_subscription/event·由 `four-tables.ts` 单一列元数据源派生）并入——与 BA 七表/Post **表集互斥无交叉**
+ * （不同物理表）→无 `MikroORM.init` 注册冲突；忠实迁移实体（`migration/migration-entities.ts`）**同源**（均读
+ * `four-tables.ts` 元数据·双描述消除）但仍独立装进迁移 init。懒建语义不变→`app-boot.smoke`仍 DB-free。
  */
-export const MIKRO_APP_ENTITIES = [Post, ...MIKRO_ENTITIES];
+export const MIKRO_APP_ENTITIES = [Post, ...MIKRO_ENTITIES, ...MIKRO_FOUR_TABLE_ENTITIES];

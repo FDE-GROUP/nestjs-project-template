@@ -1,4 +1,11 @@
 import { defineEntity, p } from '@mikro-orm/core';
+import { buildMigrationEntity } from '../column-meta';
+import {
+  EVENT_META,
+  TENANT_SUBSCRIPTION_META,
+  USER_STATUS_META,
+  WORKSPACE_META,
+} from '../four-tables';
 
 /**
  * ORM 修宪案 B · 切片 3a —— **迁移专用·忠实全模型** 实体集（MikroORM v7 零装饰器 `defineEntity`）。
@@ -149,19 +156,7 @@ export const Invitation = defineEntity({
   indexes: [{ name: 'invitation_org_email_idx', properties: ['organizationId', 'email'] }],
 });
 
-export const Workspace = defineEntity({
-  name: 'Workspace',
-  tableName: 'workspace',
-  properties: {
-    id: p.text().primary(),
-    organizationId: p.manyToOne(Organization).mapToPk().deleteRule('cascade'),
-    name: p.text(),
-    slug: p.text(),
-    createdAt: tsNow(),
-    updatedAt: ts(),
-  },
-  uniques: [{ name: 'workspace_org_slug_idx', properties: ['organizationId', 'slug'] }],
-});
+export const Workspace = buildMigrationEntity(WORKSPACE_META, { User, Organization });
 
 export const Consent = defineEntity({
   name: 'Consent',
@@ -199,70 +194,14 @@ export const Post = defineEntity({
   ],
 });
 
-export const UserStatus = defineEntity({
-  name: 'UserStatus',
-  tableName: 'user_status',
-  properties: {
-    // schema.ts：user_status 无独立 id，userId 即 PK + FK→user cascade
-    // （PK-FK 关系 Mikro 默认发 `on update cascade`，Drizzle 仅 `on delete cascade`·显式压回 no action 求逐字对齐）
-    userId: p.manyToOne(User).mapToPk().primary().updateRule('no action').deleteRule('cascade'),
-    status: p.text(),
-    reason: p.text().nullable(),
-    createdAt: tsNow(),
-    updatedAt: ts(),
-  },
+export const UserStatus = buildMigrationEntity(USER_STATUS_META, { User, Organization });
+
+export const TenantSubscription = buildMigrationEntity(TENANT_SUBSCRIPTION_META, {
+  User,
+  Organization,
 });
 
-export const TenantSubscription = defineEntity({
-  name: 'TenantSubscription',
-  tableName: 'tenant_subscription',
-  properties: {
-    id: p.text().primary(),
-    tenantId: p.manyToOne(Organization).mapToPk().deleteRule('cascade'),
-    plan: p.text(),
-    status: p.text().default('active'),
-    seatsLimit: p.integer(),
-    storageQuota: p.integer().nullable(),
-    apiQuota: p.integer().nullable(),
-    periodStart: tsNow(),
-    periodEnd: ts().nullable(),
-    provider: p.text().nullable(),
-    providerCustomerId: p.text().nullable(),
-    providerSubscriptionId: p.text().nullable(),
-    createdAt: tsNow(),
-    updatedAt: ts(),
-  },
-  indexes: [
-    { name: 'tenant_subscription_tenant_status_idx', properties: ['tenantId', 'status'] },
-    { name: 'tenant_subscription_tenant_period_idx', properties: ['tenantId', 'periodStart'] },
-  ],
-});
-
-export const Event = defineEntity({
-  name: 'Event',
-  tableName: 'event',
-  properties: {
-    id: p.bigint('number').primary().autoincrement(),
-    eventId: p.text(),
-    aggregateId: p.text(),
-    aggregateType: p.text(),
-    version: p.integer(),
-    eventType: p.text(),
-    eventVersion: p.integer().default(1),
-    payload: p.json<Record<string, any>>(),
-    metadata: p.json<Record<string, any>>().nullable(),
-    occurredAt: ts(),
-    createdAt: tsNow(),
-  },
-  uniques: [
-    {
-      name: 'event_aggregate_version_key',
-      properties: ['aggregateType', 'aggregateId', 'version'],
-    },
-    { name: 'event_event_id_key', properties: ['eventId'] },
-  ],
-  indexes: [{ name: 'event_aggregate_idx', properties: ['aggregateType', 'aggregateId'] }],
-});
+export const Event = buildMigrationEntity(EVENT_META, { User, Organization });
 
 /** 迁移基线用的全表忠实实体集（13 表·与 schema.ts 逐列对齐）。 */
 export const MIKRO_MIGRATION_ENTITIES = [

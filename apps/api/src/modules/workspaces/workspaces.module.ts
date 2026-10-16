@@ -6,7 +6,7 @@ import { WORKSPACE_REPOSITORY } from '@core/saas-kit/modules/workspaces/domain/r
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { WorkspacesController } from './api/workspaces.controller';
-import { DrizzleWorkspaceRepository } from './infrastructure/repositories/drizzle-workspace.repository';
+import { MikroWorkspaceRepository } from './infrastructure/repositories/mikro-workspace.repository';
 
 const CommandHandlers = [
   CreateWorkspaceCommandHandler,
@@ -22,7 +22,8 @@ const QueryHandlers = [ListWorkspacesQueryHandler];
     ...CommandHandlers,
     ...QueryHandlers,
     // Dependency inversion: domain owns the port, infrastructure enforces tenant scope.
-    { provide: WORKSPACE_REPOSITORY, useClass: DrizzleWorkspaceRepository },
+    // ORM 修宪案 B · 切片 3c-ii-A：绑定改指 Mikro 适配（`DrizzleWorkspaceRepository` 不删·双轨回滚点）。
+    { provide: WORKSPACE_REPOSITORY, useClass: MikroWorkspaceRepository },
   ],
   exports: [],
 })

@@ -6,7 +6,7 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { SubscriptionsController } from './api/subscriptions.controller';
 import { PaymentCustomerProvisioner } from './infrastructure/payment-customer.provisioner';
-import { DrizzleSubscriptionRepository } from './infrastructure/repositories/drizzle-subscription.repository';
+import { MikroSubscriptionRepository } from './infrastructure/repositories/mikro-subscription.repository';
 
 const CommandHandlers = [CreateSubscriptionCommandHandler];
 const QueryHandlers = [GetSubscriptionQueryHandler];
@@ -25,7 +25,8 @@ const QueryHandlers = [GetSubscriptionQueryHandler];
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,
-    { provide: SUBSCRIPTION_REPOSITORY, useClass: DrizzleSubscriptionRepository },
+    // ORM 修宪案 B · 切片 3c-ii-A：订阅仓储绑定改指 Mikro 适配（`DrizzleSubscriptionRepository` 不删·双轨回滚点）。
+    { provide: SUBSCRIPTION_REPOSITORY, useClass: MikroSubscriptionRepository },
     // §9.5.4①B/④ · P1c：订阅 domain/application 经端口消费客户开通，PaymentService 适配留应用侧。
     { provide: CUSTOMER_PROVISIONER, useClass: PaymentCustomerProvisioner },
   ],
