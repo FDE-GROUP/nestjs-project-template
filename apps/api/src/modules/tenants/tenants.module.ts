@@ -20,9 +20,9 @@ import { ListPlatformUsersQueryHandler } from './application/queries/handlers/li
 import { TENANT_GOVERNANCE_REPOSITORY } from './domain/repositories/tenant-governance.repository';
 import { TENANT_PROVISIONING_REPOSITORY } from './domain/repositories/tenant-provisioning.repository';
 import { USER_GOVERNANCE_REPOSITORY } from './domain/repositories/user-governance.repository';
-import { DrizzleTenantGovernanceRepository } from './infrastructure/repositories/drizzle-tenant-governance.repository';
 import { DrizzleTenantProvisioningRepository } from './infrastructure/repositories/drizzle-tenant-provisioning.repository';
-import { DrizzleUserGovernanceRepository } from './infrastructure/repositories/drizzle-user-governance.repository';
+import { MikroTenantGovernanceRepository } from './infrastructure/repositories/mikro-tenant-governance.repository';
+import { MikroUserGovernanceRepository } from './infrastructure/repositories/mikro-user-governance.repository';
 
 const CommandHandlers = [
   SubmitTenantApplicationCommandHandler,
@@ -58,9 +58,10 @@ const QueryHandlers = [
     // Dependency inversion: domain owns the gateway port, infrastructure calls Better Auth.
     { provide: TENANT_PROVISIONING_REPOSITORY, useClass: DrizzleTenantProvisioningRepository },
     // S5 governance: platform-level cross-tenant read model (no tenant filter).
-    { provide: TENANT_GOVERNANCE_REPOSITORY, useClass: DrizzleTenantGovernanceRepository },
-    // S6 user governance: platform-level cross-user read model (no tenant filter).
-    { provide: USER_GOVERNANCE_REPOSITORY, useClass: DrizzleUserGovernanceRepository },
+    // ORM 修宪案 B · 切片 3c-ii-B：治理读面整片切 Mikro（expand 双轨·旧 Drizzle 类不删作回滚点）。
+    { provide: TENANT_GOVERNANCE_REPOSITORY, useClass: MikroTenantGovernanceRepository },
+    // S6 user governance: platform-level cross-user read model (no tenant filter)。
+    { provide: USER_GOVERNANCE_REPOSITORY, useClass: MikroUserGovernanceRepository },
   ],
   exports: [],
 })
