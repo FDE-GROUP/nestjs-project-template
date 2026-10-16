@@ -72,22 +72,25 @@ A、B 互不依赖，各自「实现 → CI 绿 → 验收」。建议 A 先行�
   - **丁**：游标排序键 = **`(createdAt, id)` 复合·降序**（实现期核 `createdAt` 索引·无则登记不本片加）
   - **戊**：**迁 `GET /posts` 作 expand 样例**（含该端点 `Page<T>`→`CursorPage<T>` 响应形状破坏变更）
 - 审计人 / 日期：人（AskUserQuestion「全 43·加 errors[]·(createdAt,id)·迁 /posts」）/ 2026-10-17
+- 执行完成（留痕·v0.3.0）：切片 A 提交 `9056fbe`（码表 + 全 44 附码 + errors[]·ci 361 passed）；切片 B
+  提交 `d9ea6af`（游标契约 + ListCursorDto + 迁 /posts + specs 立标准·ci 380 passed·基线只增不减）。
+  游标真库 e2e 已对 `nestjs_practice` 手跑绿（无重无漏 + 同刻 id 兜底 + 畸形 400）·CI 默认 env-gated 跳过。
 
 ## 5. 完成判据（可核验 + 穷尽）
 
 **切片 A**
-- [ ] `error-codes.ts` 单源常量就位；契约测试锁命名格式（值必属 `NAMESPACE:NAME` 文法·禁裸串散落）
-- [ ] 按乙裁范围的业务抛错点附码；`fed300b` 既有 `errorCode` 透传测不回退（43 点未迁者仍绿）
-- [ ] （丙=是）`errors[]` 结构化产出 + 校验面映射测；顶层 `message` 形状兼容不破
+- [x] `error-codes.ts` 单源常量就位；契约测试锁命名格式（值必属 `NAMESPACE:NAME` 文法·禁裸串散落）
+- [x] 按乙裁范围的业务抛错点附码（实 44 处）；`fed300b` 既有 `errorCode` 透传测不回退；新增 string+options/402 兜底/errors[] 透传测
+- [x] （丙=是）`errors[]` 结构化产出 + 校验面映射测（`fromValidationErrors` 递归展平）；顶层 `message` 形状兼容不破
 
 **切片 B**
-- [ ] `CursorPageRequest` / `CursorPage<T>` / `createCursorPage` 契约 + 单测（浅复制纪律）；`ListCursorDto` cursor 校验测（合法/畸形→400）
-- [ ] 游标编码往返测 + 排序键全序测（首页 `hasMore=true` → 以 `nextCursor` 续取**无重无漏**）
-- [ ] `tooling-standards.md` + `architecture.md` 游标默认标准成文（兑现 §4-④）
-- [ ] （戊=②）示范端点 adapter/handler/controller 换 `CursorPage<T>` + 元数据锁测 + env-gated 真库 e2e 证游标语义；（戊=①）该子项标 N/A 并显式登记「端点迁移留按需批」
+- [x] `CursorPageRequest` / `CursorPage<T>` / `createCursorPage` 契约 + 单测（浅复制纪律）；`ListCursorDto` cursor 校验测（合法/畸形）
+- [x] 游标编码往返测 + 排序键全序测（首页 `hasMore=true` → 以 `nextCursor` 续取**无重无漏**·真库 e2e 实证）
+- [x] `tooling-standards.md`（§4.11）+ `architecture.md`/-zh 游标默认标准成文（兑现 §4-④）
+- [x] （戊=②）示范端点 adapter/handler/controller 换 `CursorPage<T>` + 元数据锁测 + env-gated 真库 e2e 证游标语义（已手跑绿）；（戊=① 分支 N/A）
 
 **总**
-- [ ] `pnpm run ci` 全绿（默认基线只增不减）+ Biome 净
+- [x] `pnpm run ci` 全绿（默认基线只增不减 348→380 passed）+ Biome 净
 
 ## 6. 演变记录
 
@@ -95,8 +98,9 @@ A、B 互不依赖，各自「实现 → CI 绿 → 验收」。建议 A 先行�
 |------|------|----------|----------|
 | 2026-10-17 | 0.1.0 | ORM 主线收尾后人择「就绪便宜预备」方向（#3+#5）；据实取证 43 抛错点 + 5 offset 端点后起草决策完备草案 | 首版：两切片 expand 设计 + 甲–戊 五归人裁点 + 完成判据（待审计门） |
 | 2026-10-17 | 0.2.0 | 人签核过审计门（AskUserQuestion·取完整 scope）；盘全抛错面订正初判 43→实为 44（补 seat 402 + payment ServiceUnavailable） | §1 计数订正；§4 结论翻**已审计** + 甲–戊 逐裁定案（全 44 附码·加 errors[]·(createdAt,id)·迁 /posts）；进入实现（切片 A→CI 绿→切片 B） |
+| 2026-10-17 | 0.3.0 | 两片实现完成并各自提交（A `9056fbe`、B `d9ea6af`）；游标真库 e2e 对 nestjs_practice 实跑绿 | §4 加执行完成留痕；§5 完成判据全 `[x]`（戊=②已迁·①分支 N/A）；基线 348→380 passed·只增不减 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.2.0 变更（过审计门·甲–戊 逐裁·计数订正 44），以当前正文内容为准。
+正文已于 2026-10-17 / v0.3.0 变更（两片实现完成·各自提交·§5 全 `[x]`），以当前正文内容为准。
