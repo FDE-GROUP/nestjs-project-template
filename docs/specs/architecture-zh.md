@@ -25,7 +25,7 @@ src/
 │   │   ├── infrastructure/  #   MikroORM 仓储适配器、映射器、事件分发器
 │   │   ├── api/             #   Controller + DTO（HTTP 传输层）
 │   │   └── users.module.ts  #   装配 CqrsModule + 处理器 + 端口→适配器绑定
-│   ├── auth/                # Better Auth 适配层（为未来 DDD/ES 预留的位置）
+│   ├── auth/                # Better Auth 适配层（认证+成员数据源；org 授权 HTTP 面封堵，授权裁决归 CASL）
 │   ├── stripe/              # 支付上下文
 │   └── storage/             # 云存储上下文（S3/OSS/COS）
 ├── database/                # 全局基础设施：MikroORM 客户端、实体、迁移、seed
@@ -93,7 +93,8 @@ Domain 纯净性由 `pnpm run ci` 里的 **fallow 架构边界佐证**守住（`
 - **框架**：NestJS 12 + Fastify
 - **架构**：Clean Architecture + DDD + CQRS（`@nestjs/cqrs`）
 - **数据库**：PostgreSQL + MikroORM（显式迁移）
-- **认证**：Better Auth
+- **认证**：Better Auth（**纯认证与成员数据源**：身份/会话/organization·member·invitation 表；其 org 内置授权 HTTP 面已封堵（module-rbac-casl 甲裁），成员/邀请对外端点由我方门面经服务端直调）
+- **授权**：CASL（`@casl/ability` v7）——租户级 RBAC 唯一裁决引擎：规则单源 `tenant-rules`（core 纯 TS 表）→ CASL ability 投影，端点以 `@Can(action, subject)` 声明、`TenantPermissionGuard` 经 ALS 预注入角色内存判定（无散点特判）
 - **测试**：Vitest（+ `unplugin-swc` 输出装饰器元数据）
 - **Lint/格式化**：Biome
 

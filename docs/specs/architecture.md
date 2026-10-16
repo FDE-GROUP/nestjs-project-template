@@ -27,7 +27,7 @@ src/
 │   │   ├── infrastructure/  #   MikroORM repository adapter, mappers, event dispatcher
 │   │   ├── api/             #   controller + DTOs (HTTP transport)
 │   │   └── users.module.ts  #   wires CqrsModule + handlers + port→adapter binding
-│   ├── auth/                # Better Auth adapter (reserved for future DDD/ES)
+│   ├── auth/                # Better Auth adapter (auth + membership data only; org authorization HTTP surface sealed, rulings moved to CASL)
 │   ├── stripe/              # Payment context
 │   └── storage/             # Cloud storage context (S3/OSS/COS)
 ├── database/                # Global infra: MikroORM client, entities, migrations, seed
@@ -105,7 +105,8 @@ directory centralization.
 - **Framework**: NestJS 12 + Fastify
 - **Architecture**: Clean Architecture + DDD + CQRS (`@nestjs/cqrs`)
 - **Database**: PostgreSQL + MikroORM (explicit migrations)
-- **Authentication**: Better Auth
+- **Authentication**: Better Auth (**pure auth & membership data source**: identity/session/organization·member·invitation tables; its built-in org authorization HTTP endpoints are sealed (module-rbac-casl ruling A), member/invitation endpoints served by our own facades via server-side calls)
+- **Authorization**: CASL (`@casl/ability` v7) — the sole tenant-level RBAC ruling engine: rules single source `tenant-rules` (pure-TS core table) projected into a CASL ability; endpoints declare `@Can(action, subject)` and `TenantPermissionGuard` rules in-memory from an ALS-preinjected role (no scattered special-casing)
 - **Testing**: Vitest (+ `unplugin-swc` for decorator metadata)
 - **Linting/Formatting**: Biome
 
