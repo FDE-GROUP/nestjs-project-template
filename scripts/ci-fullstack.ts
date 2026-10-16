@@ -27,10 +27,11 @@ const IMAGE = 'postgres:16-alpine';
 const E2E_DB = 'ci_e2e';
 const CONSISTENCY_DB = 'mikro_ba_consistency';
 
-/** 现存 6 个 env-gated 真库 e2e（`E2E_DATABASE_URL` 开关）——新增 gated 文件时此处同步登记。 */
+/** 现存 7 个 env-gated 真库 e2e（`E2E_DATABASE_URL` 开关）——新增 gated 文件时此处同步登记。 */
 const GATED_E2E_FILES = [
   'apps/api/src/modules/posts/infrastructure/repositories/posts-cursor-pagination.e2e.test.ts',
   'apps/api/src/database/event-store.mikro.e2e.test.ts',
+  'apps/api/src/database/outbox-relay.e2e.test.ts',
   'apps/api/src/tenancy/tenant-hard-delete.e2e.test.ts',
   'apps/api/src/tenancy/tenant-isolation.e2e.test.ts',
   'apps/api/src/modules/auth/auth-http-surface.e2e.test.ts',
@@ -123,7 +124,7 @@ try {
   }
 
   failed |= run(
-    'env-gated 全栈 e2e（6 文件·真容器真库）',
+    'env-gated 全栈 e2e（7 文件·真容器真库）',
     ['exec', 'vitest', 'run', ...GATED_E2E_FILES],
     {
       DATABASE_URL: e2eUrl,

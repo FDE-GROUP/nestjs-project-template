@@ -92,10 +92,20 @@ export interface Config {
   payment: PaymentConfig;
   platform: PlatformConfig;
   oauth: OAuthConfig;
-  eventStore: EventStoreConfig;
+  eventPublish: EventPublishConfig;
 }
 
-/** ES 首切片（module-users-es-append §2.5）：event store 影子追加双模开关。 */
-export interface EventStoreConfig {
-  enabled: boolean;
+/**
+ * ES Phase B 后半（module-es-outbox-transactional · 裁点乙）：事件发布通道三模开关，
+ * 取代旧 `EVENT_STORE_ENABLED` 布尔（高危#6 随审计门签）：
+ *  - `inproc`（缺省）：纯进程内派发，不触库——与旧布尔未置 true 逐字节等价；
+ *  - `shadow`：耐久 append event 表后立即进程内派发（旧 `true`=影子追加语义保形）；
+ *  - `outbox`：同事务 append（不立即派发），由 relay 耐久投递（at-least-once）。
+ * `pollMs`：outbox relay 轮询间隔（非 outbox 模式无意义）。
+ */
+export type EventPublishMode = 'inproc' | 'shadow' | 'outbox';
+
+export interface EventPublishConfig {
+  mode: EventPublishMode;
+  pollMs: number;
 }

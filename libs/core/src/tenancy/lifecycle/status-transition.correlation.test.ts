@@ -34,7 +34,9 @@ describe('TenantStatusService.transition 构造点', () => {
       async save() {},
     };
     const rec = makeRecorder();
-    const svc = new TenantStatusService(store, rec as unknown as DomainEventPublisher);
+    const svc = new TenantStatusService(store, rec as unknown as DomainEventPublisher, {
+      run: <T>(fn: () => Promise<T>) => fn(),
+    });
     await requestStorage.run({ requestId: 'rq-9' }, () =>
       svc.transition('org-1', TENANT_STATUS.ACTIVE),
     );
@@ -50,7 +52,9 @@ describe('TenantStatusService.transition 构造点', () => {
       async save() {},
     };
     const rec = makeRecorder();
-    const svc = new TenantStatusService(store, rec as unknown as DomainEventPublisher);
+    const svc = new TenantStatusService(store, rec as unknown as DomainEventPublisher, {
+      run: <T>(fn: () => Promise<T>) => fn(),
+    });
     await svc.transition('org-1', TENANT_STATUS.ACTIVE);
     expect(rec.captured[0]?.correlationId).toBeUndefined();
   });
@@ -69,7 +73,9 @@ describe('UserStatusService.transition 构造点', () => {
 
   it('请求上下文内暂停：user.status.transitioned 携带当前 requestId', async () => {
     const rec = makeRecorder();
-    const svc = new UserStatusService(store, rec as unknown as DomainEventPublisher);
+    const svc = new UserStatusService(store, rec as unknown as DomainEventPublisher, {
+      run: <T>(fn: () => Promise<T>) => fn(),
+    });
     await requestStorage.run({ requestId: 'rq-u1' }, () =>
       svc.transition('u-1', TENANT_STATUS.SUSPENDED),
     );

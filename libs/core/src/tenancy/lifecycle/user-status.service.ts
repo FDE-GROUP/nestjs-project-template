@@ -4,6 +4,7 @@ import {
   DOMAIN_EVENT_PUBLISHER,
   type DomainEventPublisher,
 } from '../../shared-kernel/domain/event-publisher.port';
+import { UNIT_OF_WORK, type UnitOfWork } from '../../shared-kernel/domain/unit-of-work.port';
 import { UserStatusTransitionedEvent } from './events/user-status-transitioned.event';
 import { canTransition, TENANT_STATUS, type TenantStatus } from './tenant-lifecycle';
 import { USER_STATUS_STORE, type UserStatusStore } from './user-status.store';
@@ -37,6 +38,9 @@ export class UserStatusService {
     @Inject(USER_STATUS_STORE) private readonly store: UserStatusStore,
     // S9 教训：非 controller provider 必须显式 @Inject token + 值导入，防 swc design:paramtypes 退化
     @Inject(DOMAIN_EVENT_PUBLISHER) private readonly events: DomainEventPublisher,
+    // ES Phase B 后半（module-es-outbox-transactional 切片 B）：ambient UoW，装配见
+    // MikroOrmModule @Global·单测直 new 传 pass-through 假实现
+    @Inject(UNIT_OF_WORK) private readonly uow: UnitOfWork,
   ) {}
 
   /** 读取用户当前生命周期状态；无记录行 → undefined（视同 active）。 */
@@ -54,33 +58,36 @@ export class UserStatusService {
    * 严格状态迁移：目标用户不存在 → not-found（转 404）；非法边 → illegal（转 409）；
    * 合法则 upsert `user_status` 并返回 previous 供审计。平台级动作专用（suspend/resume/delete），
    * 权限裁决归 PlatformOperatorGuard；session 硬删由调用方（治理 handler）叠加。
-   * ES 第三切片：upsert 成功后经 `DOMAIN_EVENT_PUBLISHER` 产出 `user.status.transitioned`
-   *（shadow append·与 user.registered 同聚合流·not-found/illegal 零发·失败连带 500 宁缺勿错发）。
+   * ES 第三切片 + Phase B 后半（module-es-outbox-transactional 切片 B）：upsert + 发布关键段包入
+   * `UNIT_OF_WORK`（outbox 同事务原子·shadow 连带回滚·inproc 空转等价），产出
+   * `user.status.transitioned`（与 user.registered 同聚合流·not-found/illegal 零发）。
    */
   async transition(
     userId: string,
     to: UserStatus,
     opts?: { reason?: string; actorId?: string },
   ): Promise<UserTransitionResult> {
-    if (!(await this.store.userExists(userId))) return { kind: 'not-found' };
+    return this.uow.run(async () => {
+      if (!(await this.store.userExists(userId))) return { kind: 'not-found' } as const;
 
-    const previous = await this.read(userId);
-    if (!canTransition(previous, to)) return { kind: 'illegal', from: previous, to };
+      const previous = await this.read(userId);
+      if (!canTransition(previous, to)) return { kind: 'illegal', from: previous, to } as const;
 
-    await this.store.upsert(userId, to, opts?.reason ?? null);
-    await this.events.publishAll([
-      new UserStatusTransitionedEvent({
-        aggregateId: userId,
-        // 关联 id 统一链（FR-4）：治理动作均在 HTTP 请求内，后台调用允许 undefined。
-        correlationId: currentRequestId(),
-        payload: {
-          from: previous ?? null,
-          to,
-          actorId: opts?.actorId,
-          reason: opts?.reason,
-        },
-      }),
-    ]);
-    return { kind: 'ok', previous, status: to };
+      await this.store.upsert(userId, to, opts?.reason ?? null);
+      await this.events.publishAll([
+        new UserStatusTransitionedEvent({
+          aggregateId: userId,
+          // 关联 id 统一链（FR-4）：治理动作均在 HTTP 请求内，后台调用允许 undefined。
+          correlationId: currentRequestId(),
+          payload: {
+            from: previous ?? null,
+            to,
+            actorId: opts?.actorId,
+            reason: opts?.reason,
+          },
+        }),
+      ]);
+      return { kind: 'ok', previous, status: to } as const;
+    });
   }
 }

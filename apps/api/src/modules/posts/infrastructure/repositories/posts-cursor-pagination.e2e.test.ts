@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { Organization } from '@app/database/mikro/entities';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { Post } from '@app/database/mikro/post.entity';
+import { TransactionScope } from '@app/database/transaction-scope';
 import { decodeCursor } from '@core/saas-kit/shared-kernel/domain/pagination';
 import type { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { BadRequestException } from '@nestjs/common';
@@ -41,7 +42,11 @@ gated('posts 游标分页真库 e2e（切片 B · 戊=② · env-gated）', () =
   ];
 
   beforeAll(async () => {
-    mikro = new MikroOrmService({ getDatabaseConfig: () => ({ url: E2E_DB }) } as never);
+    mikro = new MikroOrmService(
+      { getDatabaseConfig: () => ({ url: E2E_DB }) } as never,
+      // ES Phase B 后半：真 TransactionScope（事务外 fork 行为不变）
+      new TransactionScope(),
+    );
     const em = await mikro.fork();
     await em.insert(Organization, { id: orgId, name: `E2E Cursor ${stamp}`, slug: orgId } as never);
     for (const p of seed) {

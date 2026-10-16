@@ -11,7 +11,7 @@ export class DeleteUserCommandHandler implements ICommandHandler<DeleteUserComma
 
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
-    // PIPL 级联补删（ES 第二切片 §3.2）：直注 EVENT_STORE，不受 EVENT_STORE_ENABLED 开关控制——
+    // PIPL 级联补删（ES 第二切片 §3.2）：直注 EVENT_STORE，不受 EVENT_PUBLISH_MODE 开关控制——
     // 表在就要清；失败 fail-loud（PIPL 不留残迹）。S9 教训：显式 @Inject + 值导入。
     @Inject(EVENT_STORE) private readonly eventStore: EventStore,
   ) {}

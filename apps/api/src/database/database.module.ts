@@ -5,6 +5,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '../config/config.module';
 import { DefaultDomainEventPublisher } from './domain-event-publisher';
 import { MikroEventStore } from './mikro-event-store';
+import { OutboxRelay } from './outbox-relay';
 
 @Global()
 @Module({
@@ -18,6 +19,9 @@ import { MikroEventStore } from './mikro-event-store';
     // 已随双轨收口退场。
     { provide: EVENT_STORE, useClass: MikroEventStore },
     { provide: DOMAIN_EVENT_PUBLISHER, useClass: DefaultDomainEventPublisher },
+    // ES Phase B 后半（module-es-outbox-transactional 切片 C）：outbox relay——仅
+    // EVENT_PUBLISH_MODE=outbox 才启 timer（缺省不触库·DB-free 不变量不动）。
+    OutboxRelay,
   ],
   exports: [EVENT_STORE, DOMAIN_EVENT_PUBLISHER],
 })

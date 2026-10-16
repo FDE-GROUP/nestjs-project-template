@@ -39,7 +39,12 @@ const createSchemaForEnv = (_isProd: boolean) => {
     STRIPE_WEBHOOK_SECRET: Joi.string().optional(),
     STRIPE_API_VERSION: Joi.string().optional(),
     PAYMENT_PROVIDER: Joi.string().valid('stripe', 'alipay', 'wechat_pay').default('stripe'),
-    EVENT_STORE_ENABLED: Joi.string().valid('true', 'false').optional(),
+    // ES 发布通道三模开关（module-es-outbox-transactional · 裁点乙·高危#6 随审计门签）：
+    // 取代旧 EVENT_STORE_ENABLED 布尔；未置即缺省 inproc（envs 层兜底）。
+    EVENT_PUBLISH_MODE: Joi.string().valid('inproc', 'shadow', 'outbox').optional(),
+    EVENT_OUTBOX_POLL_MS: Joi.string()
+      .pattern(/^[1-9]\d*$/)
+      .optional(),
     // 生产限流信任链（module-auth-ip-trust）：反代网段 CIDR 逗号列表；未配=BA 安全默认（只信单值 XFF）。
     AUTH_TRUSTED_PROXIES: Joi.string().optional(),
   };

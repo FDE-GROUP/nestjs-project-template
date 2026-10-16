@@ -81,6 +81,12 @@ export const EVENT_META: TableMeta = {
     ['metadata', { k: 'json', nullable: true }],
     ['occurredAt', { k: 'datetime' }],
     ['createdAt', { k: 'datetime', defaultNow: true }],
+    // ES Phase B 后半（module-es-outbox-transactional 切片 A）：outbox 投递状态列——
+    // dispatchedAt 为空即未投递（at-least-once：relay 投递成功后置位）；attemptCount/lastError
+    // 承载重试上限与行级拒收留痕（DLQ 以表内状态表达，不建独立死信表）。时间列同基线无 tz 口径。
+    ['dispatchedAt', { k: 'datetime', nullable: true }],
+    ['attemptCount', { k: 'integer', default: 0 }],
+    ['lastError', { k: 'text', nullable: true }],
   ],
   uniques: [
     {
@@ -89,7 +95,12 @@ export const EVENT_META: TableMeta = {
     },
     { name: 'event_event_id_key', properties: ['eventId'] },
   ],
-  indexes: [{ name: 'event_aggregate_idx', properties: ['aggregateType', 'aggregateId'] }],
+  indexes: [
+    { name: 'event_aggregate_idx', properties: ['aggregateType', 'aggregateId'] },
+    // relay 拉取面（WHERE dispatched_at IS NULL ORDER BY id）：普通索引即可支撑——
+    // `TableMeta.indexes` 能力面不支持部分索引（partial where），为模板小表不扩列元数据机制（偏差不掩痕已登 plan §4.1）。
+    { name: 'event_dispatched_idx', properties: ['dispatchedAt'] },
+  ],
 };
 
 /** 四表元数据（迁移装配消费·与 `MIKRO_MIGRATION_ENTITIES` 顺序无关，恒等闸逐语句比对）。 */
@@ -157,6 +168,9 @@ export interface Event {
   metadata?: Record<string, any> | null;
   occurredAt: Date;
   createdAt: Date;
+  dispatchedAt?: Date | null;
+  attemptCount: number;
+  lastError?: string | null;
 }
 export const Event: EntitySchema<Event> = buildRuntimeEntity(EVENT_META) as EntitySchema<Event>;
 

@@ -12,7 +12,7 @@ import type { DomainEvent } from './domain-event';
  *
  * `deleteByAggregate` 为 PIPL 级联补删面（module-tenancy-es-lifecycle-events §3.2）：
  * 用户硬删后其事件行不会被任何 FK 机制清除（event 表无 FK），由应用层显式调用；
- * **不受** EVENT_STORE_ENABLED 开关控制——表在就要清，开关只管写入。
+ * **不受** EVENT_PUBLISH_MODE 开关控制——表在就要清，开关只管写入。
  */
 export const EVENT_STORE = Symbol('EVENT_STORE');
 

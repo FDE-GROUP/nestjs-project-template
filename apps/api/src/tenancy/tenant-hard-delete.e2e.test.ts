@@ -84,7 +84,7 @@ gated('按租户硬删全栈 e2e（真库 FK cascade + 事件补删 · env-gated
       organizationId: id,
       updatedAt: new Date(),
     } as never);
-    // 手写一行 tenant 聚合事件（不依赖 EVENT_STORE_ENABLED 开关·FK-less 表应用层补删面）
+    // 手写一行 tenant 聚合事件（不依赖 EVENT_PUBLISH_MODE 开关·FK-less 表应用层补删面）
     await em.insert(Event, {
       eventId: randomUUID(),
       aggregateId: id,

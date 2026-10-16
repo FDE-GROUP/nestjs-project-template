@@ -52,7 +52,7 @@ export class ConfigService {
     return this.get<Config['platform']>('platform');
   }
 
-  getEventStoreConfig() {
-    return this.get<Config['eventStore']>('eventStore');
+  getEventPublishConfig() {
+    return this.get<Config['eventPublish']>('eventPublish');
   }
 }

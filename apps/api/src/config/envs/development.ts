@@ -54,11 +54,11 @@ export default {
   payment: {
     provider: process.env.PAYMENT_PROVIDER || 'stripe',
   },
-  // ES 双模开关（module-config-env-surface-contract F5）：兜底方向与 default.ts / production.ts
-  // 统一为「未显式置 true 即关」。旧写法 `?? 'true'` 使 dev 下**不写这行就默认开影子追加**，
-  // 与 `.env.example`（显式 false）意图相反；且开启的前提仍是目标库已 apply 0009 event 表。
-  // 本地要验 ES：显式置 EVENT_STORE_ENABLED=true（误开 = append fail-loud）。
-  eventStore: {
-    enabled: process.env.EVENT_STORE_ENABLED === 'true',
+  // ES 发布通道三模开关（module-es-outbox-transactional · 裁点乙）：三层统一缺省 inproc（不触库）。
+  // 旧 F5 纠偏语义延续：不写这行即关；本地要验影子追加显式 EVENT_PUBLISH_MODE=shadow，
+  // 验 outbox+relay 显式置 outbox（前提：目标库已 apply 投递列·误开 = 事务外 publishAll fail-loud）。
+  eventPublish: {
+    mode: (process.env.EVENT_PUBLISH_MODE || 'inproc') as 'inproc' | 'shadow' | 'outbox',
+    pollMs: Number(process.env.EVENT_OUTBOX_POLL_MS || 1000),
   },
 };

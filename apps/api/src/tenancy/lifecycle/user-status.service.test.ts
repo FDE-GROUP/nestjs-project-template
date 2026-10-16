@@ -26,7 +26,7 @@ function makeService(opts: { exists?: boolean; status?: string; publishError?: E
     }),
   } as unknown as DomainEventPublisher;
   return {
-    svc: new UserStatusService(store, publisher),
+    svc: new UserStatusService(store, publisher, { run: <T>(fn: () => Promise<T>) => fn() }),
     upsert,
     userExists,
     readStatus,

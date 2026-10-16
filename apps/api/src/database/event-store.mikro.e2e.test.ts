@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Event } from './mikro/four-tables';
 import { MikroOrmService } from './mikro/mikro-orm.service';
 import { MikroEventStore } from './mikro-event-store';
+import { TransactionScope } from './transaction-scope';
 
 /**
  * ORM 修宪案 B · 切片 3c-ii-C —— MikroEventStore **真库往返**（env-gated）。
@@ -46,7 +47,11 @@ gated('MikroEventStore real-DB round trip (ORM 修宪案 B · 切片 3c-ii-C · 
   const aggregateIds: string[] = [];
 
   beforeAll(async () => {
-    mikro = new MikroOrmService({ getDatabaseConfig: () => ({ url: E2E_DB }) } as never);
+    mikro = new MikroOrmService(
+      { getDatabaseConfig: () => ({ url: E2E_DB }) } as never,
+      // ES Phase B 后半：真 TransactionScope（事务外 fork 行为不变）
+      new TransactionScope(),
+    );
     store = new MikroEventStore(mikro);
   });
 

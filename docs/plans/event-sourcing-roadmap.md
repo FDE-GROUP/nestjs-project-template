@@ -22,6 +22,8 @@
 > **第三切片已落地（2026-10-14·[module-tenancy-es-user-status-events](./module-tenancy-es-user-status-events.md)）**：平台用户 suspend/resume 经 `UserStatusService.transition` 产出 `user.status.transitioned`，与 `user.registered` **同聚合流**（version 跨事件类型连续·PIPL 补删零额外代码覆盖）。至此 event store 覆盖：注册流 + 租户/用户两级治理动作。
 >
 > **第四切片已落地（2026-10-14·[module-tenancy-es-tenant-rejected-event](./module-tenancy-es-tenant-rejected-event.md)）**：reject 硬删成功产出 `tenant.rejected`（同 tenant 流·PII 最小：只留审计事实不留申请内容），治理事件面**收口**——含对第二切片 §6-①「需动迁移表」误判的忠实修正（reject 实为硬删路径不经状态机）。Phase B shadow-append 覆盖面无已知缺口；后半（同事务化/rehydrate）待专项方案。
+>
+> **Phase B 后半已落地（2026-10-17·[module-es-outbox-transactional](./module-es-outbox-transactional.md)）**：经人再裁决（推翻「shadow append 即终态」既有裁决）同事务化 outbox + relay 耐久投递落地——`EVENT_PUBLISH_MODE: inproc|shadow|outbox` 三态旋钮（缺省 inproc·行为逐字节等价）；`UNIT_OF_WORK` ambient 事务使业务行与事件行**同生共死**（dual-write 窗口消灭）；app 内 `OutboxRelay` 以 `FOR UPDATE SKIP LOCKED` 批量投递、`eventVersion` 拒收、重试上限表内留痕、eventId 去重窗。**投递语义 at-least-once：重投必然发生，消费者幂等为硬要求**（裁点丙·`@EventsHandler` 消费方须按 `eventId` 或业务键幂等）。rehydrate/投影/快照仍待后续。
 
 只针对**需要审计轨迹的重状态上下文**（如 orders / ledger）。auth users 这类有状态身份数据**可能永远保持 CRUD**。
 
@@ -53,7 +55,7 @@ CREATE INDEX event_aggregate_idx ON event (aggregate_type, aggregate_id);
 - 今天：`handler → repo.save(aggregate)`（INSERT/UPDATE），然后 `eventBus.publishAll(events)`。
 - ES：`handler → eventStore.append(aggregateId, events, expectedVersion)`——聚合的 `toState()`/`rehydrate()` 通过回放事件重建当前状态。
 - 被 append 的就是 `pullDomainEvents()` 的输出（metadata → `jsonb`）。Command handler 主体其余不变。
-- 若事件必须与 append **同事务跨进程边界**，引入 **outbox**（避免 dual-write）。设计参考（机制级借鉴·非工具链，见 [research/nestjs-fastify-nx-review.md](../research/nestjs-fastify-nx-review.md) §2.2 / [plans/microservice-readiness.md](./microservice-readiness.md) §2.3-2）：① 域行与事件行**同事务原子写**；② 事件名集中常量 + 契约测试双向锁定（与 trigger SQL/仓储同锁）；③ envelope 携 schema 版本，relay **拒收**比自己新的信封而非猜；④ 消费者幂等为硬要求（重投必然发生）；⑤ 发布通道做成**双模开关**（进程内默认 / outbox 耐久），与 Phase A 平滑共存。
+- 若事件必须与 append **同事务跨进程边界**，引入 **outbox**（避免 dual-write）。设计参考（机制级借鉴·非工具链，见 [research/nestjs-fastify-nx-review.md](../research/nestjs-fastify-nx-review.md) §2.2 / [plans/microservice-readiness.md](./microservice-readiness.md) §2.3-2）：① 域行与事件行**同事务原子写**；② 事件名集中常量 + 契约测试双向锁定（与 trigger SQL/仓储同锁）；③ envelope 携 schema 版本，relay **拒收**比自己新的信封而非猜；④ 消费者幂等为硬要求（重投必然发生）；⑤ 发布通道做成**双模开关**（进程内默认 / outbox 耐久），与 Phase A 平滑共存。**①–⑤ 已由 [module-es-outbox-transactional](./module-es-outbox-transactional.md) 全部落地**（⑤ 终态为三态 `EVENT_PUBLISH_MODE`·超出原双模设想）。
 
 ### 读侧
 
@@ -66,7 +68,7 @@ CREATE INDEX event_aggregate_idx ON event (aggregate_type, aggregate_id);
 
 ## 当前明确不做（分期节奏，非方向保留）
 
-无 event store、无投影、无快照、无 outbox、无 upcaster、无 dual-write 顾虑。这些属于 Phase B/C，**以真实的回放/审计需求为门**。
+无投影、无快照、无 upcaster、无 broker 跨进程订阅、无独立死信表（relay 以表内 `attemptCount` 顶限 + `lastError` 留痕代 DLQ）。这些属于 Phase B 后段/C，**以真实的回放/审计需求为门**。event store（shadow append）与 outbox 同事务化 + relay 耐久投递已分别于 2026-10-14 / 2026-10-17 落地，不再列入「不做」。
 
 ## 参考警示
 
@@ -76,5 +78,6 @@ CREATE INDEX event_aggregate_idx ON event (aggregate_type, aggregate_id);
 
 | 日期 | 变更 |
 |------|------|
+| 2026-10-17 | Phase B 后半（outbox 同事务化 + relay）落地留痕（第五切片引用段）；消费者幂等硬要求显式声明；「当前明确不做」段校准（event store/outbox 移出·补无独立死信表口径） |
 | 2026-10-14 | 整篇中文化（AGENTS §6 中文优先）；Phase A 引用路径校准至 S10 后布局（`packages/core/src/shared-kernel/*`、`apps/reference/src/modules/users/*`）；补 outbox 设计参考链接（前次已回灌）；补高危#1 口径一句 |
 | 2026-10-14 | 经人澄清升格定位：ES + EDA 为**确定的架构目标**（CA+DDD+CQRS+ES+EDA 五件套），分期节奏与门禁不变；标题/指导原则改写，补 EDA 演进路径（进程内→outbox→broker） |

@@ -18,7 +18,7 @@ import {
  * 硬删租户（NFR-6 删除半·FR-6·平台级）：前置闸仅 `deleted` 终态可消灭（甲裁·两段式
  * 先软后硬，误删 active 无回退路径）；**先补删 tenant 事件、后删主行**（顺序理由见
  * command 注释：补删失败 org 仍在可整请求重试；反序则 404 挡死形成不可重试孤儿事件）。
- * EVENT_STORE 直注不受 EVENT_STORE_ENABLED 开关控制——表在就要清，PIPL 不留残迹
+ * EVENT_STORE 直注不受 EVENT_PUBLISH_MODE 开关控制——表在就要清，PIPL 不留残迹
  *（同 user 硬删先例·S9 教训显式 @Inject + 值导入）。审计落 pino（库外幸存·乙裁）。
  */
 @CommandHandler(DeleteTenantPermanentlyCommand)

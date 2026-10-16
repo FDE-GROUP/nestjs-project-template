@@ -54,8 +54,10 @@ export default {
   payment: {
     provider: process.env.PAYMENT_PROVIDER || 'stripe',
   },
-  // ES 首切片：生产严格默认关（须 0009 经人审 apply 后才显式置 true）。
-  eventStore: {
-    enabled: process.env.EVENT_STORE_ENABLED === 'true',
+  // ES 发布通道三模（module-es-outbox-transactional · 裁点乙）：生产严格缺省 inproc；
+  // shadow/outbox 须经 event 投递列迁移人审 apply 后方可显式置位。
+  eventPublish: {
+    mode: (process.env.EVENT_PUBLISH_MODE || 'inproc') as 'inproc' | 'shadow' | 'outbox',
+    pollMs: Number(process.env.EVENT_OUTBOX_POLL_MS || 1000),
   },
 };

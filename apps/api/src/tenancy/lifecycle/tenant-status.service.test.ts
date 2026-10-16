@@ -21,7 +21,13 @@ function makeService(metadata: unknown, publishError?: Error) {
       published.push(...events);
     }),
   } as unknown as DomainEventPublisher;
-  return { svc: new TenantStatusService(store, publisher), load, save, published, publisher };
+  return {
+    svc: new TenantStatusService(store, publisher, { run: <T>(fn: () => Promise<T>) => fn() }),
+    load,
+    save,
+    published,
+    publisher,
+  };
 }
 
 describe('TenantStatusService.transition (S5 · §9.4 严格迁移单点)', () => {

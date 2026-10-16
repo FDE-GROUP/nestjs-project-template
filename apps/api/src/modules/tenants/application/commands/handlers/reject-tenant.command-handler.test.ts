@@ -27,6 +27,8 @@ function makeHandler(
     { read } as unknown as TenantStatusService,
     audit as unknown as PlatformAuditService,
     publisher,
+    // ES Phase B 后半：pass-through UoW（单测不开库事务；真事务装配行为由 e2e/relay 验）
+    { run: <T>(fn: () => Promise<T>) => fn() },
   );
   return { handler, audit, published, publisher };
 }

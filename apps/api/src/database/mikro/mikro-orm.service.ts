@@ -1,6 +1,7 @@
 import { ConfigService } from '@app/config/config.service';
 import type { EntityManager, MikroORM } from '@mikro-orm/core';
 import { Inject, Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
+import { TransactionScope } from '../transaction-scope';
 import { mikroAuthAdapter } from './mikro-auth-adapter';
 import { initMikroOrm } from './orm';
 import { MIKRO_APP_ENTITIES } from './post.entity';
@@ -22,7 +23,12 @@ export class MikroOrmService implements OnModuleDestroy {
   private orm?: MikroORM;
   private pending?: Promise<MikroORM>;
 
-  constructor(@Inject(ConfigService) private readonly config: ConfigService) {}
+  constructor(
+    @Inject(ConfigService) private readonly config: ConfigService,
+    // ES Phase B 后半（module-es-outbox-transactional 切片 B）：ambient 事务参与——
+    // TransactionScope 零应用内依赖，无循环导入；缺装时（单测直 new）降级为无事务行为。
+    @Inject(TransactionScope) private readonly txScope: TransactionScope,
+  ) {}
 
   private async ensure(): Promise<MikroORM> {
     if (!this.pending) {
@@ -36,8 +42,21 @@ export class MikroOrmService implements OnModuleDestroy {
     return this.pending;
   }
 
-  /** per-operation fork（读写各取独立 em·绝不共享全局 `orm.em`）。 */
+  /**
+   * per-operation fork（读写各取独立 em·绝不共享全局 `orm.em`）。
+   * ES Phase B 后半：活跃 UoW 事务内返回**事务 em**（域行/事件行同生共死）；事务外维持原样。
+   */
   async fork(): Promise<EntityManager> {
+    const txEm = this.txScope?.current();
+    if (txEm) {
+      return txEm;
+    }
+    const orm = await this.ensure();
+    return orm.em.fork();
+  }
+
+  /** `MikroUnitOfWork` 开事务专用：**绕过 ALS** 永远取全新 fork（防嵌套/防复用外层事务 em 重复 BEGIN）。 */
+  async newTransactionEm(): Promise<EntityManager> {
     const orm = await this.ensure();
     return orm.em.fork();
   }

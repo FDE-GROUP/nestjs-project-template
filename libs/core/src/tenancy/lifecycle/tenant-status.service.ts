@@ -4,6 +4,7 @@ import {
   DOMAIN_EVENT_PUBLISHER,
   type DomainEventPublisher,
 } from '../../shared-kernel/domain/event-publisher.port';
+import { UNIT_OF_WORK, type UnitOfWork } from '../../shared-kernel/domain/unit-of-work.port';
 import { TenantStatusTransitionedEvent } from './events/tenant-status-transitioned.event';
 import {
   canTransition,
@@ -38,6 +39,9 @@ export class TenantStatusService {
     @Inject(TENANT_STATUS_STORE) private readonly store: TenantStatusStore,
     // S9 教训：非 controller provider 必须显式 @Inject token + 值导入，防 swc design:paramtypes 退化
     @Inject(DOMAIN_EVENT_PUBLISHER) private readonly events: DomainEventPublisher,
+    // ES Phase B 后半（module-es-outbox-transactional 切片 B）：ambient UoW，装配见
+    // MikroOrmModule @Global·单测直 new 传 pass-through 假实现
+    @Inject(UNIT_OF_WORK) private readonly uow: UnitOfWork,
   ) {}
 
   /** 读取租户当前生命周期状态；行不存在/无合法状态 → undefined。 */
@@ -64,7 +68,9 @@ export class TenantStatusService {
    * 严格状态迁移（S5 收紧）：按 §9.4 迁移表裁决合法边，非法 → illegal（调用方转 409）；
    * 行不存在 → not-found（转 404）；合法则合并写回 metadata（保留其余键）并返回 previous
    * 供审计。平台级动作专用（approve/suspend/resume/delete），权限裁决归 PlatformOperatorGuard。
-   * 事件在写成功后发布：发布失败连带 500（宁缺勿错发·非事务窗口与首切片 handler 同语义）；
+   * ES Phase B 后半（module-es-outbox-transactional 切片 B）：关键段（写回 + 发布）包入
+   * `UNIT_OF_WORK`——outbox 下域行与事件行同事务原子；shadow 下发布/append 失败连带业务写
+   * 回滚（语义较旧「非事务窗口」收紧·plan §2.1）；inproc 下事务空转语义等价。
    * not-found/illegal 零分支绝不发事件。
    */
   async transition(
@@ -72,25 +78,27 @@ export class TenantStatusService {
     to: TenantStatus,
     options?: TenantTransitionOptions,
   ): Promise<TenantTransitionResult> {
-    const row = await this.store.load(organizationId);
-    if (!row) return { kind: 'not-found' };
-    const previous = readTenantStatus(row.metadata);
-    if (!canTransition(previous, to)) return { kind: 'illegal', from: previous, to };
-    const metadata = withTenantStatus(row.metadata, to);
-    await this.store.save(organizationId, metadata);
-    await this.events.publishAll([
-      new TenantStatusTransitionedEvent({
-        aggregateId: organizationId,
-        // 关联 id 统一链（FR-4）：治理动作均在 HTTP 请求内，后台调用允许 undefined。
-        correlationId: currentRequestId(),
-        payload: {
-          from: previous ?? null,
-          to,
-          actorId: options?.actorId,
-          reason: options?.reason,
-        },
-      }),
-    ]);
-    return { kind: 'ok', previous, status: to };
+    return this.uow.run(async () => {
+      const row = await this.store.load(organizationId);
+      if (!row) return { kind: 'not-found' } as const;
+      const previous = readTenantStatus(row.metadata);
+      if (!canTransition(previous, to)) return { kind: 'illegal', from: previous, to } as const;
+      const metadata = withTenantStatus(row.metadata, to);
+      await this.store.save(organizationId, metadata);
+      await this.events.publishAll([
+        new TenantStatusTransitionedEvent({
+          aggregateId: organizationId,
+          // 关联 id 统一链（FR-4）：治理动作均在 HTTP 请求内，后台调用允许 undefined。
+          correlationId: currentRequestId(),
+          payload: {
+            from: previous ?? null,
+            to,
+            actorId: options?.actorId,
+            reason: options?.reason,
+          },
+        }),
+      ]);
+      return { kind: 'ok', previous, status: to } as const;
+    });
   }
 }
