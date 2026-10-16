@@ -42,5 +42,5 @@
 |---|---|
 | V1、V2 | **已立项**（module-auth-ip-trust·人裁"同意，1" 2026-10-14） |
 | V3、B3–B6、C1–C7 | 挂账中（截至 2026-10-14） |
-| V4 | **已立 B 案·人裁 Q1＝v7+自持 adapter·切片 0 证据补拍已 Node 重采全绿**（mikro-orm-ddd-feasibility **v0.2**·人裁"同意，A" 2026-10-15·**R1 已订正**；B 修宪案 [global-orm-mikro-constitution-amendment](../plans/global-orm-mikro-constitution-amendment.md) **v0.2.0** 已入 plans 区·待审计·实施未开工 2026-10-16；切片 0 pre-audit spike 已在 Node 22+pnpm isolated+真 PG 15 重跑取证（账目见该案 §5.1：R1 消解·迁移链经 `migrator.up()` 绿·R2 桥法绿·BA 三表真行·scratch 已清）；**但 organization/genericOAuth/additionalFields/quota/test-utils（R4）尚未跑→切片 0 未整体结清**） |
+| V4 | **已立 B 案·Q1–Q4 均已裁（Q1＝v7+自持 adapter·Q2＝零装饰器+S9 实体面豁免·Q3＝Filters/RLS 暂不采·Q4＝不引 Kysely）·切片 0 证据补拍已 Node 重采全绿**（mikro-orm-ddd-feasibility **v0.2**·人裁"同意，A" 2026-10-15·**R1 已订正**；B 修宪案 [global-orm-mikro-constitution-amendment](../plans/global-orm-mikro-constitution-amendment.md) **v0.2.0** 已入 plans 区·待审计·实施未开工 2026-10-16；切片 0 pre-audit spike 已在 Node 22+pnpm isolated+真 PG 15 重跑取证（账目见该案 §5.1：R1 消解·迁移链经 `migrator.up()` 绿·R2 桥法绿·BA 三表真行·scratch 已清）；**但 organization/genericOAuth/additionalFields/quota/test-utils（R4）尚未跑→切片 0 未整体结清**） |
 | V5 | **已出 B 案待审**（global-runtime-node-pnpm v0.1·人裁"运行时修宪·未勾 ORM" 2026-10-15·候选稿零代码·待审计门） |

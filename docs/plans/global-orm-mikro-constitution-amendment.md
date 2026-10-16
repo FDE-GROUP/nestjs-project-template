@@ -42,7 +42,7 @@
   完成判据：真库 migrate + seed 往返绿；`verify:prod-boot` 200；gated e2e 全链（sign-up/sign-in/session/organization）进防线脚本。
 - **切片 4 · contract：删旧 + 宪法修订**——删 `drizzle-orm`/`drizzle-kit`/`postgres` 依赖与残留 import；修订 `docs/specs/tooling-standards.md` §2（ORM/驱动/迁移三行）、§3 禁条（候选文案 `MikroORM + PostgreSQL（禁 Prisma/TypeORM/Drizzle 回迁）`·现条原文为「禁 Prisma / TypeORM / MongoDB 等第二套 ORM/DB —— 统一 Drizzle + PostgreSQL」·定稿归人）、§4.3（S9 形态在 defineEntity 下的退役声明·Q2）、§4.4 迁移流程、§4.8 如涉及门禁脚本、`workflow.md` §3 高危清单第 1 条命令口径、`AGENTS.md` §2/§3 指针；同步 `drizzle-migration-guide.md` 等运维文档。**本切片整体属高危，逐项人签核后方可执行。**
   完成判据：全仓 `drizzle` 命中仅剩历史文档与冻结的 `drizzle/` 目录；宪法/索引/入口三层口径一致。
-- **切片 5 · 可选裁决点（默认不做）**——租户全局 Filters / RLS 采纳（Q3·勘察 §3-3「叠甲」论）；Kysely 逃生舱引入与否（Q4）。
+- **切片 5 · 可选裁决点（Q3/Q4 已裁＝不做·本切片整体不执行）**——租户全局 Filters / RLS 采纳（Q3·勘察 §3-3「叠甲」论）· **人裁暂不采纳**；Kysely 逃生舱引入（Q4）· **人裁不引入**。→ 保留为本切片的历史占位；若将来需 Filters/RLS 加固或 Kysely，另开独立片单独审计，不随本案默认带出。
 
 ## 4. 影响面与风险
 
@@ -65,13 +65,12 @@
 
 > 无已审方案不写码。全局 / 不可逆 → 人签核。本稿状态 = **待审计**：Agent 起草留痕，**尚不构成任何片段的开工依据**。
 
-- **归人裁决点（未决项·逐条须人明示）**：
-  - **Q1 修宪与否 + 版本站队**：v6 保守线（现成 adapter 生态·peer ^6·属"上一代"）/ v7 + 自持 adapter + `tinyglobby` 钉死（勘察旗舰线·与 BA 生态结构性断裂）/ 维持 Drizzle 弃本案。**人裁（2026-10-16）＝ v7 + 自持 adapter**（切片 0 已据此在 Node 重采取证·见 §5.1）；Q2/Q3/Q4 仍归人未决；
-  - **Q2 装饰器立场**：EntitySchema/`defineEntity` 零装饰器形态下，S9 三重约束在 ORM entity 面的适用性声明（保留 `@mikro-orm/nestjs` 装饰器路线为落选备选）；
-  - **Q3 租户叠甲**：Filters / RLS 采纳与否（切片 5）；
-  - **Q4 逃生舱**：是否引入 Kysely；
-  - 切片 0 夹具口径：scratch 库名与是否允许真 PG 实例（dev 专用）；
-  - 一致性套件是否入 `ci` 硬门禁（触清单 3）。
+- **裁决点（Q1–Q4 均已裁·余下为子项）**：
+  - **Q1 修宪与否 + 版本站队**：v6 保守线（现成 adapter 生态·peer ^6·属"上一代"）/ v7 + 自持 adapter + `tinyglobby` 钉死（勘察旗舰线·与 BA 生态结构性断裂）/ 维持 Drizzle 弃本案。**人裁（2026-10-16）＝ v7 + 自持 adapter**（切片 0 已据此在 Node 重采取证·见 §5.1）；
+  - **Q2 装饰器立场**（EntitySchema/`defineEntity` 零装饰器形态下 S9 三重约束在 ORM entity 面的适用性声明）——**人授意按建议自裁（2026-10-16）＝采零装饰器，并显式声明 S9 三重约束在 ORM 实体面不适用**（仅约束 Controller/DTO/DI provider 注入面）；`@mikro-orm/nestjs` 装饰器路线落选。理由：切片 0 实证 `defineEntity`+UoW 全绿无需装饰器/reflect-metadata；S9 病根是构造注入类被 `import type` 擦除致 `design:paramtypes` 退化，实体非 DI 目标、与二者正交；实体保持框架无关契合 shared-kernel 端口倒置；仓储 adapter / provider 仍受 S9 约束不变；
+  - **Q3 租户叠甲**（Filters / RLS 采纳与否·切片 5）——**人授意按建议自裁（2026-10-16）＝暂不采纳**（切片 5 维持默认不做）；迁移全程以既有「仓储层唯一卡点 · port 不暴露 tenantId · adapter 从 ALS 注入 · `requireTenantId` fail-closed」为隔离唯一 SSOT。理由：全局 Filters/RLS = 第二套租户谓词来源（需与卡点同步=双 SSOT 漂移），RLS 还需 per-request DB 角色切换（与连接池/现 DrizzleService 冲突）；切片 2 验收判据是「既有测试不改动仍绿」，切换期叠加隔离机制无谓放大 R6 工程与审计面→列为换库稳定后独立加固片再评；
+  - **Q4 逃生舱**（是否引入 Kysely）——**人授意按建议自裁（2026-10-16）＝不引入**作一等公民；原始/复杂 SQL 走 MikroORM 自带 `em.execute` / QueryBuilder；若将来确有 Kysely 才能优雅解决的复杂查询，再按片单独审计引入。理由：钉死 Kysely=新增一套 SQL 心智（勘察 §3-4 点名此代价），与「审 SQL 后 migrate」显式可审纪律相悖，且当前无需求（YAGNY）；`em.execute`/QueryBuilder 已覆盖原生 SQL 逃生。
+  - （以下两项**仍归人未决**）切片 0 夹具口径：scratch 库名与是否允许真 PG 实例（dev 专用）；一致性套件是否入 `ci` 硬门禁（触清单 3）。
 - **Agent 不得先行执行**：一切依赖增删、schema 迁移、`docs/specs` 修订、门禁改动。
 - 结论：（空 · 待人填）
 - **§5.1 切片 0 复测账目（Node 22.23 + pnpm isolated + 真 PG 15·scratch 库 `mikro_spike_v7` 已 DROP·/tmp 已删·零仓库依赖变更）**：把勘察 v0.2 钉在 Bun 1.3.14 上的证据在现运行时下重采，逐条与勘察对照——
@@ -99,8 +98,9 @@
 |------|------|----------|----------|
 | 2026-10-16 | 0.1.0 | 人裁「③两者都做」中之一：出 B 修宪案 | 首版候选稿：以勘察 v0.2 为唯一事实输入，立 0–5 六切片（证据补拍 / 自持 adapter / expand / BA 切换 / contract+修宪 / 可选叠甲）、R1–R6 对策表、Q1–Q4 归人裁决点；顺带把案名由勘察预留的 `tooling-mikro-orm` 订正为 `global-orm-mikro-constitution-amendment`（本仓 `global-*` = 全局修宪命名惯例） |
 | 2026-10-16 | 0.2.0 | 人裁 Q1＝v7+自持 adapter（chat selection）→ 据裁执行切片 0 证据补拍 | §5 记 Q1 裁示；§5.1 回填 Node 22+pnpm isolated+真 PG 15 重测账（R1 消解·迁移链经 `migrator.up()` 绿但拓出 v7 API 换形/protected 静默空跑·实体 DSL 漂移·UoW/Identity Map 绿·R2 桥法给绿·BA 接链坑·全绿存照）；**诚实声明未覆盖面**（organization/genericOAuth/additionalFields/quota/test-utils 未跑，R4 尚未结清）·零仓库依赖变更 |
+| 2026-10-16 | 0.2.1 | 人选 Q2/Q3/Q4·「你帮我裁定」（人授意按建议自裁·同 V5 口径） | §5 将 Q2/Q3/Q4 由归人未决改为已裁并附由：Q2＝零装饰器 + S9 实体面豁免声明（装饰器线落选）·Q3＝Filters/RLS 暂不采纳（隔离唯一 SSOT 保留现仓储卡点·切片 5 不执行）·Q4＝不引入 Kysely（逃生走 `em.execute`/QueryBuilder）；§3 切片 5 同步标 Q3/Q4 已裁＝不做；仍留两项子项（夹具口径·一致性套件是否入硬门禁）归人 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-16 / v0.2.0 变更（人裁 Q1·切片 0 证据补拍成文），以当前正文内容为准；状态仍为待审计（未过审计门前不构成任何实施片开工依据）。
+正文已于 2026-10-16 / v0.2.1 变更（人授意按建议自裁 Q2/Q3/Q4），以当前正文内容为准；状态仍为待审计（未过审计门前不构成任何实施片开工依据）。
