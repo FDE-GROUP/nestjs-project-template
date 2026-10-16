@@ -66,7 +66,7 @@
 > 无已审方案不写码。全局 / 不可逆 → 人签核。本稿状态 = **待审计**：Agent 起草留痕，**尚不构成任何片段的开工依据**。
 
 - **归人裁决点（未决项·逐条须人明示）**：
-  - **Q1 修宪与否 + 版本站队**：v6 保守线（现成 adapter 生态·peer ^6·属"上一代"）/ v7 + 自持 adapter + `tinyglobby` 钉死（勘察旗舰线·与 BA 生态结构性断裂）/ 维持 Drizzle 弃本案；
+  - **Q1 修宪与否 + 版本站队**：v6 保守线（现成 adapter 生态·peer ^6·属"上一代"）/ v7 + 自持 adapter + `tinyglobby` 钉死（勘察旗舰线·与 BA 生态结构性断裂）/ 维持 Drizzle 弃本案。**人裁（2026-10-16）＝ v7 + 自持 adapter**（切片 0 已据此在 Node 重采取证·见 §5.1）；Q2/Q3/Q4 仍归人未决；
   - **Q2 装饰器立场**：EntitySchema/`defineEntity` 零装饰器形态下，S9 三重约束在 ORM entity 面的适用性声明（保留 `@mikro-orm/nestjs` 装饰器路线为落选备选）；
   - **Q3 租户叠甲**：Filters / RLS 采纳与否（切片 5）；
   - **Q4 逃生舱**：是否引入 Kysely；
@@ -74,7 +74,13 @@
   - 一致性套件是否入 `ci` 硬门禁（触清单 3）。
 - **Agent 不得先行执行**：一切依赖增删、schema 迁移、`docs/specs` 修订、门禁改动。
 - 结论：（空 · 待人填）
-- **§5.1 切片 0 复测账目**：（待回填·现空）
+- **§5.1 切片 0 复测账目（Node 22.23 + pnpm isolated + 真 PG 15·scratch 库 `mikro_spike_v7` 已 DROP·/tmp 已删·零仓库依赖变更）**：把勘察 v0.2 钉在 Bun 1.3.14 上的证据在现运行时下重采，逐条与勘察对照——
+  - **R1 消解（绿·与勘察 §2.5 同结论）**：`tinyglobby@0.2.17` 在 pnpm isolated node_modules 下可被 `@mikro-orm/core` 经 `createRequire` 解析到（`.pnpm/tinyglobby@0.2.17/…`），运行时 `fs.glob type = function` → 走 tinyglobby 而非 Node 原生 `globSync`，勘察担心的「pnpm 严格化令隐依赖不可见」在 Node 不复现；采纳 v7 仍须把 `tinyglobby` 显式钉依赖 + 隐式 peer 登记。
+  - **迁移链（绿·但抓出 v7 API 换形·须写入实施片·与勘察 §2.1「初判 migrate 断」订正一致并进一步）**：`migrator.create()` 返回 `{ fileName, code, diff }`（**非** v6 的 `{ migrations: [...] }`）；查待执行用 `getPending()`（**非** `getPendingMigrations()`）；**关键坑**：`runMigrations(method, options)` 是 protected，无 method 参调用走 down/no-op 分支**静默空跑**（`executed=[]` 且列不生效），公共入口是 **`orm.migrator.up()`**——用它才真正 apply（`mikro_post` 出现 `published` 列、`mikro_migrations` 落 1 行）；schema 生命周期 v7 名变：`.create()/.update()/.drop()/.clear()`（**无** v6 的 `clearDatabase/updateSchema/createSchema`）。
+  - **实体 DSL 漂移（与文档面出入·Node 同样成立）**：双向 `p.oneToMany('BlogPost').mappedBy('author')`（非 `p.many`）；反向 `p.manyToOne(User).fieldName('author_id').nullable().deleteRule('cascade')`（**非** `.field`/`.onDelete`）；主键须属性级 `p.integer().primary()`（**无**实体级 `primary:['id']`）；`p.string(255)` 位置参（非 `{length:255}`）；`p.datetime().defaultRaw('now()')` 须放 options（置 options 外侧生成 `timestamptz([object Object])`）；`Migrator` 注册为 `extensions: [Migrator]`（类·非 `new Migrator()`）。
+  - **UoW / Identity Map（绿·与勘察 §2.1 一致）**：`em.create`+`flush`；同 em `findOne` 返同引用（`found===u` true）；改属性再 `flush` → 裸 SQL 见更新值。
+  - **R2 决定性可解（绿·与勘察 §2.2「v7 字符串寻址必 miss」互补给出桥法）**：v7 metadata `getAll()` 是 `Map<class, meta>`、`has('User')`=false（R2 根因在 Node 复现），**但 `metadataStorage.get('User')` 按模型名仍可取** → 自持 adapter 以「模型名→entity 类」映射 + `em.getRepository(class)` 桥接即可寻址；`createAdapterFactory`（`better-auth/adapters`）返回**函数**（非构造器），BA 的 `database` 字段自定义 adapter 必须传**函数形式** `(opts) => Factory(opts)`（`adapter-base.mjs` 判 `typeof options.database === 'function'`；传对象落 kysely 分支报 `Failed to initialize database adapter`）；8 必选方法最小实现（create/update/updateMany/delete/deleteMany/findOne/findMany/count）+ 缺 `transaction` 时 BA **自动 patch + warn**（非致命·仍须切片 1 补）；**BA 接链坑（原样复现勘察 §2.3）**：① `advanced.database.generateId:false` **必须删**（BA 自生成 nanoid id，置 false 报 `Value for User.id is required`）；② BA 1.7.7 session 字段是 `expiresAt` 非 `expiresIn`，entity 须对齐。**最终全绿**：`signUpEmail 200 → getSession {user:email, session:true} → ba_user=1, ba_session=1, ba_account=1, ba_verification=0`（BA 真字段集经 create 入口日志反推：user `{name,email,emailVerified,createdAt,updatedAt,id}`、account `{accountId,providerId,userId,password,…}`、session `{expiresAt,token,…}`）。
+  - **诚实面·切片 0 未覆盖面（不得 overclaim·留给实施片补拍）**：本重拍仅覆盖勘察 §2.1/2.3/2.5 + R1/R2/R3 最小接线；**organization 插件实体 / genericOAuth 回调 / additionalFields / quota 钩子 / `@better-auth/test-utils` 一致性套件**均**未跑**——即 R4「第一强前置」尚未在本片结清，切片 0 的 GO/NO-GO 判据须待这些面补拍后方可视为整体结清；Q2/Q3/Q4 归人未替人拍。
 - 审计人 / 日期：（空 · 待人填）
 
 ## 6. 完成判据（可核验 + 穷尽）
@@ -92,8 +98,9 @@
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
 | 2026-10-16 | 0.1.0 | 人裁「③两者都做」中之一：出 B 修宪案 | 首版候选稿：以勘察 v0.2 为唯一事实输入，立 0–5 六切片（证据补拍 / 自持 adapter / expand / BA 切换 / contract+修宪 / 可选叠甲）、R1–R6 对策表、Q1–Q4 归人裁决点；顺带把案名由勘察预留的 `tooling-mikro-orm` 订正为 `global-orm-mikro-constitution-amendment`（本仓 `global-*` = 全局修宪命名惯例） |
+| 2026-10-16 | 0.2.0 | 人裁 Q1＝v7+自持 adapter（chat selection）→ 据裁执行切片 0 证据补拍 | §5 记 Q1 裁示；§5.1 回填 Node 22+pnpm isolated+真 PG 15 重测账（R1 消解·迁移链经 `migrator.up()` 绿但拓出 v7 API 换形/protected 静默空跑·实体 DSL 漂移·UoW/Identity Map 绿·R2 桥法给绿·BA 接链坑·全绿存照）；**诚实声明未覆盖面**（organization/genericOAuth/additionalFields/quota/test-utils 未跑，R4 尚未结清）·零仓库依赖变更 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-16 / v0.1.0 起草（人裁「出 B 案」·纯文档零代码），状态待审计，以当前正文内容为准。
+正文已于 2026-10-16 / v0.2.0 变更（人裁 Q1·切片 0 证据补拍成文），以当前正文内容为准；状态仍为待审计（未过审计门前不构成任何实施片开工依据）。

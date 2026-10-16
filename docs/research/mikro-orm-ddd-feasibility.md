@@ -97,8 +97,11 @@ B 修宪案（现名 [global-orm-mikro-constitution-amendment](../plans/global-o
 
 **派生指针（v0.2 新增）**：因 R1 订正与"全仓零 `Bun.*` API"取证，"弃 Bun → Node+pnpm"已确立为**与 ORM 立场正交的独立工具链修宪**（非为 v7 服务），另立 [global-runtime-node-pnpm.md](../plans/global-runtime-node-pnpm.md)。
 
+**取证重采回填（v0.2.2 追补）**：人裁 Q1＝v7+自持 adapter 后，本案切片 0 已在 **Node 22 + pnpm isolated + 真 PG 15** 下重跑本文 §2.1/2.3/2.5 全部取证点（账目见 [global-orm-mikro-constitution-amendment](../plans/global-orm-mikro-constitution-amendment.md) §5.1）——**R1 与本文同结论（Node 亦不复现·tinyglobby 可解析）**；迁移链、UoW/Identity Map、v7 自持 adapter 接 BA 三表真行均绿；R2 给出 class-key 桥法。**但 organization / genericOAuth / additionalFields / quota / `@better-auth/test-utils` 一致性套件（本文 §4 R4）仍未跑 → 未结清**；本文作为**参考快照不随运行时刷新**，Node 实机账目以 plan §5.1 为当前真相。
+
 ## 7. 演变记录
 
 - v0.1（2026-10-15）：初稿。spike 全量证据入账（§2）；社区包定位由"依赖候选"降为"参考实现"（§1-2 依据）；v7 两处真裂缝为意外收获（§2.1/2.2·文档面均未预告）。
 - v0.2（2026-10-15）：**R1 订正**（人追问"是否换回 Node"触发复测）——初判"Bun `fs.glob` 缺口致 v7 migrate 断"**不实**，真身是缺 `tinyglobby` 隐含可选依赖，补装后 v7 迁移链 Bun 下实机全绿（§2.5）；R1 由"高·已实锤"降为"低·已消解"；新增"全仓零 `Bun.*` API"取证（弃 Bun 属纯工具链修宪·与 v7 立场无关）。
-- v0.2.1（2026-10-16）：仅 §6 指针订正——人裁「出 B 案」后案名落地为 `global-orm-mikro-constitution-amendment.md`（原预留名 `tooling-mikro-orm` 不合本仓 `global-*` 修宪命名惯例）；**本文结论未动**，取证重采（Bun→Node 基线）由该案切片 0 承接。
+- v0.2.1（2026-10-16）：仅 §6 指针订正——人裁「出 B 案」后案名落地为 `global-orm-mikro-constitution-amendment.md`（原预留的 `tooling-mikro-orm` 不合本仓 `global-*` 修宪命名惯例）；**本文结论未动**，取证重采（Bun→Node 基线）由该案切片 0 承接。
+- v0.2.2（2026-10-16）：§6 追补取证重采回填指针——切片 0 已在 Node+pnpm+真 PG 重跑 §2.1/2.3/2.5 并全绿（账目入 plan §5.1·R4 面仍未结清）；本文仍为 **Bun 1.3.14 参考快照**·不逐运行时刷新，当前真相以 plan §5.1 为准。
