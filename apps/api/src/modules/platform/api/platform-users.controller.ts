@@ -1,11 +1,14 @@
 import { CurrentUser } from '@app/modules/auth/decorators/current-user.decorator';
 import type { SessionUser } from '@app/modules/auth/guards/session.guard';
+import { ResumeUserCommand } from '@app/modules/tenants/application/commands/resume-user.command';
+import { SuspendUserCommand } from '@app/modules/tenants/application/commands/suspend-user.command';
+import { ListPlatformUsersQuery } from '@app/modules/tenants/application/queries/list-platform-users.query';
 import type {
   PlatformUserPage,
   UserGovernanceResult,
 } from '@app/modules/tenants/application/read-models/platform-user.read-model';
+import { PlatformOperatorGuard } from '@core/saas-kit/platform/platform-operator.guard';
 import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
-import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
 import { TenantExempt } from '@core/saas-kit/tenancy/tenant-exempt.decorator';
 import {
   Body,
@@ -20,9 +23,6 @@ import {
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ResumeUserCommand } from '../application/commands/resume-user.command';
-import { SuspendUserCommand } from '../application/commands/suspend-user.command';
-import { ListPlatformUsersQuery } from '../application/queries/list-platform-users.query';
 import { ListPlatformUsersDto } from './dto/list-platform-users.dto';
 import { SuspendUserDto } from './dto/suspend-user.dto';
 

@@ -2,10 +2,6 @@ import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-sta
 import { TENANT_STATUS_STORE } from '@core/saas-kit/tenancy/lifecycle/tenant-status.store';
 import { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
 import { USER_STATUS_STORE } from '@core/saas-kit/tenancy/lifecycle/user-status.store';
-import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
-import { PLATFORM_SETTINGS } from '@core/saas-kit/tenancy/platform/platform-config.port';
-import { PLATFORM_IDENTITY_LOOKUP } from '@core/saas-kit/tenancy/platform/platform-identity.port';
-import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
 import { QuotaGuard } from '@core/saas-kit/tenancy/quota/quota.guard';
 import { QuotaService } from '@core/saas-kit/tenancy/quota/quota.service';
 import { QUOTA_STORE } from '@core/saas-kit/tenancy/quota/quota.store';
@@ -16,8 +12,6 @@ import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import { Global, type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthSessionReader } from './infrastructure/auth-session.reader';
-import { ConfigPlatformSettings } from './infrastructure/config-platform.settings';
-import { MikroPlatformIdentityLookup } from './infrastructure/mikro-platform-identity.lookup';
 import { MikroQuotaStore } from './infrastructure/mikro-quota.store';
 import { MikroTenantStatusStore } from './infrastructure/mikro-tenant-status.store';
 import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
@@ -27,8 +21,6 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
  * Exposes `TenantContextService` globally, binds the per-request tenant scope via
  * `TenantMiddleware` (AsyncLocalStorage), and provides per-route guards:
  * - `TenantScopeGuard` (S2 · FR-5): fail-closed gate requiring an active tenant.
- * - `PlatformOperatorGuard` (S4 · FR-11/13): platform-level (cross-tenant) actions.
- * - `PlatformAuditService` (S5 · FR-6): structured audit choke-point for governance actions.
  * - `UserStatusService` (S6 · FR-10): platform-level user suspension deny-list (dedicated table).
  * - `QuotaService` + `QuotaGuard` (S7 · FR-7): tenant seat-quota choke-point (subscription
  *   limit vs live member count); opt-in per-route via `@Quota`, not a global APP_GUARD.
@@ -42,8 +34,10 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
  *
  * 领域细化重构 A3：租户 RBAC 裁决（`TenantPermissionGuard` + CASL checker 与
  * `TENANT_PERMISSION_CHECKER`/`TENANT_PERMISSION_INVALIDATOR` 端口绑定）已迁出本横切
- * 隔离层，归 `AuthorizationModule`（@Global 供给）；本模块只留隔离机制与
- * 状态/会话/配额/平台治理适配，不再依赖 TenantsModule。
+ * 隔离层，归 `AuthorizationModule`（@Global 供给）；领域细化重构 D：平台治理
+ * （`PlatformOperatorGuard`/`PlatformAuditService` + `PLATFORM_IDENTITY_LOOKUP`/`PLATFORM_SETTINGS`
+ * 适配）亦迁出，归 `PlatformModule`（@Global 供给）——本模块只留隔离机制与
+ * 状态/会话/配额适配，不再依赖 TenantsModule。
  */
 @Global()
 @Module({
@@ -52,8 +46,6 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
     TenantStatusService,
     UserStatusService,
     TenantScopeGuard,
-    PlatformOperatorGuard,
-    PlatformAuditService,
     QuotaService,
     QuotaGuard,
     // §9.5.4①B 端口倒置：core 服务经端口消费持久化，适配由本（参考）应用装配。
@@ -61,11 +53,8 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
     { provide: TENANT_STATUS_STORE, useClass: MikroTenantStatusStore },
     { provide: USER_STATUS_STORE, useClass: MikroUserStatusStore },
     { provide: QUOTA_STORE, useClass: MikroQuotaStore },
-    { provide: PLATFORM_IDENTITY_LOOKUP, useClass: MikroPlatformIdentityLookup },
     // §9.5.4①B · P1b 会话端口倒置：core 经端口消费会话/RBAC，Better Auth 实例适配由参考应用装配。
     { provide: SESSION_READER, useClass: AuthSessionReader },
-    // §9.5.3 热点③ · P1c 配置端口：core 经端口消费平台配置，`ConfigService` 适配留参考应用。
-    { provide: PLATFORM_SETTINGS, useClass: ConfigPlatformSettings },
     // S11 · 高危#4 复合全局：全局租户墙（deny-by-default）。TenantScopeGuard 已在本模块 provide，
     // 其依赖（TenantContextService 本地 · Reflector 由 Nest core 自动提供）均可解析；useExisting 复用同实例。
     // @Public/@TenantExempt 路由经 Reflector 旁路。注册于 AuthModule 会话墙之后（AppModule import 顺序）。
@@ -76,8 +65,6 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
     TenantStatusService,
     UserStatusService,
     TenantScopeGuard,
-    PlatformOperatorGuard,
-    PlatformAuditService,
     QuotaService,
     QuotaGuard,
     // 端口 token 随 @Global 一并导出：守卫/服务在消费模块（如 TenantsModule）就地实例化时
@@ -85,9 +72,7 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
     TENANT_STATUS_STORE,
     USER_STATUS_STORE,
     QUOTA_STORE,
-    PLATFORM_IDENTITY_LOOKUP,
     SESSION_READER,
-    PLATFORM_SETTINGS,
   ],
 })
 export class TenancyModule implements NestModule {

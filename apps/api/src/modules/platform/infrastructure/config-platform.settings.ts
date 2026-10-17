@@ -1,5 +1,5 @@
 import { ConfigService } from '@app/config/config.service';
-import type { PlatformSettings } from '@core/saas-kit/tenancy/platform/platform-config.port';
+import type { PlatformSettings } from '@core/saas-kit/platform/platform-config.port';
 import { Inject, Injectable } from '@nestjs/common';
 
 /**

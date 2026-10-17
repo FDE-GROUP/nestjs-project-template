@@ -1,8 +1,8 @@
 import { CurrentUser } from '@app/modules/auth/decorators/current-user.decorator';
 import type { SessionUser } from '@app/modules/auth/guards/session.guard';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
+import { PlatformOperatorGuard } from '@core/saas-kit/platform/platform-operator.guard';
 import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
-import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
 import { TenantExempt } from '@core/saas-kit/tenancy/tenant-exempt.decorator';
 import {
   Body,

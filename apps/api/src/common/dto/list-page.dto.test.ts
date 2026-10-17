@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { describe, expect, it } from 'vitest';
-import { ListPlatformTenantsDto } from '../../modules/tenants/api/dto/list-platform-tenants.dto';
+import { ListPlatformTenantsDto } from '../../modules/platform/api/dto/list-platform-tenants.dto';
 import { ListPageDto } from './list-page.dto';
 
 /**

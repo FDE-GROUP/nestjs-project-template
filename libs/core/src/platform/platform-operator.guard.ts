@@ -6,9 +6,9 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ERROR_CODES } from '../../shared-kernel/errors/error-codes';
-import { UserStatusService } from '../lifecycle/user-status.service';
-import { type RequestSessionReader, SESSION_READER } from '../session/request-session.port';
+import { ERROR_CODES } from '../shared-kernel/errors/error-codes';
+import { UserStatusService } from '../tenancy/lifecycle/user-status.service';
+import { type RequestSessionReader, SESSION_READER } from '../tenancy/session/request-session.port';
 import { PLATFORM_SETTINGS, type PlatformSettings } from './platform-config.port';
 import { PLATFORM_IDENTITY_LOOKUP, type PlatformIdentityLookup } from './platform-identity.port';
 

@@ -1,7 +1,7 @@
+import { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
 import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
-import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import type { TenantApplicationReadModel } from '../../read-models/tenant-application.read-model';

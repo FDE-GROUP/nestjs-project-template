@@ -1,8 +1,8 @@
+import type { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
 import type { DomainEvent } from '@core/saas-kit/shared-kernel/domain/domain-event';
 import type { DomainEventPublisher } from '@core/saas-kit/shared-kernel/domain/event-publisher.port';
 import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 import type { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
-import type { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { ConflictException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import type { TenantProvisioningRepository } from '../../../domain/repositories/tenant-provisioning.repository';

@@ -6,7 +6,7 @@ import {
   TENANT_PERMISSION_CHECKER,
   TENANT_PERMISSION_INVALIDATOR,
 } from '@core/saas-kit/authorization/tenant-permission.port';
-import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
+import { PlatformOperatorGuard } from '@core/saas-kit/platform/platform-operator.guard';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import { Test } from '@nestjs/testing';
 import { describe, expect, it } from 'vitest';

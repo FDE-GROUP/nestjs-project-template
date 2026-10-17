@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { AppModule } from '@app/app.module';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
 import {
@@ -6,13 +7,16 @@ import {
   type TenantRbacRepository,
 } from '@app/modules/authorization/domain/repositories/tenant-rbac.repository';
 import { CaslTenantPermissionChecker } from '@app/modules/authorization/infrastructure/casl-tenant-permission.checker';
+import { ConfigPlatformSettings } from '@app/modules/platform/infrastructure/config-platform.settings';
+import { MikroPlatformIdentityLookup } from '@app/modules/platform/infrastructure/mikro-platform-identity.lookup';
 import { TenantPermissionGuard } from '@core/saas-kit/authorization/tenant-permission.guard';
 import { TENANT_PERMISSION_CHECKER } from '@core/saas-kit/authorization/tenant-permission.port';
+import { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
+import { PLATFORM_SETTINGS } from '@core/saas-kit/platform/platform-config.port';
+import { PLATFORM_IDENTITY_LOOKUP } from '@core/saas-kit/platform/platform-identity.port';
+import { PlatformOperatorGuard } from '@core/saas-kit/platform/platform-operator.guard';
 import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
 import { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
-import { PLATFORM_SETTINGS } from '@core/saas-kit/tenancy/platform/platform-config.port';
-import { PLATFORM_IDENTITY_LOOKUP } from '@core/saas-kit/tenancy/platform/platform-identity.port';
-import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
 import { SESSION_READER } from '@core/saas-kit/tenancy/session/request-session.port';
 import { TenantMiddleware } from '@core/saas-kit/tenancy/tenant.middleware';
 import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
@@ -237,6 +241,19 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
 
       expect(tenantInView).toBeUndefined();
       expect(thrown).toBeInstanceOf(ForbiddenException);
+    });
+  });
+
+  describe('⑤ D 片 · PlatformModule 真实装配（整树 AppModule 下闸门/审计/端口适配在新家可解析）', () => {
+    it('AppModule 整树（含 PlatformModule @Global）解析 guard/audit/两端口适配·DB-free', async () => {
+      // 与 app-boot.smoke 同源的全树 compile（MikroOrmService 懒建不连库）：证平台件由
+      // **新上下文真实装配**供给（tenancy 已不再自住），非手工桩依赖。
+      const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+
+      expect(moduleRef.get(PlatformOperatorGuard)).toBeInstanceOf(PlatformOperatorGuard);
+      expect(moduleRef.get(PlatformAuditService)).toBeInstanceOf(PlatformAuditService);
+      expect(moduleRef.get(PLATFORM_IDENTITY_LOOKUP)).toBeInstanceOf(MikroPlatformIdentityLookup);
+      expect(moduleRef.get(PLATFORM_SETTINGS)).toBeInstanceOf(ConfigPlatformSettings);
     });
   });
 });

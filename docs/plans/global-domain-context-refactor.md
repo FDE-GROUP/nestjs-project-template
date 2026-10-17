@@ -55,7 +55,7 @@
 
 1. **A5 端口形状**：采独立 `ROLE_ASSIGNABILITY_READER`（已实现·弱耦合最优）vs 直接导出 `TENANT_RBAC_REPOSITORY` 供 tenants 注入——**已裁**：取前者（A 片落地）。
 2. **B**：`modules/auth` 是否物理更名 `modules/authentication`（churn vs 自解释）——**已裁（人授自裁 2026-10-17）**：不更名·宪法定名 authentication·物理更名缓行。
-3. **D 接缝**：治理命令/查询 handlers 是否随门面搬入 platform（建议：**留 tenants**·platform 只持闸门+审计+门面）。
+3. **D 接缝**：治理命令/查询 handlers 是否随门面搬入 platform（建议：**留 tenants**·platform 只持闸门+审计+门面）——**已裁（D 片落地）**：取建议档·handlers/读模型留 tenants·controller 经 CQRS Bus 委派。
 4. **quota/lifecycle 归位**：域策略终态应还业务域（lifecycle→tenants、quota→subscriptions/平台治理）——本 plan 不动仅地图定位·归位时机另裁。
 5. **平台层授权形态**：(a) 概念归 authorization、实现维持 guard 现状（**本 plan 默认**）；(b) D 内收敛为消费 authorization 平台 scope 接口；(c) 平台角色表化（#1·schema 另片）。
 
@@ -76,6 +76,14 @@
   - 未决项 2 已裁（人授 Agent 自裁）：保留 `modules/auth` 目录名·宪法定名 authentication·物理更名缓行另片。
   - **验收存照**：check 净·build TSC 0×2·`pnpm run test` **480/30 基线不动**（纯文档·无行为变更）。
 
+- **D 片已落地（2026-10-17）**：
+  - core 契约 `libs/core/src/tenancy/platform/*` 四件迁 `libs/core/src/platform/`（旧目录物理清零）；内部相对导入深度修正（`../lifecycle→../tenancy/lifecycle`、`../../shared-kernel→../shared-kernel` 等）；全仓 `@core/saas-kit/tenancy/platform/ → @core/saas-kit/platform/` sweep（含 tenants 治理 handlers/测试·Symbol token 名未动）。
+  - `apps/api/src/modules/platform/{api,infrastructure}` 建成：HTTP 门面 `platform-{tenants,users}.controller` + 三专属 dto（`list-platform-tenants/list-platform-users/suspend-user`）迁入 `api/`（路由不变）；适配 `mikro-platform-identity.lookup`/`config-platform.settings` 迁入 `infrastructure/`；`tenancy/platform/{platform-operator.guard,platform-audit.service}.test.ts` 随迁（旧目录清零）；controller 对 tenants 命令/查询/读模型的导入改 `@app/modules/tenants/…` 绝对路径（handlers **留 tenants**·未决项 3 取建议档·经 CQRS Bus 委派）。
+  - 装配：新建 `PlatformModule`（@Global·imports CqrsModule·provide guard/audit + 两端口 useClass·export 四项）；`TenantsModule` 摘两 controller；`TenancyModule` 摘 platform 四 import/两 provide/两 useClass/四 export（横切层至此只剩隔离机制+状态/会话/配额适配）；`AppModule` 注册 PlatformModule。表所有权零翻账（platform 无自有表·读面宽松不触守卫）。
+  - 验收新增锁测：`di-context.integration.test.ts` ⑤ 块——AppModule 整树（含 PlatformModule 真实装配）解析 guard/audit/`PLATFORM_IDENTITY_LOOKUP`(Mikro 适配)/`PLATFORM_SETTINGS`(Config 适配) 四项·DB-free。
+  - `PlatformOperatorGuard` 判定语义未动（FR-13 email 命中 config 硬判）；平台 scope RBAC 化不在本片。
+  - **验收存照**：`pnpm run ci` PASSED·build TSC 0×2·Biome 净·**481 passed / 30 skipped（基线 480→481 只增不减·+⑤ 锁测）**·旧路径零残留（仅 docstring 历史溯源注）。
+
 ## 6. 演变记录
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
@@ -83,3 +91,4 @@
 | 2026-10-17 | v0.1 | 立项（plan 经人多轮审计后批准） | A 片落地全绿并 commit `198a5bd`（待推送）；B/D/C 未开工·各片开工前高危逐签 |
 | 2026-10-17 | v0.2 | 人授「三项归 Agent 自行裁定」 | 裁 1 本地提交 A 片（推送归人）；裁 2 B 片签核开工；裁 3 未决项 2＝保留 `modules/auth` 目录名·仅宪法定名 authentication·物理更名另片缓行 |
 | 2026-10-17 | v0.3 | B 片落地 | 边界条款入宪 ±zh·错件复核裁定皆合规原位（seats-quota.hook 搬离否决·挂载≠属主）·基线 480/30 不动 |
+| 2026-10-17 | v0.4 | D 片落地 | platform 上下文抽出（core 契约迁址+适配/门面/测试归位+PlatformModule 装配+未决项 3 裁留 handlers）·di-context ⑤ 新锁测·基线 480→481 只增不减 |

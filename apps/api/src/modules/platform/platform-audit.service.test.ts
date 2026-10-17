@@ -1,5 +1,5 @@
+import { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
 import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
-import { PlatformAuditService } from '@core/saas-kit/tenancy/platform/platform-audit.service';
 import { Logger } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

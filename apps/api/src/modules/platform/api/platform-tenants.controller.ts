@@ -1,13 +1,25 @@
 import { CurrentUser } from '@app/modules/auth/decorators/current-user.decorator';
 import type { SessionUser } from '@app/modules/auth/guards/session.guard';
+import { DeleteTenantCommand } from '@app/modules/tenants/application/commands/delete-tenant.command';
+import {
+  DeleteTenantPermanentlyCommand,
+  type TenantHardDeleteResult,
+} from '@app/modules/tenants/application/commands/delete-tenant-permanently.command';
+import { ResumeTenantCommand } from '@app/modules/tenants/application/commands/resume-tenant.command';
+import { SuspendTenantCommand } from '@app/modules/tenants/application/commands/suspend-tenant.command';
+import { ExportTenantDataQuery } from '@app/modules/tenants/application/queries/export-tenant-data.query';
+import { GetPlatformTenantQuery } from '@app/modules/tenants/application/queries/get-platform-tenant.query';
+import { GetTenantDiagnosticsQuery } from '@app/modules/tenants/application/queries/get-tenant-diagnostics.query';
+import { ListPlatformTenantsQuery } from '@app/modules/tenants/application/queries/list-platform-tenants.query';
 import type {
   PlatformTenantPage,
   PlatformTenantRow,
   TenantDiagnostics,
 } from '@app/modules/tenants/application/read-models/platform-tenant.read-model';
+import type { TenantApplicationReadModel } from '@app/modules/tenants/application/read-models/tenant-application.read-model';
 import type { TenantDataExport } from '@app/modules/tenants/application/read-models/tenant-data-export.read-model';
+import { PlatformOperatorGuard } from '@core/saas-kit/platform/platform-operator.guard';
 import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
-import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
 import { TenantExempt } from '@core/saas-kit/tenancy/tenant-exempt.decorator';
 import {
   Controller,
@@ -24,18 +36,6 @@ import {
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { DeleteTenantCommand } from '../application/commands/delete-tenant.command';
-import {
-  DeleteTenantPermanentlyCommand,
-  type TenantHardDeleteResult,
-} from '../application/commands/delete-tenant-permanently.command';
-import { ResumeTenantCommand } from '../application/commands/resume-tenant.command';
-import { SuspendTenantCommand } from '../application/commands/suspend-tenant.command';
-import { ExportTenantDataQuery } from '../application/queries/export-tenant-data.query';
-import { GetPlatformTenantQuery } from '../application/queries/get-platform-tenant.query';
-import { GetTenantDiagnosticsQuery } from '../application/queries/get-tenant-diagnostics.query';
-import { ListPlatformTenantsQuery } from '../application/queries/list-platform-tenants.query';
-import type { TenantApplicationReadModel } from '../application/read-models/tenant-application.read-model';
 import { ListPlatformTenantsDto } from './dto/list-platform-tenants.dto';
 
 /**

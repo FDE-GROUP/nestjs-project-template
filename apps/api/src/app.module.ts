@@ -14,6 +14,7 @@ import { MailerModule } from './mailer/mailer.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { PlatformModule } from './modules/platform/platform.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
@@ -36,6 +37,8 @@ import { TenancyModule } from './tenancy/tenancy.module';
     // 领域细化重构 A3：授权上下文（@Global·guard/裁决端口/published port 的全局供给源），
     // 注册于 TenancyModule 前——两者互不依赖（guard 的 TenantContextService 经全局解析）。
     AuthorizationModule,
+    // 领域细化重构 D：平台治理上下文（@Global·operator 闸门/审计单点/平台端口适配）。
+    PlatformModule,
     TenancyModule,
     UsersModule,
     PostsModule,

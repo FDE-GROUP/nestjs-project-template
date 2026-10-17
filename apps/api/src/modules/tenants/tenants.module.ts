@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
-import { PlatformTenantsController } from './api/platform-tenants.controller';
-import { PlatformUsersController } from './api/platform-users.controller';
 import { TenantsController } from './api/tenants.controller';
 import { TenantsOrgAdminController } from './api/tenants-org-admin.controller';
 import { TenantsSelfController } from './api/tenants-self.controller';
@@ -55,13 +53,7 @@ const QueryHandlers = [
   imports: [CqrsModule],
   // module-rbac-casl 甲裁：BA 内置 org 授权 HTTP 面封堵后，成员/邀请管理门面（@Can·CASL）
   // 与个人通道门面（TenantExempt·BA 数据面自裁决）接管对外端点。
-  controllers: [
-    TenantsController,
-    TenantsOrgAdminController,
-    TenantsSelfController,
-    PlatformTenantsController,
-    PlatformUsersController,
-  ],
+  controllers: [TenantsController, TenantsOrgAdminController, TenantsSelfController],
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,
@@ -77,6 +69,9 @@ const QueryHandlers = [
     { provide: USER_GOVERNANCE_REPOSITORY, useClass: MikroUserGovernanceRepository },
     // 领域细化重构 A3：RBAC 仓储绑定与 TenantRbacAdminService 已迁 AuthorizationModule
     // （tenants 经全局 ROLE_ASSIGNABILITY_READER published port 消费角色可挂载判定）。
+    // 领域细化重构 D：platform-* 治理 HTTP 门面已迁 PlatformModule（经 CQRS Bus 调本上下文
+    // handlers·闸门/审计单点由 PlatformModule @Global 供给）；命令/查询 handlers 与读模型
+    // 留 tenants（租户生命周期写能力是核心域本体）。
   ],
 })
 export class TenantsModule {}
