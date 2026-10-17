@@ -34,6 +34,8 @@
 
 CASL 片段由此表派生（`forAction`/规则数组），**表是 SSOT、CASL rules 是其投影**——满足新宪法「授权规则单源」。
 
+> ⚠️ **旧裁订正（2026-10-17·[module-rbac-dynamic-roles](./module-rbac-dynamic-roles.md) 丙裁·高危#5 随片签）**：本片「`tenant-rules` TS 表是授权事实 SSOT」已被**取代**——授权事实 SSOT 迁至 DB grant 行（`tenant_role`/`tenant_role_grant`/`tenant_role_audit` 三表·per-tenant 动态角色 + 审计热改 + check 级实例 conditions）；`tenant-rules` 降为**编译期词汇表（语言 SSOT·仅 `TenantSubject/TenantAction` 类型域）**，矩阵内容整表删净；CASL rules 仍是运行时投影（checker 经仓储端口 per-tenant 懒投影 + 进程内缓存 + `invalidateTenant` 失效）。本片其余裁（BA 只管认证·授权归 CASL·@Can·ALS 预注入·禁散点特判）**不变**。
+
 ### 2.2 裁决适配（app 侧）
 
 - `CaslTenantPermissionChecker`：端口签名换形为 `hasPermission({ role, resource, actions[] }): boolean`（旧 headers 透传形废弃）；内部按 role 从 tenant-rules 投影建 ability·`can(action, subject)` 判定。

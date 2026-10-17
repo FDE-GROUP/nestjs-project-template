@@ -128,7 +128,7 @@
 | tenant 实体 | **复用** | org 插件 `organization` 表（= Tenant；`slug`/`metadata` 存租户元） |
 | membership (user×tenant) | **复用** | org 插件 `member`（userId, organizationId, role） |
 | 受邀 (invitation) | **复用** | org 插件 `invitation`（email 锚、pending/accept/reject） |
-| 租户内 RBAC (租户级) | **自建**（CASL 换轨后·module-rbac-casl） | 规则单源 `tenant-rules`（owner/admin/member）→ CASL ability 裁决（`@Can`+`TenantPermissionGuard`）；BA `ac`/`hasPermission` 退场，org 内置授权 HTTP 面封堵（BA 降为纯认证+成员数据源） |
+| 租户内 RBAC (租户级) | **自建**（CASL 换轨 + 动态化·module-rbac-casl → module-rbac-dynamic-roles） | **授权事实 SSOT 在 DB**（`tenant_role`/`tenant_role_grant`/`tenant_role_audit` 三表·per-tenant 动态角色 + 审计热改·丙裁取代旧 `tenant-rules` TS 表 SSOT）；`tenant-rules` 降为编译期词汇表（语言 SSOT）→ checker per-tenant 投影为 CASL ability 运行时裁决（`@Can`+`TenantPermissionGuard`·check 级实例 conditions）；BA `ac`/`hasPermission` 退场，org 内置授权 HTTP 面封堵（BA 降为纯认证+成员数据源） |
 | active tenant | **复用** | `session.activeOrganizationId`（D4 session-cookie）+ `/organization/set-active` |
 | **申请加入**（user→tenant 方向） | **自建** | org 无 join-request，建 `join_request` 表（见 9.4） |
 | 数据隔离强制 (FR-5) | **自建** | 业务表 `tenant_id`/`workspace_id` + 查询守卫（见 9.3） |
@@ -150,7 +150,7 @@
 ### 9.3 租户上下文贯穿 + 隔离守卫
 
 - **上下文**：`TenantContextMiddleware`（或拦截器）在 `SessionGuard` 之后运行，从 `getSession` 结果读 `activeOrganizationId`（header 可临时覆盖，D4）与活动租户成员角色（会话解析点 ALS 预注入·module-rbac-casl 丙裁）→ 写入 **AsyncLocalStorage** `TenantContext { tenantId, workspaceId?, userId, roles }`（FR-2）。
-- **隔离守卫（FR-5/NFR-1）**：`TenantScopeGuard` + 查询层强制注入 `tenant_id`（必要时 `workspace_id`）谓词；**fail-closed**：无 `TenantContext` 即拒；提供越权回归测试（漏挂过滤即红）。**租户级 RBAC 判定由 CASL 规则单源（`tenant-rules`）统一在守卫层封装（`TenantPermissionGuard` 内存裁决·禁散点特判，FR-4）**——旧「org `hasPermission` 单一权限源」条款已由 [module-rbac-casl](./module-rbac-casl.md) 人裁换轨（2026-10-17「BA 只管认证·授权归 CASL」）。
+- **隔离守卫（FR-5/NFR-1）**：`TenantScopeGuard` + 查询层强制注入 `tenant_id`（必要时 `workspace_id`）谓词；**fail-closed**：无 `TenantContext` 即拒；提供越权回归测试（漏挂过滤即红）。**租户级 RBAC 判定由 CASL 统一在守卫层封装（`TenantPermissionGuard` 内存裁决·禁散点特判，FR-4）**——旧「org `hasPermission` 单一权限源」条款已由 [module-rbac-casl](./module-rbac-casl.md) 人裁换轨（2026-10-17「BA 只管认证·授权归 CASL」），其「`tenant-rules` TS 表是授权事实 SSOT」裁再被 [module-rbac-dynamic-roles](./module-rbac-dynamic-roles.md) 丙裁取代（2026-10-17「DB 是授权事实 SSOT·代码词汇表是语言 SSOT·CASL rules 是运行时投影」：per-tenant 动态角色三表 + checker 懒投影与进程内缓存 + `invalidateTenant` 热改生效 + check 级实例 conditions·`tenant-rules` 降为编译期词汇表）。
 
 ### 9.4 生命周期与状态机
 
