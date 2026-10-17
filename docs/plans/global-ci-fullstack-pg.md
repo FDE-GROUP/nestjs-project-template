@@ -85,9 +85,4 @@
 | 2026-10-17 | 0.1.1 | 审计门过人签核 | §4 甲–戊逐裁留痕（乙=16-alpine·丙=重定义 ci:db·丁=一容器双库·戊=三面全落）；README 索引翻「已审计·开工」 |
 | 2026-10-17 | 0.2.0 | 三切片+A′ 落地·验收全绿 | 新增 §4.1 执行留痕（含切片 A′：harness 缺生产管拓出 SQL NaN 真缺陷·validation-pipe 工厂单源·越界写断言订正为 400 拒入·pnpm allowBuilds 占位行坑）；§5 DoD 全勾；README 翻「已完成·待人类验收」 |
 | 2026-10-17 | 0.2.1 | 人类验收·结项 | 人同意（含切片 A′ 超出字面裁示的断言订正 口径确认）；README 索引翻「已验收·结项」·commit `8497e25` |
-| 2026-10-17 | 0.2.2 | 结项后续发现登记（不改正文·归因自 [module-workspace-owner-column](./module-workspace-owner-column.md) 实跑） | env-gated 组存在**既有共享库并发互污**：outbox-relay.e2e 两例（tickOnce 捞全局未派发行/lastEventId 跨测试竞态）与同库并跑的 event 表触面文件互污——**不带 owner-column 片新文件也可决定性复现**（三既有文件并跑 ×2 败·单跑 5/5 绿），属测试隔离策略缺陷非迁移链问题（重放 4 迁移段全绿）；隔离策略修订属高危#6（门禁面）缓账归人 |
-
----
-
-<!-- 变更戳 -->
-正文已于 2026-10-17 / v0.2.1 变更，以当前正文内容为准。
+| 2026-10-17 | 0.2.2 | 结项后续发现登记（不改正文·归因自 [module-workspace-owner-column](./module-workspace-owner-column.md) 实跑） | env-gated 组存在**既有共享库并发互污**：outbox-relay.e2e 两例（tickOnce 捞全局未派发行/lastEventId 跨测试竞态）与同库并跑的 event 表触面文件互污——**不带 owner-column 片新文件也可决定性复现**（三既有文件并跑 ×2 败·单跑 5/5 绿），属测试隔离策略缺陷非迁移链问题（重放 4 迁移段全绿）；隔离策略修订属高危#6（门禁面）缓账归人 【对账指针 2026-10-17】本行互污缓账已由 [module-ci-gated-e2e-isolation](./module-ci-gated-e2e-isolation.md) 人裁 B1 兑现——`ci:db` 连续两次 EXIT=0（全链史上首次全绿）。 |【对账指针 2026-10-17】本行登记的 gated 组互污缓账已由 [module-ci-gated-e2e-isolation](./module-ci-gated-e2e-isolation.md) B1 兑现：`ci:db` 连续两次 EXIT=0（全链史上首次全绿）。 |
