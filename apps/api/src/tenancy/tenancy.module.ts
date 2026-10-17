@@ -1,3 +1,4 @@
+import { TenantsModule } from '@app/modules/tenants/tenants.module';
 import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
 import { TENANT_STATUS_STORE } from '@core/saas-kit/tenancy/lifecycle/tenant-status.store';
 import { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
@@ -46,6 +47,9 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
  */
 @Global()
 @Module({
+  // module-rbac-dynamic-roles S2：checker 投影源 = tenants 上下文导出的 TENANT_RBAC_REPOSITORY。
+  // TenantsModule 经 @Global 本模块消费其会话/守卫端口（反向依赖），非显式 import，故无模块图环。
+  imports: [TenantsModule],
   providers: [
     TenantContextService,
     TenantStatusService,

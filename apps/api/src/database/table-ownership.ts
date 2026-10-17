@@ -25,6 +25,11 @@ export const TABLE_OWNERSHIP: Record<string, string> = {
   workspace: 'workspaces',
   post: 'posts',
   tenantSubscription: 'subscriptions',
+  // module-rbac-dynamic-roles S1（甲裁三表）：角色/授权/审计均属 tenants 上下文自有表，
+  // 唯一写通道 = MikroTenantRbacRepository（checker/门面皆经端口读写，禁散点直访）。
+  tenantRole: 'tenants',
+  tenantRoleGrant: 'tenants',
+  tenantRoleAudit: 'tenants',
   // database 基础设施：ES 端口（原事件存储适配）独占写面，业务仓储不得直写 event（§6-丙）
   event: 'database',
 };

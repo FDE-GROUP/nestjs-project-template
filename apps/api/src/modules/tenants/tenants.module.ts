@@ -21,9 +21,11 @@ import { ListPlatformTenantsQueryHandler } from './application/queries/handlers/
 import { ListPlatformUsersQueryHandler } from './application/queries/handlers/list-platform-users.query-handler';
 import { TENANT_GOVERNANCE_REPOSITORY } from './domain/repositories/tenant-governance.repository';
 import { TENANT_PROVISIONING_REPOSITORY } from './domain/repositories/tenant-provisioning.repository';
+import { TENANT_RBAC_REPOSITORY } from './domain/repositories/tenant-rbac.repository';
 import { USER_GOVERNANCE_REPOSITORY } from './domain/repositories/user-governance.repository';
 import { MikroTenantGovernanceRepository } from './infrastructure/repositories/mikro-tenant-governance.repository';
 import { MikroTenantProvisioningRepository } from './infrastructure/repositories/mikro-tenant-provisioning.repository';
+import { MikroTenantRbacRepository } from './infrastructure/repositories/mikro-tenant-rbac.repository';
 import { MikroUserGovernanceRepository } from './infrastructure/repositories/mikro-user-governance.repository';
 
 const CommandHandlers = [
@@ -75,7 +77,10 @@ const QueryHandlers = [
     { provide: TENANT_GOVERNANCE_REPOSITORY, useClass: MikroTenantGovernanceRepository },
     // S6 user governance: platform-level cross-user read model (no tenant filter)。
     { provide: USER_GOVERNANCE_REPOSITORY, useClass: MikroUserGovernanceRepository },
+    // module-rbac-dynamic-roles S1：授权事实 SSOT 仓储（DB 是角色/授权行属主·MikroORM 唯一实现）。
+    // export 供 S2 checker（tenancy 边界层）跨模块注入投影源。
+    { provide: TENANT_RBAC_REPOSITORY, useClass: MikroTenantRbacRepository },
   ],
-  exports: [],
+  exports: [TENANT_RBAC_REPOSITORY],
 })
 export class TenantsModule {}

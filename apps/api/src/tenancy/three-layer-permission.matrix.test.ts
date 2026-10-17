@@ -61,9 +61,9 @@ function sessionReader(session: SessionResult | null): RequestSessionReader {
   return { read: async () => view } as unknown as RequestSessionReader;
 }
 
-/** module-rbac-casl 换形：端口消费同步 can({role,action,subject})·裁决引擎在 CASL 适配侧。 */
+/** module-rbac-casl 换形 + dynamic-roles S2：端口消费异步 can({organizationId,role,action,subject})·裁决引擎在 CASL 适配侧（规则源 DB）。 */
 function permissionChecker(allowed: boolean): TenantPermissionChecker {
-  return { can: () => allowed } as unknown as TenantPermissionChecker;
+  return { can: async () => allowed } as unknown as TenantPermissionChecker;
 }
 
 function userStatus(blocked = false): UserStatusService {
@@ -154,16 +154,16 @@ describe('三层权限收口矩阵 (S8 · FR-11 互不授予 / fail-closed / 校
       );
     });
 
-    it('租户权限缺失时 CASL 裁决 deny → TenantPermissionGuard 403（租户权不外溢）', () => {
+    it('租户权限缺失时 CASL 裁决 deny → TenantPermissionGuard 403（租户权不外溢）', async () => {
       const tcs = new TenantContextService();
       const reflector = {
         getAllAndOverride: () => ({ action: 'delete', subject: 'Organization' }),
       };
       const guard = new TenantPermissionGuard(reflector as never, tcs, permissionChecker(false));
       const { ctx } = ctxWith({ cookie: 's' });
-      expect(() =>
+      await expect(
         tcs.run({ tenantId: 'org_1', userId: 'm' }, () => guard.canActivate(ctx)),
-      ).toThrow(ForbiddenException);
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

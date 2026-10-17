@@ -1,28 +1,30 @@
 import { AbilityBuilder, createMongoAbility, type MongoAbility } from '@casl/ability';
-import {
-  TENANT_RULES,
-  type TenantAction,
-  type TenantRole,
-  type TenantSubject,
-} from '@core/saas-kit/tenancy/rbac/tenant-rules';
+import type { TenantAction, TenantSubject } from '@core/saas-kit/tenancy/rbac/tenant-rules';
 
 /**
- * tenant-rules 表（SSOT·core 侧）→ CASL ability 的**纯投影**（module-rbac-casl §2.2）。
+ * grant 行（DB `tenant_role_grant` / seed 死数据同形）→ CASL ability 的**纯投影**
+ * （module-rbac-casl §2.2 换形 · module-rbac-dynamic-roles §2.3）。
  *
- * 本文件不含任何独立权限知识：规则全部来自 `TENANT_RULES[role]`，逐格 `can(actions, subject)`。
- * 未知角色投影为空规则 → 全部拒绝（fail-closed；守卫侧另有前置拦截，此为双保险）。
- * 实例级 conditions 留钩不引入（plan 非目标）：本片只做端点级 (action, subject) 裁决。
+ * 本文件不含任何独立权限知识：输入即授权事实（旧 `TENANT_RULES[role]` 静态表输入已随
+ * 丙裁删净），逐行 `can(action, subject, conditions?)`。空输入投影为空规则 → 全部拒绝
+ * （fail-closed；守卫侧另有前置拦截，此为双保险）。
+ * check 级实例 conditions（S4·乙裁）在此承接口径：`conditions` 非空行走 CASL mongo
+ * conditions 匹配（`{{userId}}` 模板由 checker 侧在建 ability 前解析，本投影保持无感）。
  */
 export type TenantCaslAbility = MongoAbility<[TenantAction, TenantSubject]>;
 
-export function buildTenantAbility(role: TenantRole): TenantCaslAbility {
+/** 投影输入行：与 `tenant_role_grant` 行、seed grant 皆同构（subject×action×conditions）。 */
+export interface TenantAbilityGrant {
+  readonly subject: TenantSubject;
+  readonly action: TenantAction;
+  readonly conditions?: Record<string, unknown> | null;
+}
+
+export function buildTenantAbility(grants: readonly TenantAbilityGrant[]): TenantCaslAbility {
   const { can, build } = new AbilityBuilder<[TenantAction, TenantSubject]>(createMongoAbility);
-  const rules = TENANT_RULES[role];
-  if (rules) {
-    for (const subject of Object.keys(rules) as TenantSubject[]) {
-      const actions = rules[subject];
-      if (actions.length > 0) can([...actions] as TenantAction[], subject);
-    }
+  for (const grant of grants) {
+    if (grant.conditions) can(grant.action, grant.subject, grant.conditions as object);
+    else can(grant.action, grant.subject);
   }
   return build();
 }

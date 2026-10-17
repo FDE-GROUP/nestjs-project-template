@@ -23,6 +23,7 @@ import { defineEntity, type EntitySchema, p } from '@mikro-orm/core';
 export type ColKind =
   | { k: 'text'; primary?: true; nullable?: true; default?: string }
   | { k: 'integer'; nullable?: true; default?: number }
+  | { k: 'boolean'; nullable?: true; default?: boolean }
   | { k: 'datetime'; nullable?: true; defaultNow?: true }
   | { k: 'json'; nullable?: true }
   | { k: 'bigintAutoPk' }
@@ -53,18 +54,20 @@ function datetime(c: Extract<ColKind, { k: 'datetime' }>): any {
   return b;
 }
 
-/** 标量列共链（text/integer/json/bigintAutoPk/datetime·按种类映射到 `p.*` 链）。 */
+/** 标量列共链（text/integer/boolean/json/bigintAutoPk/datetime·按种类映射到 `p.*` 链）。 */
 function scalarBuilder(c: Exclude<ColKind, { k: 'fk' }>, flatText: boolean): any {
   if (c.k === 'bigintAutoPk') return p.bigint('number').primary().autoincrement();
   if (c.k === 'datetime') return datetime(c);
   let b: any =
     c.k === 'integer'
       ? p.integer()
-      : c.k === 'json'
-        ? p.json<Record<string, any>>()
-        : flatText
-          ? p.string()
-          : p.text();
+      : c.k === 'boolean'
+        ? p.boolean()
+        : c.k === 'json'
+          ? p.json<Record<string, any>>()
+          : flatText
+            ? p.string()
+            : p.text();
   if ('primary' in c && c.primary) b = b.primary();
   if ('default' in c && c.default !== undefined) b = b.default(c.default);
   if ('nullable' in c && c.nullable) b = b.nullable();

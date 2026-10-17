@@ -1,7 +1,7 @@
 import { AUTH_BYPASS_PATHS, AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { AuthInstance, InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { resolveRequestSession } from '@app/modules/auth/session-resolver';
-import { TENANT_ROLE_VALUES, type TenantRole } from '@core/saas-kit/tenancy/rbac/tenant-rules';
+import type { TenantRole } from '@core/saas-kit/tenancy/rbac/tenant-rules';
 import type {
   RequestSessionReader,
   SessionRequestLike,
@@ -28,9 +28,13 @@ import { Inject, Injectable } from '@nestjs/common';
 /** 按请求记忆活动租户角色，避免同一请求多次 membership 读取。 */
 const roleCache = new WeakMap<SessionRequestLike, TenantRole | undefined>();
 
-/** BA role 字符串 → 本仓词汇表归一（词汇外 → undefined·消费侧 fail-closed）。 */
+/**
+ * BA role 字符串透传归一（module-rbac-dynamic-roles 丙裁：角色是 DB 运行时词汇，系统三 key
+ * + 自定义 key 皆合法，不再按封闭词汇表拦截）；非法值（非 string/空串）→ undefined·
+ * 消费侧 fail-closed。合法性（角色存在且有授权）由投影侧查 DB grant 行裁决，非本处职责。
+ */
 function toTenantRole(raw: unknown): TenantRole | undefined {
-  return TENANT_ROLE_VALUES.includes(raw as TenantRole) ? (raw as TenantRole) : undefined;
+  return typeof raw === 'string' && raw.length > 0 ? raw : undefined;
 }
 
 /**

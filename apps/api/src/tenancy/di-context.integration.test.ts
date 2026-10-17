@@ -1,6 +1,10 @@
 import 'reflect-metadata';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
+import {
+  TENANT_RBAC_REPOSITORY,
+  type TenantRbacRepository,
+} from '@app/modules/tenants/domain/repositories/tenant-rbac.repository';
 import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
 import { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
 import { PLATFORM_SETTINGS } from '@core/saas-kit/tenancy/platform/platform-config.port';
@@ -106,6 +110,14 @@ describe('S9 · Tenancy DI / 上下文集成（design:paramtypes 回归 + ALS �
           // §9.5.4①B · P1b：守卫/中间件经会话/裁决端口消费·此处用真实适配类坐实 DI 解析（依赖全局 AuthInstanceInjectKey）。
           { provide: SESSION_READER, useClass: AuthSessionReader },
           { provide: TENANT_PERMISSION_CHECKER, useClass: CaslTenantPermissionChecker },
+          // S2：checker 现依赖 TENANT_RBAC_REPOSITORY 投影源——此处桩住（不触库），坐实注入可解析。
+          {
+            provide: TENANT_RBAC_REPOSITORY,
+            useValue: {
+              ensureSystemRoles: async () => {},
+              findGrants: async () => null,
+            } as unknown as TenantRbacRepository,
+          },
           { provide: UserStatusService, useValue: { isBlocked: async () => false } },
           { provide: TenantStatusService, useValue: { isBlocked: async () => false } },
         ],

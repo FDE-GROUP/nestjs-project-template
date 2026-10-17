@@ -6,6 +6,7 @@ import {
   USER_STATUS_META,
   WORKSPACE_META,
 } from '../four-tables';
+import { TENANT_ROLE_AUDIT_META, TENANT_ROLE_GRANT_META, TENANT_ROLE_META } from '../rbac-tables';
 
 /**
  * ORM 修宪案 B · 切片 3a —— **迁移专用·忠实全模型** 实体集（MikroORM v7 零装饰器 `defineEntity`）。
@@ -203,7 +204,15 @@ export const TenantSubscription = buildMigrationEntity(TENANT_SUBSCRIPTION_META,
 
 export const Event = buildMigrationEntity(EVENT_META, { User, Organization });
 
-/** 迁移基线用的全表忠实实体集（13 表·与 schema.ts 逐列对齐）。 */
+// module-rbac-dynamic-roles S1（甲裁三表）：授权事实 SSOT 入 DB·同元数据双变体派生（纯 additive）。
+export const TenantRole = buildMigrationEntity(TENANT_ROLE_META, { Organization });
+export const TenantRoleGrant = buildMigrationEntity(TENANT_ROLE_GRANT_META, { TenantRole });
+export const TenantRoleAudit = buildMigrationEntity(TENANT_ROLE_AUDIT_META, {
+  Organization,
+  User,
+});
+
+/** 迁移基线用的全表忠实实体集（16 表·与 schema 逐列对齐）。 */
 export const MIKRO_MIGRATION_ENTITIES = [
   User,
   Account,
@@ -218,4 +227,7 @@ export const MIKRO_MIGRATION_ENTITIES = [
   UserStatus,
   TenantSubscription,
   Event,
+  TenantRole,
+  TenantRoleGrant,
+  TenantRoleAudit,
 ];

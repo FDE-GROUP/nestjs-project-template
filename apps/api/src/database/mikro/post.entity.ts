@@ -1,6 +1,7 @@
 import { defineEntity, p } from '@mikro-orm/core';
 import { MIKRO_ENTITIES } from './entities';
 import { MIKRO_FOUR_TABLE_ENTITIES } from './four-tables';
+import { MIKRO_RBAC_TABLE_ENTITIES } from './rbac-tables';
 
 /**
  * ORM 修宪案 B · 切片 2 —— posts 参考上下文试迁移的 **零装饰器** MikroORM v7 实体。
@@ -60,4 +61,9 @@ export const Post = defineEntity({
  * （不同物理表）→无 `MikroORM.init` 注册冲突；忠实迁移实体（`migration/migration-entities.ts`）**同源**（均读
  * `four-tables.ts` 元数据·双描述消除）但仍独立装进迁移 init。懒建语义不变→`app-boot.smoke`仍 DB-free。
  */
-export const MIKRO_APP_ENTITIES = [Post, ...MIKRO_ENTITIES, ...MIKRO_FOUR_TABLE_ENTITIES];
+export const MIKRO_APP_ENTITIES = [
+  Post,
+  ...MIKRO_ENTITIES,
+  ...MIKRO_FOUR_TABLE_ENTITIES,
+  ...MIKRO_RBAC_TABLE_ENTITIES,
+];

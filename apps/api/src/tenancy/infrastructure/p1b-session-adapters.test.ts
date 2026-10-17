@@ -58,13 +58,23 @@ describe('AuthSessionReader (P1b · 会话端口适配)', () => {
     ).resolves.toEqual({ userId: 'u1', activeOrganizationId: 'org_1', role: 'admin' });
   });
 
-  it('角色词汇外/读取失败 → role 缺省（消费侧 fail-closed）', async () => {
+  it('角色透传归一（丙裁：DB 运行时词汇·自定义 key 合法）；非法值/读取失败 → role 缺省 fail-closed', async () => {
+    // 'wizard' 不再是「词汇外拒入」——自定义角色 key 合法透传，存在性/授权由投影侧查 DB 裁决。
     const { reader } = readerWith(
       { user: { id: 'u1' }, session: { activeOrganizationId: 'org_1' } },
       { memberRole: 'wizard' },
     );
     await expect(
       reader.read({ headers: { cookie: 'session=abc' }, url: '/posts' }),
+    ).resolves.toEqual({ userId: 'u1', activeOrganizationId: 'org_1', role: 'wizard' });
+
+    // 非法值（空串）仍归一 undefined（消费侧 fail-closed）。
+    const empty = readerWith(
+      { user: { id: 'u1' }, session: { activeOrganizationId: 'org_1' } },
+      { memberRole: '' },
+    );
+    await expect(
+      empty.reader.read({ headers: { cookie: 'session=abc' }, url: '/posts' }),
     ).resolves.toEqual({ userId: 'u1', activeOrganizationId: 'org_1', role: undefined });
 
     const failing = readerWith(

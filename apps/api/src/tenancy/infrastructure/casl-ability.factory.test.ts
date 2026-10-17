@@ -1,81 +1,88 @@
-import {
-  TENANT_RULES,
-  type TenantAction,
-  type TenantRole,
-  type TenantSubject,
-} from '@core/saas-kit/tenancy/rbac/tenant-rules';
+import type { TenantAction, TenantSubject } from '@core/saas-kit/tenancy/rbac/tenant-rules';
 import { describe, expect, it } from 'vitest';
-import { buildTenantAbility } from './casl-ability.factory';
+import { buildTenantAbility, type TenantAbilityGrant } from './casl-ability.factory';
 
 /**
- * 矩阵逐格等价锁测（module-rbac-casl §2.5 · DoD 首条）：
- * CASL ability 对 tenant-rules 表的每个 (role, subject, action) 格判定，
- * 必须与表声明严格一致——表内 can、表外 cannot（fail-closed）。
- * 这是旧 ac 语义 → 新 CASL 语义「迁移不丢权限」的验收锚。
+ * grant 行 → CASL ability 纯投影锁测（module-rbac-casl §2.5 换形 · module-rbac-dynamic-roles §2.3）。
+ *
+ * 旧「buildTenantAbility ↔ TENANT_RULES 逐格等价」随丙裁（矩阵删净）迁至
+ * `system-role-seed.test.ts`（seed ↔ 旧矩阵对拍）；本测只锁**投影机制**：
+ * 行内 can、行外 cannot、conditions 匹配、空输入 fail-closed——投影不含任何权限知识。
  */
 
-const ROLE_VALUES: TenantRole[] = ['owner', 'admin', 'member'];
-const SUBJECT_VALUES: TenantSubject[] = ['Organization', 'Member', 'Invitation', 'Workspace'];
+const SUBJECT_VALUES: TenantSubject[] = [
+  'Organization',
+  'Member',
+  'Invitation',
+  'Workspace',
+  'Role',
+  'RoleGrant',
+];
 const ACTION_VALUES: TenantAction[] = ['create', 'read', 'update', 'delete', 'cancel'];
 
-describe('buildTenantAbility ↔ TENANT_RULES 逐格等价', () => {
-  it('每角色 × 每资源 × 每动作：表内 can、表外 cannot（全矩阵无旁逸）', () => {
-    for (const role of ROLE_VALUES) {
-      const ability = buildTenantAbility(role);
-      for (const subject of SUBJECT_VALUES) {
-        const allowed = TENANT_RULES[role][subject];
-        expect(allowed, `role=${role} 缺资源词汇 ${subject}`).toBeInstanceOf(Array);
-        for (const action of ACTION_VALUES) {
-          const inTable = allowed.includes(action);
-          expect(ability.can(action, subject), `表内判定 ${role} ${action} ${subject}`).toBe(
-            inTable,
-          );
-          expect(ability.cannot(action, subject), `表外判定 ${role} ${action} ${subject}`).toBe(
-            !inTable,
-          );
-        }
-      }
-    }
-  });
+function grantsOf(subject: TenantSubject, actions: readonly TenantAction[]): TenantAbilityGrant[] {
+  return actions.map((action) => ({ subject, action }));
+}
 
-  it('分层语义锚点（S4 BA 现状对拍后）：member 仅读（Workspace/Member/Invitation），写面全拒', () => {
-    const ability = buildTenantAbility('member');
-    // 可读三面：成员列表/待处理邀请对全体成员可见（BA list-members/list-invitations 仅 isMember）。
+describe('buildTenantAbility grant 行投影', () => {
+  it('行内 can、行外 cannot（多 subject 行并集·未声明组合零规则）', () => {
+    const ability = buildTenantAbility([
+      ...grantsOf('Workspace', ['create', 'read']),
+      ...grantsOf('Member', ['read']),
+    ]);
+    expect(ability.can('create', 'Workspace')).toBe(true);
     expect(ability.can('read', 'Workspace')).toBe(true);
     expect(ability.can('read', 'Member')).toBe(true);
-    expect(ability.can('read', 'Invitation')).toBe(true);
-    // Organization 对 member 零格（矩阵表 member.Organization = []）。
     for (const action of ACTION_VALUES) {
-      expect(ability.cannot(action, 'Organization'), `member 不应可 ${action} Organization`).toBe(
-        true,
-      );
-    }
-    // 写面（非 read）全拒：管理职权归 owner/admin。
-    for (const subject of ['Member', 'Invitation', 'Workspace'] as TenantSubject[]) {
-      for (const action of ACTION_VALUES) {
-        if (action === 'read') continue;
-        expect(ability.cannot(action, subject), `member 不应可 ${action} ${subject}`).toBe(true);
+      if (action !== 'read') expect(ability.cannot(action, 'Member'), action).toBe(true);
+      if (action !== 'create' && action !== 'read') {
+        expect(ability.cannot(action, 'Workspace'), action).toBe(true);
       }
     }
+    expect(ability.cannot('read', 'Organization')).toBe(true);
   });
 
-  it('owner 与 admin 的唯一差异锚点：Organization delete 仅 owner', () => {
-    expect(buildTenantAbility('owner').can('delete', 'Organization')).toBe(true);
-    expect(buildTenantAbility('admin').can('delete', 'Organization')).toBe(false);
-  });
-
-  it('未知角色投影为空规则 → 全部拒绝（fail-closed 双保险）', () => {
-    const ability = buildTenantAbility('superuser' as unknown as TenantRole);
+  it('空输入投影为空规则 → 全部拒绝（fail-closed·与「查无角色」同语义）', () => {
+    const ability = buildTenantAbility([]);
     for (const subject of SUBJECT_VALUES) {
       for (const action of ACTION_VALUES) {
-        expect(ability.cannot(action, subject), `未知角色不应可 ${action} ${subject}`).toBe(true);
+        expect(ability.cannot(action, subject), `${action} ${subject}`).toBe(true);
       }
     }
   });
 
-  it('规则词汇锁：表键集合 = 声明词汇表（防资源旁逸）', () => {
-    for (const role of ROLE_VALUES) {
-      expect(Object.keys(TENANT_RULES[role]).sort()).toEqual([...SUBJECT_VALUES].sort());
-    }
+  it('conditions 行实例匹配（__caslSubjectType__ 形·CASL v7 源码对拍）：属性命中 allow、不命中 deny', () => {
+    const ability = buildTenantAbility([
+      { subject: 'Workspace', action: 'update', conditions: { ownerId: 'u1' } },
+    ]);
+    // CASL v7 实例判定口径：can(action, {__caslSubjectType__, ...attrs})（第三参对象不是合法
+    // API——field 重载限 string，误传直接抛错）；S4 模板解析后守卫生成实例形即用此形。
+    expect(ability.can('update', { __caslSubjectType__: 'Workspace', ownerId: 'u1' })).toBe(true);
+    expect(ability.can('update', { __caslSubjectType__: 'Workspace', ownerId: 'u2' })).toBe(false);
+    // 事实登记（S4 关键语义）：**类型级**判定不下推 conditions（无实例可比 → 条件规则视同放行），
+    // 故带 conditions 的格必须走实例形——guard 侧「先取资源再判」的机制依据（不可用类型级偷懒）。
+    expect(ability.can('update', 'Workspace')).toBe(true);
+    // 未声明动作即便属性命中也拒。
+    expect(ability.can('delete', { __caslSubjectType__: 'Workspace', ownerId: 'u1' })).toBe(false);
+  });
+
+  it('同格多行 = OR 并集（行式 grant 的合并语义·甲裁表形配套）', () => {
+    const ability = buildTenantAbility([
+      { subject: 'Workspace', action: 'update', conditions: { ownerId: 'u1' } },
+      { subject: 'Workspace', action: 'update', conditions: { ownerId: 'u2' } },
+    ]);
+    expect(ability.can('update', { __caslSubjectType__: 'Workspace', ownerId: 'u1' })).toBe(true);
+    expect(ability.can('update', { __caslSubjectType__: 'Workspace', ownerId: 'u2' })).toBe(true);
+    expect(ability.can('update', { __caslSubjectType__: 'Workspace', ownerId: 'u3' })).toBe(false);
+  });
+
+  it('词汇扩项锁：Role/RoleGrant subject 可投影可判（S3 管理职权词汇就位）', () => {
+    const ability = buildTenantAbility([
+      ...grantsOf('Role', ['create', 'read', 'update', 'delete']),
+      ...grantsOf('RoleGrant', ['create', 'read', 'delete']),
+    ]);
+    expect(ability.can('create', 'Role')).toBe(true);
+    expect(ability.can('delete', 'RoleGrant')).toBe(true);
+    expect(ability.cannot('cancel', 'Role')).toBe(true);
   });
 });
