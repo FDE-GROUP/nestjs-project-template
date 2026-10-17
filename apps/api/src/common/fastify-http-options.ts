@@ -17,6 +17,7 @@ import { parseTrustedProxies } from './trusted-proxies';
  */
 export function buildFastifyHttpOptions(value?: string): {
   logger: LoggerOptions;
+  disableRequestLogging: boolean;
   trustProxy?: string[];
 } {
   const trustedProxies = parseTrustedProxies(value);
@@ -38,6 +39,8 @@ export function buildFastifyHttpOptions(value?: string): {
       };
   return {
     logger,
+    // 去重：LoggingInterceptor 已单源结构化记录每请求进出，关闭 Fastify 自动 req/res 日志防双打。
+    disableRequestLogging: true,
     ...(trustedProxies ? { trustProxy: trustedProxies } : {}),
   };
 }
