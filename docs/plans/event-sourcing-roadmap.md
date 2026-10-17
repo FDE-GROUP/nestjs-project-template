@@ -9,9 +9,9 @@
 ## Phase A — 今天已接好的钩子（本仓库现状）
 
 1. **写路径只有 Command → CommandHandler**。Controller 从不直接改状态。把某个 handler 的持久化从 CRUD 换成 append-event，只触及 handler + repository，不触及传输层。
-2. **聚合根记录领域事件**：经 `AggregateRoot.recordEvent(...)` 记录、`pullDomainEvents()` 暴露。仓储返回同一个聚合实例，使待派发事件活到 dispatch 点。见 `packages/core/src/shared-kernel/domain/aggregate-root.ts` 与 `apps/reference/src/modules/users/domain/entities/user.aggregate.ts`。
-3. **`DomainEvent` 信封已是 ES 形状**——`eventId`、`aggregateId`、`aggregateType`、`eventType`、`eventVersion`、`occurredAt`、`correlationId`、`causationId`、`payload`。这些正是一张 append-only 存储表的全部列；`eventVersion` 就是未来 upcaster 的键。契约测试锁住这些字段（`apps/reference/src/modules/users/domain/events/user-registered.event.test.ts`）。
-4. 事件当前**仅进程内派发**：`EventBus.publishAll(...)` + `@EventsHandler`（`apps/reference/src/modules/users/infrastructure/dispatchers/`）。**什么都不持久化**——没有 event store、投影、快照或 outbox。
+2. **聚合根记录领域事件**：经 `AggregateRoot.recordEvent(...)` 记录、`pullDomainEvents()` 暴露。仓储返回同一个聚合实例，使待派发事件活到 dispatch 点。见 `libs/core/src/shared-kernel/domain/aggregate-root.ts` 与 `apps/api/src/modules/users/domain/entities/user.aggregate.ts`。
+3. **`DomainEvent` 信封已是 ES 形状**——`eventId`、`aggregateId`、`aggregateType`、`eventType`、`eventVersion`、`occurredAt`、`correlationId`、`causationId`、`payload`。这些正是一张 append-only 存储表的全部列；`eventVersion` 就是未来 upcaster 的键。契约测试锁住这些字段（`apps/api/src/modules/users/domain/events/user-registered.event.test.ts`）。
+4. 事件当前**进程内派发**：`EventBus.publishAll(...)` + `@EventsHandler`（`apps/api/src/modules/users/infrastructure/dispatchers/`）。（Phase A 快照时点「什么都不持久化」；Phase B 后 event store（shadow append·0009）与 outbox+relay 已分别于 2026-10-14/17 落地——见下段与「当前明确不做」段校准；投影/快照/upcaster 仍无。）
 
 ## Phase B — 为选定上下文点亮 ES
 
@@ -78,6 +78,7 @@ CREATE INDEX event_aggregate_idx ON event (aggregate_type, aggregate_id);
 
 | 日期 | 变更 |
 |------|------|
+| 2026-10-17 | 账目卫生扫描（事实订正留痕）：Phase A「本仓库现状」段三行引用路径校准至现布局（`packages/core→libs/core`·`apps/reference→apps/api`·逐条磁盘实存坐实）；第 4 条「什么都不持久化」现状句与 Phase B 已落地事实自相矛盾，改为带时点口径的如实描述（历史演变行不改写） |
 | 2026-10-17 | 消费者兑现留痕（module-es-first-real-consumer 治理档）：首个真实业务消费者（治理→订阅终态收敛·幂等真库实证）；附带应用生成 id 切 UUIDv7 |
 | 2026-10-17 | Phase B 后半（outbox 同事务化 + relay）落地留痕（第五切片引用段）；消费者幂等硬要求显式声明；「当前明确不做」段校准（event store/outbox 移出·补无独立死信表口径） |
 | 2026-10-14 | 整篇中文化（AGENTS §6 中文优先）；Phase A 引用路径校准至 S10 后布局（`packages/core/src/shared-kernel/*`、`apps/reference/src/modules/users/*`）；补 outbox 设计参考链接（前次已回灌）；补高危#1 口径一句 |
