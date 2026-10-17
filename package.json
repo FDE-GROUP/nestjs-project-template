@@ -43,7 +43,9 @@
     "db:seed": "tsx apps/api/src/database/seed.ts",
     "db:reset": "tsx scripts/mikro-migrate.ts --fresh && pnpm run db:seed",
     "db:setup": "tsx scripts/mikro-migrate.ts && pnpm run db:seed",
-    "openapi:export": "pnpm run build && node dist/apps/api/src/openapi-codegen.js"
+    "openapi:export": "pnpm run build && node dist/apps/api/src/openapi-codegen.js",
+    "openapi:codegen": "node dist/apps/api/src/openapi-codegen.js",
+    "openapi:drift": "pnpm run openapi:codegen && git diff --exit-code -- openapi/openapi.yaml"
   },
   "keywords": [],
   "author": {

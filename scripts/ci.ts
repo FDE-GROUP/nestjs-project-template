@@ -44,6 +44,10 @@ console.log(`${DIM}Node ${process.version} · ${new Date().toLocaleString()}${RS
 step('Lint & format (biome)', run('run', 'check'));
 if (!quick) {
   step('Build & typecheck (libs + nest)', run('run', 'build'));
+  // 契约对拍（前端 F1 · module-frontend-api-client 丁裁）：以 build 产物直出 openapi.yaml，
+  // 与入库的 openapi/openapi.yaml 逐字节对拍——改响应注解却未 `openapi:export` 重生成 → 此处拓红，
+  // 逼「文档 SSOT 与代码同源」。需 DB-free dist，故仅 full 模式（build 之后）执行。
+  step('OpenAPI codegen 对拍 (spec ↔ committed yaml)', run('run', 'openapi:drift'));
 }
 step('Tests (vitest)', run('run', 'test'));
 
