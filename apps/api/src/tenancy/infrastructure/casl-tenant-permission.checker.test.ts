@@ -181,3 +181,91 @@ describe('CaslTenantPermissionChecker（DB 规则源·S2）', () => {
     expect(ensureSystemRoles).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('CaslTenantPermissionChecker（S4·check 级实例判定）', () => {
+  const ownerScoped = () => [grant('Workspace', 'update', { ownerId: '{{userId}}' })];
+
+  it('ownerId 模板命中当前操作者 → 实例级 allow', async () => {
+    const { checker } = makeChecker(ownerScoped);
+    await expect(
+      checker.can({
+        organizationId: 'orgA',
+        role: 'editor',
+        action: 'update',
+        subject: 'Workspace',
+        resource: { ownerId: 'u1' },
+        userId: 'u1',
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it('ownerId 不命中（他人实例）→ 实例级 deny', async () => {
+    const { checker } = makeChecker(ownerScoped);
+    await expect(
+      checker.can({
+        organizationId: 'orgA',
+        role: 'editor',
+        action: 'update',
+        subject: 'Workspace',
+        resource: { ownerId: 'u2' },
+        userId: 'u1',
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it('无 userId → 模板不可解析（留字面）→ 保守 deny', async () => {
+    const { checker } = makeChecker(ownerScoped);
+    await expect(
+      checker.can({
+        organizationId: 'orgA',
+        role: 'editor',
+        action: 'update',
+        subject: 'Workspace',
+        resource: { ownerId: 'u1' },
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it('整 subject 级行（conditions=null）实例判定放行任意实例', async () => {
+    const { checker } = makeChecker(() => [grant('Workspace', 'read')]);
+    await expect(
+      checker.can({
+        organizationId: 'orgA',
+        role: 'member',
+        action: 'read',
+        subject: 'Workspace',
+        resource: { ownerId: 'anyone' },
+        userId: 'u1',
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it('类型级（无 resource）仍拒条件行·S2 over-grant 防线不因 S4 塔改', async () => {
+    const { checker } = makeChecker(ownerScoped);
+    await expect(
+      checker.can({
+        organizationId: 'orgA',
+        role: 'editor',
+        action: 'update',
+        subject: 'Workspace',
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it('实例判定复用同 (org,key) 缓存·不逐请求查库', async () => {
+    const { checker, findGrants } = makeChecker(ownerScoped);
+    const base = {
+      organizationId: 'orgA',
+      role: 'editor',
+      action: 'update' as const,
+      subject: 'Workspace' as const,
+    };
+    await expect(checker.can({ ...base, resource: { ownerId: 'u1' }, userId: 'u1' })).resolves.toBe(
+      true,
+    );
+    await expect(checker.can({ ...base, resource: { ownerId: 'u2' }, userId: 'u1' })).resolves.toBe(
+      false,
+    );
+    expect(findGrants).toHaveBeenCalledTimes(1);
+  });
+});

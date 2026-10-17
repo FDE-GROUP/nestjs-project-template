@@ -1,4 +1,7 @@
-import type { TenantRbacRepository } from '@app/modules/tenants/domain/repositories/tenant-rbac.repository';
+import type {
+  TenantRbacRepository,
+  TenantRoleGrantView,
+} from '@app/modules/tenants/domain/repositories/tenant-rbac.repository';
 import { TENANT_RBAC_REPOSITORY } from '@app/modules/tenants/domain/repositories/tenant-rbac.repository';
 import type {
   TenantPermissionCheck,
@@ -7,6 +10,34 @@ import type {
 } from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
 import { Inject, Injectable } from '@nestjs/common';
 import { buildTenantAbility, type TenantCaslAbility } from './casl-ability.factory';
+
+/** 缓存条目：per-(org,key) 的授权事实源（grants）+ 派生的类型级 ability（守卫热路径复用·免重建）。 */
+interface CachedEntry {
+  readonly grants: readonly TenantRoleGrantView[];
+  readonly typeLevel: TenantCaslAbility;
+}
+
+const USER_TEMPLATE = '{{userId}}';
+
+/**
+ * 解析 grant conditions 里的 `{{userId}}` 模板为当前操作者实值（S4 check 级）。
+ * 无 userId（未登录/未透传）→ 保留字面模板，CASL mongo 等值匹配必然落空 → 保守 deny（fail-closed）。
+ * 值面只处理字符串（写侧策略闸已锁 conditions 为平铺原始量）。
+ */
+function resolveConditions(
+  conditions: Record<string, unknown> | null,
+  userId?: string,
+): Record<string, unknown> | null {
+  if (conditions === null || userId === undefined) return conditions;
+  const out: Record<string, unknown> = {};
+  for (const [field, value] of Object.entries(conditions)) {
+    out[field] =
+      typeof value === 'string' && value.includes(USER_TEMPLATE)
+        ? value.split(USER_TEMPLATE).join(userId)
+        : value;
+  }
+  return out;
+}
 
 /**
  * `TenantPermissionChecker` 的 CASL 适配（module-rbac-casl §2.2 · module-rbac-dynamic-roles §2.3·S2 落形）。
@@ -18,9 +49,10 @@ import { buildTenantAbility, type TenantCaslAbility } from './casl-ability.facto
  *  - **进程内版本缓存**：同 (org,key) 记忆 ability（含在途 Promise 防并发重入），守卫热路径不逐请求查库；
  *    `invalidateTenant` 为热改生效面（S3 门面在 grant/revoke/create/delete 后调用）。
  *
- * over-grant 防线（S2 裁决）：**带 `conditions` 的 grant 行不参与类型级判定**——CASL v7 类型级
- * `can(action, subject)`（不带实例）不下推 conditions，若纳入则「带条件授权」在类型级静默升为全量放行；
- * conditions 行的消费推迟到 S4 实例判定（check 级），本片按 deny-from-type-level 保守投影。
+ * over-grant 防线（S2·类型级）：守卫热路径（`can` 不带 `resource`）用**仅含 conditions=null 行**的
+ * 类型级 ability——CASL v7 类型级 `can(action, subject)` 不下推 conditions，纳入会静默升为全量放行。
+ * S4（check 级·乙裁）：当 `check.resource` 存在时走**实例判定**——纳入全部 grant 行、把 `{{userId}}`
+ * 模板按 `check.userId` 解析为实值后携 `__caslSubjectType__` 交 CASL mongo 匹配；query 级列表过滤仍缓账。
  */
 @Injectable()
 export class CaslTenantPermissionChecker
@@ -28,8 +60,8 @@ export class CaslTenantPermissionChecker
 {
   constructor(@Inject(TENANT_RBAC_REPOSITORY) private readonly rbac: TenantRbacRepository) {}
 
-  /** `(org,key)` 复合键 → 在途/已决 ability Promise（防并发重入·加载失败即时淘汰）。 */
-  private readonly abilities = new Map<string, Promise<TenantCaslAbility>>();
+  /** `(org,key)` 复合键 → 在途/已决投影 Promise（防并发重入·加载失败即时淘汰）。 */
+  private readonly abilities = new Map<string, Promise<CachedEntry>>();
 
   async can(check: TenantPermissionCheck): Promise<boolean> {
     const { organizationId, role, action, subject } = check;
@@ -37,8 +69,20 @@ export class CaslTenantPermissionChecker
     if (!organizationId || !role) return false;
     const cacheKey = `${organizationId}\u0000${role}`;
     try {
-      const ability = await this.abilityFor(cacheKey, organizationId, role);
-      return ability.can(action, subject);
+      const entry = await this.entryFor(cacheKey, organizationId, role);
+      // 守卫路径（不带 resource）：类型级判定·复用缓存 ability·conditions 行保守 deny（S2 防线）。
+      if (check.resource === undefined) {
+        return entry.typeLevel.can(action, subject);
+      }
+      // 实例路径（check 级·S4）：纳入全部 grant 行·按操作者解析 {{userId}} 后交 CASL mongo 匹配。
+      const instance = buildTenantAbility(
+        entry.grants.map((g) => ({
+          subject: g.subject,
+          action: g.action,
+          conditions: resolveConditions(g.conditions ?? null, check.userId),
+        })),
+      );
+      return instance.can(action, { __caslSubjectType__: subject, ...check.resource });
     } catch {
       // 加载失败绝不视同放行：淘汰缓存以待下次重试，本次 deny（fail-closed）。
       this.abilities.delete(cacheKey);
@@ -54,25 +98,25 @@ export class CaslTenantPermissionChecker
     }
   }
 
-  private abilityFor(
+  private entryFor(
     cacheKey: string,
     organizationId: string,
     roleKey: string,
-  ): Promise<TenantCaslAbility> {
+  ): Promise<CachedEntry> {
     let pending = this.abilities.get(cacheKey);
     if (!pending) {
-      pending = this.buildAbility(organizationId, roleKey);
+      pending = this.buildEntry(organizationId, roleKey);
       this.abilities.set(cacheKey, pending);
     }
     return pending;
   }
 
-  private async buildAbility(organizationId: string, roleKey: string): Promise<TenantCaslAbility> {
+  private async buildEntry(organizationId: string, roleKey: string): Promise<CachedEntry> {
     await this.rbac.ensureSystemRoles(organizationId);
-    const grants = await this.rbac.findGrants(organizationId, roleKey);
-    // 查无角色（null）与零授权（[]）同归空规则投影 → 全拒（fail-closed 双保险）。
-    if (!grants || grants.length === 0) return buildTenantAbility([]);
-    // over-grant 防线：条件行（conditions≠null）不入类型级 ability（留待 S4 实例判定消费）。
-    return buildTenantAbility(grants.filter((g) => g.conditions === null));
+    // 查无角色（null）与零授权（[]）同归空 grants → 类型级/实例级投影皆落空 → 全拒（fail-closed 双保险）。
+    const grants = (await this.rbac.findGrants(organizationId, roleKey)) ?? [];
+    // 类型级投影：over-grant 防线——conditions 行（conditions≠null）不入类型级 ability。
+    const typeLevel = buildTenantAbility(grants.filter((g) => (g.conditions ?? null) === null));
+    return { grants, typeLevel };
   }
 }

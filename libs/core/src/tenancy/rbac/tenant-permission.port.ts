@@ -13,6 +13,12 @@ import type { TenantAction, TenantRole, TenantSubject } from './tenant-rules';
  *  - `organizationId` 入参——规则是 per-tenant 事实，同 key 角色在不同租户投影可不同；
  *  - `can` 异步——规则源为 DB（miss 时懒加载 + ensure 系统角色；命中走进程内版本缓存，
  *    守卫热路径不逐请求查库）。
+ *
+ * 形状扩展注记（dynamic-roles S4·乙裁「仅 check 级」·丁裁②契约）：
+ *  - `resource` 可选——实例级判定的**逃生舱**：不带 = 类型级裁决（守卫路径·带 conditions 的行保守
+ *    deny，承 S2 over-grant 防线）；带上 = 交出「先取资源再判」的应用层，适配侧纳入 conditions 行并按
+ *    实例匹配（query 级列表过滤缓账另片）；
+ *  - `userId` 可选——绑定 grant conditions 里的 `{{userId}}` 模板为当前操作者实值（缺省即模板不可解析 → 保守 deny）。
  */
 
 export const TENANT_PERMISSION_CHECKER = Symbol('TENANT_PERMISSION_CHECKER');
@@ -24,6 +30,14 @@ export interface TenantPermissionCheck {
   readonly role?: TenantRole;
   readonly action: TenantAction;
   readonly subject: TenantSubject;
+  /**
+   * 实例级判定的资源快照（S4·check 级）。省略 = 类型级裁决（守卫路径·conditions 行保守 deny）；
+   * 传入 = 适配侧携 `__caslSubjectType__=subject` 交 CASL mongo 匹配带条件的 grant 行。由应用层「先取资源再判」供给，
+   * 不经全局守卫（守卫在资源加载前运行）。
+   */
+  readonly resource?: Record<string, unknown>;
+  /** 绑定 grant conditions 中 `{{userId}}` 模板的当前操作者 id（实例级判定所需；缺省则模板不可解析 → 保守 deny）。 */
+  readonly userId?: string;
 }
 
 export interface TenantPermissionChecker {
