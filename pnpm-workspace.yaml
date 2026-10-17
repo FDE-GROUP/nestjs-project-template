@@ -2,6 +2,7 @@
 packages:
   - apps/*
   - libs/*
+  - packages/*
 
 # 构建脚本白名单（pnpm 11 默认拦 postinstall 以护供应链）。@swc/core / esbuild 放行以链接
 # 平台原生二进制；@scarf/scarf 为遥测上报，显式拒绝（false）。

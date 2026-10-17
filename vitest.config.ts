@@ -37,8 +37,13 @@ export default defineConfig({
     // swc transform can exceed the 5s default on the first test.
     testTimeout: 20000,
     hookTimeout: 20000,
-    include: ['apps/**/*.test.ts', 'apps/**/*.test.tsx', 'libs/**/*.test.ts'],
-    exclude: ['node_modules', 'dist'],
+    include: [
+      'apps/**/*.test.ts',
+      'apps/**/*.test.tsx',
+      'libs/**/*.test.ts',
+      'packages/**/*.test.ts',
+    ],
+    exclude: ['**/node_modules/**', '**/dist/**'],
     env: {
       NODE_ENV: 'test',
       LOG_LEVEL: 'silent',
@@ -62,7 +67,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',
-      include: ['apps/**/*.ts', 'libs/**/*.ts'],
+      include: ['apps/**/*.ts', 'libs/**/*.ts', 'packages/**/*.ts'],
       exclude: [
         'apps/**/*.test.ts',
         'apps/**/dto/**',
@@ -70,6 +75,9 @@ export default defineConfig({
         'apps/**/main.ts',
         'apps/**/database/seed.ts',
         'apps/**/*.module.ts',
+        // packages/api-client：schema.d.ts 为 openapi.yaml 生成物（非手写逻辑），index.ts 为纯 barrel。
+        'packages/**/schema.d.ts',
+        'packages/**/*.test.ts',
       ],
     },
   },

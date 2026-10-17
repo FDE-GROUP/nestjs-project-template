@@ -1,0 +1,27 @@
+{
+  "name": "@saas/api-client",
+  "version": "0.0.0",
+  "description": "前端 typed API 客户端（F1·类型从 openapi/openapi.yaml 生成，envelope/errors 与后端实存对拍，码表单源 re-export @core）",
+  "type": "module",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "gen:types": "openapi-typescript ../../openapi/openapi.yaml -o src/schema.d.ts",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@core/saas-kit": "workspace:*",
+    "openapi-fetch": "^0.17.0"
+  },
+  "devDependencies": {
+    "js-yaml": "^5.4.3",
+    "openapi-typescript": "^7.13.0"
+  }
+}
