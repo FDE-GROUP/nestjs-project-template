@@ -85,8 +85,9 @@
 | 2026-10-17 | 0.4.0 | S3 交付对拍 | S3（角色/授权管理门面 controller+应用服务·7 端点 `@Can('Role'\|'RoleGrant')`·仓储写侧同事务落审计行·`TENANT_PERMISSION_INVALIDATOR` 契约端口·core 词汇运行时数组·org-admin 存在性前置闸）落地·L1 全绿 474/30（基线 462→470→474 只增）·build 0·Biome 净；新登 §4.1 两条（门面非 CQRS·系统 key 短路）·§5 判据 1/2/3/5/6 打钩·剩 S4（check 级实例 conditions）/S5（文档三面） |
 | 2026-10-17 | 0.5.0 | S4 交付对拍 | S4（check 级实例 conditions：端口 `TenantPermissionCheck` additive 增 `resource?`/`userId?`·checker 缓存条目升 `{grants, typeLevel}`·`can()` 有/无 resource 分叉类型级/实例级·`resolveConditions` 解析 `{{userId}}` 模板·携 `__caslSubjectType__` 交 CASL mongo）落地·L1 全绿 480/30（基线 474→480·+6 S4 测只增）·build 0·Biome 净；新登 §4.1 一条（CASL v7 实例键口径实机对拍·初版 `__typename` 误用已订正）·§5 判据 box4 打钩·剩 S5（文档三面） |
 | 2026-10-17 | 0.6.0 | S5 交付对拍·全片完成 | S5（文档三面）落地：architecture 中英双份授权条款改写为新宪（DB 事 SSOT·代码词汇语言 SSOT·CASL 运行时投影·check 级实例判定）+ global-tenancy §9.1 RBAC 归属行/§9.3 隔离守卫条款订正（旧 tenant-rules SSOT 被丙裁取代·互引）+ module-rbac-casl §2.1「表是 SSOT」旧裁就地补订正注（高危#5 随片签）。本阶段 S1–S5 全部交付·待提交推送归人·L1 全绿 480/30·build 0·Biome 净 |
+| 2026-10-17 | 0.7.0 | 提交推送翻账（陈旧措辞订正） | S4 已 commit `09cfd60`、S5 已 commit `84b6782`（随 global-domain-context-refactor 各批顺路入库·经 merge-base 坐实四 commit `beab90b/2ed76be/09cfd60/84b6782` 均 in origin/main·每批 pre-push CI 绿）；v0.6.0 行「待提交推送归人」措辞系登记滞后非事实失实，本行为账。README 索引同步翻「已交付·待人类验收」·当前基线 483/30（后续片只增） |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.6.0 变更，以当前正文内容为准。
+正文已于 2026-10-17 / v0.7.0 变更，以当前正文内容为准。
