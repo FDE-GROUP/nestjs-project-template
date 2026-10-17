@@ -72,7 +72,7 @@ okee = pnpm workspace 单仓多包前端：`apps/okee`（壳应用）+ `packages
 - [x] F0：`pnpm run ci` 全绿（biome 392 文件含 tsx·新基线 **529 passed/31 skipped·90 files**（+6 web 测）·EXIT=0）
 - [x] F0：实跑取证——vite dev :5173 反代打穿 BA 面四步闭环：sign-up 200 → sign-in 200（cookie 落 jar）→ get-session 带出 user → sign-out（带 Origin 头·BA CSRF 语义）200 → get-session 收敛 `200+null`；两实机真值已注记源码（登出面非 401 是 200+null；sign-out 需 origin）
 - [x] README 索引翻「已完成·待人类验收」
-- [ ] 人类验收后结项
+- [x] 人类验收后结项（令「同意」2026-10-17，验收 `d50672f`+`54c57be` 两笔；F1 另片呈审）
 
 ## 6. 演变记录
 
@@ -81,8 +81,9 @@ okee = pnpm workspace 单仓多包前端：`apps/okee`（壳应用）+ `packages
 | 2026-10-17 | 0.1.0 | 人令三点（修宪/参考 okee 栈/工具 SSOT 沿用）→ 起草呈审 | 首版：okee 实读勘察 + 修宪拟稿 §2.1 + F0–F2 分片 + 四待裁点 |
 | 2026-10-17 | 0.2.0 | 人令「同意」过审计门 | §4 结论翻「已审计·放行」（措辞原样批准·四裁点按推荐档·F0 即刻实施）；§5 前两框勾齐；戳翻实施中。 |
 | 2026-10-17 | 0.3.0 | F0 落地 + 三笔自捕登记 | ①**install 引出的真回归**：本次 pnpm install 修剪了 root node_modules 历史幽灵链接，`verify:prod-boot` 红拓出 root deps 两漏宣（@nestjs/throttler·@casl/ability 此前靠幽灵存活）——按「依赖 hoist 于根」既有纪律补 root 声明修复，防线设计目标兑现（CI 绿≠prod 起服可跑）；②fetchStub 形状自捕两例（json 属性名冲突把 payload 函数当值返回）；③sign-out 403=BA CSRF 缺 Origin 头（curl 语义差非应用缺陷，浏览器自动携带）。AGENTS §5 目录地图同步 apps/web。 |
+| 2026-10-17 | 0.4.0 | 人类验收结项 | 令「同意」= F0 片验收通过（反代四步闭环 + L1 新基线 + 三笔自捕账目认可）；§5 全勾，戳翻「已验收·结项」。F1（api-client）呈审片另起。 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.3.0 更新（**已完成·待人类验收——F0 骨架落地·闭环取证与三笔自捕在案**）；发现登 §6 不入正文。
+正文已于 2026-10-17 / v0.4.0 更新（**已验收·结项——人类令「同意」，F0 骨架片交付认可；F1 另片呈审**）；发现登 §6 不入正文。
