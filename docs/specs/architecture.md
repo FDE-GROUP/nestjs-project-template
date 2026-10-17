@@ -27,9 +27,18 @@ src/
 │   │   ├── infrastructure/  #   MikroORM repository adapter, mappers, event dispatcher
 │   │   ├── api/             #   controller + DTOs (HTTP transport)
 │   │   └── users.module.ts  #   wires CqrsModule + handlers + port→adapter binding
-│   ├── auth/                # Better Auth adapter (auth + membership data only; org authorization HTTP surface sealed, rulings moved to CASL)
-│   ├── stripe/              # Payment context
+│   ├── auth/                # Authentication (constitution name; Better Auth adapter: credentials/session/factors/OAuth · membership data only)
+│   ├── authorization/       # Authorization supporting domain: roles/grants/adjudication/audit · two scope layers (tenant + platform)
+│   ├── tenants/             # Tenant/organization core domain: lifecycle/members/invitations + governance handlers
+│   ├── platform/            # Platform-governance facade: operator gate/audit/identity+settings ports (no owned tables)
+│   ├── workspaces/          # In-tenant resource partitioning (an authorization subject; NOT a second isolation wall)
+│   ├── posts/               # Content context
+│   ├── subscriptions/       # Tenant subscription/quota context
+│   ├── payment/             # Payment context
 │   └── storage/             # Cloud storage context (S3/OSS/COS)
+├── tenancy/                 # Cross-cutting multi-tenancy MECHANISM layer (not a business context): ALS tenant
+│                            #   context + TenantScopeGuard + middleware + exempt/public; state/session/quota
+│                            #   adapters; CONSUMES authorization's ruling ports
 ├── database/                # Global infra: MikroORM client, entities, migrations, seed
 ├── config/                  # Global infra: typed config + Joi validation
 ├── logger/  mailer/  common/  i18n/   # Cross-cutting infrastructure
@@ -67,6 +76,29 @@ Domain purity is guarded by the **fallow architecture-boundary advisory** in `pn
 `apps/api/src/modules/users/domain/**` for `@nestjs/*`, `@mikro-orm/*` or `@app/database`
 imports — layer direction is additionally held by the per-layer import matrix above and by
 code review.
+
+## Bounded Context Map & the Multi-Tenancy Mechanism Layer
+
+Terminology discipline: a **tenant** is a business concept (the `tenants` core-domain
+aggregate, with lifecycle, invariants and language); **multi-tenancy** is an isolation
+mechanism (infrastructure, no aggregate, no lifecycle: request recognition → ALS
+propagation → boundary enforcement → exemption axis). The two never co-inhabit:
+`tenancy/` hosts no tenant-aggregate business writes, and business contexts never
+re-implement isolation. `tenancy/` consumes `authorization` ruling ports; it no longer
+houses the CASL checker (slice A) or platform governance (slice D).
+
+Context identities fixed by the domain-refactor plan (global-domain-context-refactor):
+`authorization` is an **independent supporting domain** serving both `tenants` (members
+carry role keys) and `platform` (operator gate) — never a tenants sub-domain; `platform`
+is a **governance facade without aggregates** (tenant lifecycle write capability stays
+in `tenants`, invoked via the CQRS bus); workspace is a partition inside a tenant, an
+authorization *subject*, not a role scope. Cross-context references stay weakly coupled:
+role keys and foreign ids are plain string columns (no cross-context ORM relations), and
+contexts meet only through published ports (e.g. `ROLE_ASSIGNABILITY_READER`).
+
+The three-layer permission chain: `PlatformOperatorGuard` (platform layer) →
+`TenantScopeGuard`/ALS (tenant isolation) → `TenantPermissionGuard` + `@Can`
+(tenant layer + instance-level conditions).
 
 ## Cross-Context Communication
 

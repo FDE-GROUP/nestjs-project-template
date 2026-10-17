@@ -84,6 +84,13 @@
   - `PlatformOperatorGuard` 判定语义未动（FR-13 email 命中 config 硬判）；平台 scope RBAC 化不在本片。
   - **验收存照**：`pnpm run ci` PASSED·build TSC 0×2·Biome 净·**481 passed / 30 skipped（基线 480→481 只增不减·+⑤ 锁测）**·旧路径零残留（仅 docstring 历史溯源注）。
 
+- **C 片已落地（2026-10-17）**：
+  - 宪法 ±zh 目录树重写为实存九上下文 + `tenancy/` 横切机制层条目（删陈旧 `stripe/` 行·补 posts/subscriptions 实存行）；各新增「Bounded Context Map & the Multi-Tenancy Mechanism Layer / 限界上下文地图与多租户机制层」节：术语纪律（租户=业务概念·多租户=隔离机制·不可混住）、authorization=独立支撑域服务两类消费者、platform=无聚合治理门面、workspace=subject 非角色作用域、弱耦合纪律（string 列+published ports）、三层权限链。
+  - `global-tenancy.md` §9.3 补「领域细化定态」条（tenancy 消费 authorization 裁决端口·经 A 不住 checker、经 D 不住平台治理）+ 演变表 0.23.0 行 + 头部版本推进。
+  - `table-ownership.ts` 头注释复核仍自洽（`tenancy/**` 归 tenants），补定态语境注（三表已翻 authorization·platform 无自有表不在清单出现）。
+  - 对拍实测：`apps/api/src/modules/` 实存目录与宪法树逐一对应（auth/authorization/tenants/platform/workspaces/posts/subscriptions/payment/storage + `tenancy/`）。
+  - **验收存照**：`pnpm run ci` PASSED·纯文档+注释·**481/30 基线不动**·高危 #3 入宪完成。
+
 ## 6. 演变记录
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
@@ -92,3 +99,4 @@
 | 2026-10-17 | v0.2 | 人授「三项归 Agent 自行裁定」 | 裁 1 本地提交 A 片（推送归人）；裁 2 B 片签核开工；裁 3 未决项 2＝保留 `modules/auth` 目录名·仅宪法定名 authentication·物理更名另片缓行 |
 | 2026-10-17 | v0.3 | B 片落地 | 边界条款入宪 ±zh·错件复核裁定皆合规原位（seats-quota.hook 搬离否决·挂载≠属主）·基线 480/30 不动 |
 | 2026-10-17 | v0.4 | D 片落地 | platform 上下文抽出（core 契约迁址+适配/门面/测试归位+PlatformModule 装配+未决项 3 裁留 handlers）·di-context ⑤ 新锁测·基线 480→481 只增不减 |
+| 2026-10-17 | v0.5 | C 片落地·整 plan 四片入库 | tenancy 定型横切机制层入宪（±zh 树重写+上下文地图节·§9.3 定态+演变 0.23.0·table-ownership 语境注·树↔目录对拍）·ci 全绿 481/30 不动·高危 #3 完成·推送归人·未决项 4/5 仍挂账另片 |

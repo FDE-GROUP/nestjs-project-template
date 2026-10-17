@@ -25,9 +25,18 @@ src/
 │   │   ├── infrastructure/  #   MikroORM 仓储适配器、映射器、事件分发器
 │   │   ├── api/             #   Controller + DTO（HTTP 传输层）
 │   │   └── users.module.ts  #   装配 CqrsModule + 处理器 + 端口→适配器绑定
-│   ├── auth/                # Better Auth 适配层（认证+成员数据源；org 授权 HTTP 面封堵，授权裁决归 CASL）
-│   ├── stripe/              # 支付上下文
+│   ├── auth/                # 认证（宪法名 authentication·Better Auth 适配层：凭证/会话/因子/OAuth 渠道；仅成员数据面）
+│   ├── authorization/       # 授权支撑域：角色/授予/裁决/审计·两作用域层（租户 scope + 平台 scope）
+│   ├── tenants/             # 租户/组织核心域：生命周期/成员/邀请 + 治理命令 handlers
+│   ├── platform/            # 平台治理门面：operator 闸门/审计/身份+配置端口（无自有表）
+│   ├── workspaces/          # 租户内资源分区（是授权的 subject·非第二道隔离墙）
+│   ├── posts/               # 内容上下文
+│   ├── subscriptions/       # 租户订阅/配额上下文
+│   ├── payment/             # 支付上下文
 │   └── storage/             # 云存储上下文（S3/OSS/COS）
+├── tenancy/                 # 横切多租户隔离机制层（非业务上下文）：ALS 租户上下文 +
+│                            #   TenantScopeGuard + middleware + exempt/public；状态/会话/配额适配；
+│                            #   消费 authorization 的裁决端口
 ├── database/                # 全局基础设施：MikroORM 客户端、实体、迁移、seed
 ├── config/                  # 全局基础设施：类型安全配置 + Joi 校验
 ├── logger/  mailer/  common/  i18n/   # 横切基础设施
@@ -63,6 +72,24 @@ Domain 纯净性由 `pnpm run ci` 里的 **fallow 架构边界佐证**守住（`
 阻断；其结论需二次人工核验，见 [tooling-standards.md §4.7](./tooling-standards.md)）。**不存在**
 任何扫描 `apps/api/src/modules/users/domain/**` 检查 `@nestjs/*`、`@mikro-orm/*`、
 `@app/database` import 的测试——层级方向另由上表逐层 import 矩阵与代码评审守住。
+
+## 限界上下文地图与多租户机制层
+
+术语纪律：**租户（Tenant）**是业务概念（`tenants` 核心域聚合·有生命周期/不变量/语言）；
+**多租户（Multi-tenancy）**是隔离机制（基础设施·无聚合无生命周期：请求识别 → ALS 传播 →
+边界执行 → 豁免轴）。两者不可混住：`tenancy/` 不住租户聚合的业务写面，业务上下文也不得
+自实现隔离。`tenancy/` **消费** `authorization` 的裁决端口；经重构 A 片不再自住 CASL
+checker、经 D 片不再自住平台治理。
+
+领域细化重构（global-domain-context-refactor）定型的上下文身份：`authorization` 是
+**独立支撑域**，同时服务 `tenants`（成员挂角色 key）与 `platform`（经营者闸门）——绝非
+租户子域；`platform` 是**无聚合的治理门面**（租户生命周期写能力留 `tenants`·经 CQRS Bus
+调用）；workspace 是租户内的分区、授权的 *subject*，不是角色作用域。跨上下文引用保持
+弱耦合：角色 key 与外键 id 皆为普通 string 列（不建跨上下文 ORM 实体关系），上下文之间
+仅经 published port 相接（如 `ROLE_ASSIGNABILITY_READER`）。
+
+三层权限链：`PlatformOperatorGuard`（平台层）→ `TenantScopeGuard`/ALS（租户隔离）→
+`TenantPermissionGuard` + `@Can`（租户层 + 实例层 conditions）。
 
 ## 上下文间通信
 

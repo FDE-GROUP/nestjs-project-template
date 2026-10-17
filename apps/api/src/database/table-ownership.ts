@@ -8,6 +8,8 @@
  *
  * 键为 `schema.ts` 导出名（非物理表名），值为限界上下文标识：
  * `modules/<ctx>/**` 与 `tenancy/**`（归 `tenants`）为守卫扫描的上下文推导源。
+ * 领域细化重构定态：RBAC 三表属主已翻账 `authorization`（A 片·守卫 `contextOf` 按
+ * `modules/authorization/**` 自动推导）；`platform` 为治理门面上下文·**无自有表**（不在本清单出现）。
  */
 export const TABLE_OWNERSHIP: Record<string, string> = {
   // auth core：Better Auth adapter 运行时写 + users 注册路径源码写
