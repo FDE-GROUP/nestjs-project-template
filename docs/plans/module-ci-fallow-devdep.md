@@ -64,6 +64,7 @@
 - [x] registry 支持度结论成文（npmmirror 缺 3.33.1 平台件·够用档=3.33.0·不覆写 scope·镜像补齐后可升版）——已写入 `tooling-standards.md` §4.7「版本一致性」。
 - [x] 改宪：`tooling-standards.md` §3/§4.7/§4.8 + `workflow.md` L2 + 根 `README.md` dlx→exec 口径同步·无现行口径残留（历史执行记录如 global-runtime-node-pnpm 保留原文）。
 - [x] `pnpm run ci` 全绿：硬门禁 check→build→test **481/30 基线不动（只增不减）**·fallow 步骤输出 `✓ No issues found`（非 missing-binary 空跑）。
+- [x] **全子命令实跑核验可用**（推送后追加存照）：`--version` 报 `verified: yes · signed`（原生件加载验签）；`architecture`(0)·`dead-code --type-aware`(1·有候选属正常·`fallow-type-aware@3.33.0` optional 件已落地)·`health --score`(0)·`dupes`(0)·`audit`(0) 均真实产出报告；裸 `guard` exit 2 为**缺 preset 参数的用法校验**，非引擎故障。fallow 收编全入口可用。
 
 ## 6. 演变记录
 
@@ -71,8 +72,9 @@
 |------|------|----------|----------|
 | 2026-10-17 | 0.1.0 | 起草 | 首版：dlx 原生二进制缺失取证坐实（missing-binary·镜像 200·非项目依赖）；三切片（取证/收编/registry 成文）；点明触高危 #2 依赖 + #5 修宪（§4.7 line 125 dlx 口径冲突）；advisory 定位不变列非目标。§4 甲乙丙待裁。 |
 | 2026-10-17 | 0.2.0 | 人「你自行裁定」→ Agent 自裁甲乙丙并实现落地 | **根因订正**：slice A 实测发现非 dlx 特有——npmmirror 缺 `@fallow-cli` 3.33.1 平台件（仅到 3.33.0），dlx 与 devDependency@3.33.1 同因报 missing-binary。**取镜像够用档 3.33.0**（非 npmjs scope 覆写）解决。落地：package.json devDep `fallow@3.33.0`（精确·无 `^`）+ `fallow:arch` 脚本·ci.ts dlx→exec·宪法 §3/§4.7/§4.8 + workflow L2 + README dlx→exec 口径归一（发现 §4.7 line 128 宪法已预写 devDependency 路线·本片为执行既有推荐）。验收 `pnpm run ci` 全绿 **481/30 基线不动**·fallow 真实产出 `✓ No issues found`。高危 #2/#5 随人「自行裁定」授权。 |
+| 2026-10-17 | 0.3.0 | 人「确保fallow能用」→ 全入口实跑存照 | 除 CI 已覆盖的 `architecture` 外，逐子命令实跑核验：`--version`（`verified: yes · signed`）·`dead-code --type-aware`（type-aware optional 件落地·exit 1=有候选正常）·`health --score`(0)·`dupes`(0)·`audit`(0) 均真实可用；裸 `guard` exit 2 定性为缺参用法校验、非收编缺陷。复核 npmmirror 平台件仍止 3.33.0（3.33.1 未同步），钉版仍是正解、升版观察继续挂账。零仓库变更（纯验证）。 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.1.0 变更，以当前正文内容为准。
+正文已于 2026-10-17 / v0.3.0 变更，以当前正文内容为准。
