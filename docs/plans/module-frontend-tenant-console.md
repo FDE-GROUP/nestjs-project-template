@@ -81,7 +81,7 @@
 - [x] §2.3 五待裁点获人裁定（令「同意」= 推荐档全采）
 - [x] F2a：apps/web 消费 `@saas/api-client` typed 通（④甲 spike 定案：`build:client` 产 dist（含 schema.d.ts 拷贝步）·web `moduleResolution:bundler` 走 exports→dist·**typecheck EXIT=0 + vite build 打包通**）；`/workspaces` typed 列表 / 首页订阅摘要（SubscriptionResponse）/ `/settings/members`（BA 透传·诚实防御渲染）落地，deny-by-default（`requireSession`）与后端会话墙同向
 - [ ] F2b：邀请 / 成员 / workspace / 切当前租户 操作面落地，mutation 成功重载、失败据 `errorCode`/`message` 反馈
-- [ ] 新页组件测覆盖渲染 / 空态 / 错误窄化（**F2a 已达成**：WorkspacesView/SubscriptionView/MembersView typed+空态测 + format 错误窄化单测·共 14 新测）；关键路径 **dev 反代真跑端到端**（需起 DB+后端+登录态）——本轮未跑，归人类验收执行（非 Playwright）
+- [ ] 新页组件测覆盖渲染 / 空态 / 错误窄化（**F2a 已达成**：WorkspacesView/SubscriptionView/MembersView typed+空态测 + format 错误窄化单测·共 14 新测）；关键路径 **dev 反代真跑端到端**（需起 DB+后端+登录态）——本轮未跑，归人类验收执行（非 Playwright）；操作手册见 [docs/frontend-dev-proxy-runbook.md](../frontend-dev-proxy-runbook.md)
 - [x] `pnpm run ci` L1 全绿（基线只增不减·F1 后 540/31·92 → **F2a 554/31·96 files**·+14 测/+4 测文件·skip 稳 31）
 - [x] 后端零改动、F1 制品零触动（`git status` apps/api 无改动·契约锁测 `api-contracts.test.ts` 仍绿）
 - [ ] 人类验收（F2a、F2b 各自单独验收）
