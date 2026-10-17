@@ -7,7 +7,8 @@
  *     `assertScratchDb` 安全断言·防误指真实库的原前置原样生效）
  *   → 两库各**重放已提交基线迁移**（`initMigrationOrm` + `migrator.up()`·与 `db:setup` 同路径·
  *     永不 `schema.create/synchronize`，守 tooling §4「generate+migrate」纪律）
- *   → 跑 9 个 env-gated 全栈 e2e（`DATABASE_URL`=`E2E_DATABASE_URL`=ci_e2e 容器串·现契约两变量同指一库）
+ *   → 跑全部已登记 env-gated 真库 e2e（清单恒等校验先行·SSOT=`GATED_E2E_FILES`；`DATABASE_URL`=
+ *     `E2E_DATABASE_URL`=ci_e2e 容器串·现契约两变量同指一库）
  *   → 跑 BA authFlow 一致性套件（`DATABASE_URL`=mikro_ba_consistency 串 + `BA_MIKRO_CONSISTENCY=1`）
  *   → `finally` 显式 `container.stop()`——用完即焚、零足迹（§4.10 实跑对拍口径）。
  *
@@ -20,6 +21,7 @@
  * 默认 CI 的 DB-free 不变量不动（gated e2e 无 env 时仍 `describe.skip`，本脚本只负责供 env 与库）。
  */
 import { spawnSync } from 'node:child_process';
+import { existsSync, readdirSync } from 'node:fs';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { initMigrationOrm } from '../apps/api/src/database/mikro/migration/mikro-migration.config.ts';
 
@@ -27,7 +29,8 @@ const IMAGE = 'postgres:16-alpine';
 const E2E_DB = 'ci_e2e';
 const CONSISTENCY_DB = 'mikro_ba_consistency';
 
-/** 现存 9 个 env-gated 真库 e2e（`E2E_DATABASE_URL` 开关）——新增 gated 文件时此处同步登记。
+/** 已登记 env-gated 真库 e2e（`E2E_DATABASE_URL` 开关）——新增 gated 文件时此处同步登记；
+ *  实存/清单恒等由下方 `verifyGatedListIdentity` 机制兜底（不再纯靠记性）。
  *  路径订正注记（module-rbac-guard-instance-read 实跑自捕）：tenant-hard-delete/seat-quota-member
  *  早先随 `9eec820` 域归位重构迁居 modules/ 下，本清单未同步→ vitest 对不存在路径静默不跑（漂移敞口）；
  *  workspace-owner-rbac 为 owner-column 片漏登。均按清单自身声明规则补齐，非门禁语义变更。 */
@@ -45,6 +48,55 @@ const GATED_E2E_FILES = [
 
 // Ryuk 禁用（见头注）；容器清理走 finally stop + 启动前遗留清扫。
 process.env.TESTCONTAINERS_RYUK_DISABLED = 'true';
+
+/** 豁免名单：具 e2e 命名但非真库 gated 组成员（归属裁定见 module-ci-gated-list-identity-check C1）。 */
+const GATED_EXEMPT = [
+  // DB-free HTTP 面契约测（probe DTO + 校验链），L1 全量常跑已覆盖，不需 E2E_DATABASE_URL。
+  'apps/api/src/i18n/validation-i18n.e2e.test.ts',
+];
+
+/**
+ * C1 双向恒等校验（人 2026-10-17 令「你定」单点授权裁）：防 GATED_E2E_FILES 登记漂移——
+ * 两类已实发无告警先例：① 迁居致清单路径 stale（vitest 对不存在路径静默不跑）；② 新增 gated
+ * 文件漏登（全绿假象·单跑绿掩盖「不在链」）。另补豁免腐烂向：豁免条目实存消失亦 fail-loud。
+ * 在任何容器开销之前 fail-loud（启动即验·红成本低）。
+ */
+function verifyGatedListIdentity(): void {
+  const rel = (abs: string) => abs.replace(/^\.\//, '');
+  const stale = GATED_E2E_FILES.filter((p) => !existsSync(p));
+  if (stale.length > 0) {
+    throw new Error(
+      `[ci-fullstack] GATED_E2E_FILES 引用不存在路径（漂移·迁居/stale）：\n  ${stale.join('\n  ')}`,
+    );
+  }
+  const found: string[] = [];
+  const walk = (dir: string): void => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === 'node_modules' || e.name === 'dist' || e.name.startsWith('.')) continue;
+      const p = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith('.e2e.test.ts')) found.push(rel(p));
+    }
+  };
+  for (const root of ['apps/api/src', 'libs']) walk(root);
+  const known = new Set([...GATED_E2E_FILES, ...GATED_EXEMPT]);
+  const unregistered = found.filter((p) => !known.has(p));
+  if (unregistered.length > 0) {
+    throw new Error(
+      `[ci-fullstack] 实存 *.e2e.test.ts 未登记进 GATED_E2E_FILES 亦非豁免（漏登脱链·全绿假象）：\n  ${unregistered.join('\n  ')}`,
+    );
+  }
+  const ghostExempt = GATED_EXEMPT.filter((p) => !found.includes(p));
+  if (ghostExempt.length > 0) {
+    throw new Error(
+      `[ci-fullstack] 豁免名单条目已不存在（腐烂·须同步清理）：\n  ${ghostExempt.join('\n  ')}`,
+    );
+  }
+  console.log(
+    `[ci-fullstack] gated list identity verified (${GATED_E2E_FILES.length} gated + ${GATED_EXEMPT.length} exempt)`,
+  );
+}
+verifyGatedListIdentity();
 
 function docker(...args: string[]): string {
   const res = spawnSync('docker', args, { encoding: 'utf8' });
