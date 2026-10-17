@@ -68,7 +68,7 @@
 - [x] `@saas/api-client` 构建通过（`tsc` 净）；errors 单源锁测绿（re-export 与 `@core/saas-kit` 恒等）；envelope 对拍锁测绿（↔ `openapi.yaml` 逐字段）
 - [x] apps/web **零改动**（F0 已验收面不动·防验收回退）
 - [x] `pnpm run ci` L1 全绿（基线 529/31·90 files → **540/31·92 files** 只增不减；新增 = api-contracts.test.ts(3) + api-client.test.ts(8)）
-- [ ] 人类验收
+- [x] 人类验收（人令「同意」2026-10-18·F1 片验收结项·4 commit 已推 main）
 
 ## 6. 演变记录
 
@@ -77,8 +77,9 @@
 | 2026-10-17 | 0.1.0 | 总纲 F0 验收结项后按 §2.2 串行呈 F1 | 首版呈审：契约缺口实据（0/39 响应 schema）+ 码表单源确认 + 四待裁点 |
 | 2026-10-17 | 0.2.0 | 人令「同意」过审计门 | §4 翻「已审计·放行」（四裁点推荐档全采）；§5 首框勾；戳翻实施中。 |
 | 2026-10-17 | 0.3.0 | 实施收口·γ 翻账（自捕/降档均登此不入正文） | ①**契约非「34 全 typed」**：12 BA 透传面 + 2 bulk-export 聚合 + health 以 `apiOkPassthrough`（`data` 自由对象 + `description` 点名真相源 SSOT）**诚实降档**，若干 void/204 面无 payload 仅挂 `apiError`——不 overclaim。②**分页语义修正**：`Page<T>`/`CursorPage<T>` 契约**无 `meta` 键**，不触发拦截器 `{items,meta}` 提升，整个分页对象原样入 `data`（校正 §1 line16「分页形 `{ data, meta, … }`」旧述）。③**client 双前缀偏差**：`paths` 已含 `/api/v1`，§2.2.2 所设 basePath `/api/v1` 会致 `/api/v1/api/v1/…`→ `DEFAULT_BASE_PATH=''`（同源相对·Node/测试传绝对 baseUrl）。④**yaml 入库事故**：`openapi/openapi.yaml` 历史从未入库 → drift 门禁形同虚设；人「你裁定」采**纳入版本控制**（改 `.gitignore`）。⑤**ci 链新增 `openapi:drift` 硬门禁步**（build 后·需 dist），yaml 入库后方真生效。⑥**vitest 纳入 packages**：test/coverage include 加 `packages/**`，且 `test.exclude` 由裸串 `['node_modules','dist']`（覆盖默认·不排嵌套）修为 `['**/node_modules/**','**/dist/**']`——消 `packages/api-client/node_modules/@core` 符号链接致 @core 测试重复跑。⑦**契约地基自捕**：`api-contracts.test.ts` `contractProps` 原以 `design:type` 枚举 prototype 自身键取空（装饰属性不落 prototype 自有键）致 3 测红 → 改走 swagger `apiModelPropertiesArray` 元数据（继承链聚合去 `:` 前缀），并令错误面锁测以 object response **穷举可选字段**（errorCode+errors[]）方谈逐字段恒等。⑧read-model 手抄 `*.response.ts` 附**编译期双向赋值锁**（tsc 拓红·非 runtime），enum 字段以精确 union（TenantStatus/UserStatus）防 string 退化。⑨**生成类型被 bundle 规则吞**：`.gitignore` 既有 `packages/**/*.d.ts`（#bundle）无差别忽略刻意入库的 `packages/api-client/src/schema.d.ts`（§2.2.1 要求生成物同 routeTree.gen 入库）→ 加精准豁免 `!packages/api-client/src/schema.d.ts`（dist 编译产物仍由 `*.js`+`dist/` 双规则忽略）。⑩**Biome 同步豁免生成物**（高危·改 Biome 配置）：Biome 遵 `.gitignore`，`schema.d.ts` 豁免入库后即受格式检查（openapi-typescript 出 4 空格 vs Biome 2 空格→每次 `gen:types` 永冲）→ 按现有 `!**/*.gen.ts(x)` 生成物惯例同式加 `!packages/api-client/src/schema.d.ts`（**需人验收此门禁面变更**）。 |
+| 2026-10-18 | 0.4.0 | 人类验收结项 | 令「同意」= F1 片验收通过（契约补全 + api-client 四件套 + L1 540/31·92 files + 降档/自捕账目 + 三处高危面变更均认可）；4 commit（`0f2cdd3`/`0d0d776`/`8d46a45`/`fab2cf8`）已推 main；§5 全勾，戳翻「已验收·结项」。F2 租户自助面另片呈审。 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.3.0 更新（**已实施·待人类验收——L1 全绿、基线只增不减、契约缺口闭合**）；发现降档均登 §6 不入正文。
+正文已于 2026-10-18 / v0.4.0 更新（**已验收·结项——人类令「同意」，F1 契约与 api-client 交付认可；F2 另片呈审**）；发现降档均登 §6 不入正文。
