@@ -21,8 +21,10 @@ import { MIKRO_APP_ENTITIES, Post } from './mikro/post.entity';
  *   updatedAt 的可观测结果·否则 23502 NOT NULL 违约）。
  * - **`role` 文本经 PG coerced 入 enum 列**（`roleEnum('role',['USER','ADMIN'])`·沿 §5.18 `role` default 实证）；
  *   直接写 `'ADMIN'`/`'USER'` 文本，不再 `import { Role } from './schema'`（去除对旧 ORM schema 的最后一处 seed 依赖）。
- * - **`SEED_CLEANUP` / 弱口令兜底（`ADMIN_PASSWORD||admin123` · `USER_PASSWORD||user123`）逐字不变**——
- *   属 module-config-env-surface-contract 归人项，本批不夹带改 fail-loud。
+ * - **`SEED_CLEANUP` 逐字不变；弱口令兜底改形（人裁①·module-config-seed-fail-loud-and-contract-gate 切片 E）**：
+ *   旧「`ADMIN_PASSWORD||admin123` 静默兜底」升为入口裁决单点 `enforceSeedPasswordPolicy`——
+ *   `NODE_ENV=production` 缺 `ADMIN_PASSWORD`/`USER_PASSWORD` 即**拒跑**（先于建连·零弱口令上图）；
+ *   非生产兜底值不变 + 点名 warn（与 OAuth social 面「非生产 warn/生产 fail-loud」同构·机制不特判）。
  * - **运行器＝`tsx`**（`db:seed`）：seed 现值导入整条 Mikro 轨（`./mikro/orm`→`./entities`/`./four-tables`…
  *   扩展名省略），Node 原生 type-stripping **不解析扩展名省略的相对 ESM 导入**（原 `node seed.ts` 亦不例外），
  *   故改用仓内既有 `tsx` 运行（不改行为·仅换装载器·SWC 编译链不受影响）。核心逻辑抽为 `runSeed(em, options)`
@@ -80,6 +82,27 @@ export function parseArgs(): SeedOptions {
   }
 
   return options;
+}
+
+/**
+ * seed 口令裁决单点（切片 E·人裁「生产 fail-loud + 非生产 warn」）：入口调用一次，不逐处特判。
+ * 两键皆已配置→静默通过；缺键且 `NODE_ENV=production`→throw 拒跑（调用点在 `initMikroOrm` **之前**·
+ * 绝不触库）；缺键且非生产→不拦·只点名 warn（兜底值 `admin123`/`user123` 仍由 createUsers/createPosts
+ * 现路径生效·与 warn 文案同形）。env 可注入供锁测直调（不篡改全局）。
+ */
+export function enforceSeedPasswordPolicy(env: NodeJS.ProcessEnv = process.env): void {
+  const missing = ['ADMIN_PASSWORD', 'USER_PASSWORD'].filter((key) => !env[key]);
+  if (missing.length === 0) return;
+  if (env.NODE_ENV === 'production') {
+    throw new Error(
+      `Refusing to seed: NODE_ENV=production 但未配置 ${missing.join(' / ')}。` +
+        '平台经营者/演示账号口令不得静默使用内置弱口令（admin123/user123）上生产——' +
+        '请在 .env 显式设置这两键后重跑（或改用非生产口径）。',
+    );
+  }
+  console.warn(
+    `⚠️ seed 弱口令兜底生效：缺 ${missing.join(' / ')}，将使用内置 admin123/user123（仅限开发/演示·生产必配）。`,
+  );
 }
 
 export async function createUsers(em: EntityManager, options: SeedOptions): Promise<void> {
@@ -251,6 +274,9 @@ export async function runSeed(em: EntityManager, options: SeedOptions): Promise<
 async function main() {
   const options = parseArgs();
   const startTime = Date.now();
+
+  // 裁决单点先于一切 DB 访问（生产缺键→throw→main catch 退码 1·零建连）。
+  enforceSeedPasswordPolicy();
 
   console.log('🌱 Starting database seeding...');
   console.log('📋 Seed options:', options);

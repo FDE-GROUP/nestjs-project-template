@@ -51,7 +51,7 @@ pnpm run migration:run
 schema 的唯一真相是实体模型（`apps/api/src/database/mikro/**`·迁移实体经 `column-meta.ts` 单一源派生）；
 生成物落 `apps/api/src/database/mikro/migration/migrations/`（迁移 TS 工件 + snapshot·库内台账表 `mikro_migrations`）。
 
-- **空库 / CI / 生产**：`pnpm run migration:run`（`migrator.up()` 依序应用未执行迁移并在 `mikro_migrations` 记账），再 `pnpm run db:seed`。可复现、与台账一致。
+- **空库 / CI / 生产**：`pnpm run migration:run`（`migrator.up()` 依序应用未执行迁移并在 `mikro_migrations` 记账），再 `pnpm run db:seed`。可复现、与台账一致。生产跑 seed 须先配 `ADMIN_PASSWORD`/`USER_PASSWORD`，否则 fail-loud 拒跑（先于建连·弱口令永不静默上图）。
 - **本地增量开发**：改实体后 `pnpm run migration:generate`（`migrator.create()` 比对「实体元数据 ↔ 库 schema」产新工件 + 更新 snapshot），人工审 SQL 后 `pnpm run migration:run` 落库。
 - `pnpm run db:reset`（= `mikro-migrate.ts --fresh` + seed）先 `schema.drop()` 删实体表 + 台账再重放基线——**破坏性·仅限本地一次性重建**，切勿指向生产。
 - ⚠️ 生产只走显式 `migration:generate` + `migration:run`；不存在 push / 隐式同步通道。

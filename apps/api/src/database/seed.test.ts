@@ -2,7 +2,7 @@ import { Organization, User } from '@app/database/mikro/entities';
 import { Post } from '@app/database/mikro/post.entity';
 import type { EntityManager } from '@mikro-orm/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, createPosts, createUsers, runSeed } from './seed';
+import { cleanup, createPosts, createUsers, enforceSeedPasswordPolicy, runSeed } from './seed';
 
 /**
  * ORM 修宪案 B · 切片 4-α（S-d6）——seed 数据面旧 ORM→Mikro 换轨的**镜像断言**（非弱化）。
@@ -192,5 +192,40 @@ describe('seed runSeed 编排 (S-d6)', () => {
     // createUsers（nativeUpdate·operator 存在）与 createPosts（insert Post）均发生。
     expect(spies.nativeUpdate).toHaveBeenCalledTimes(1);
     expect(insertsFor(spies.insert, Post)).toHaveLength(1);
+  });
+});
+
+describe('seed 口令裁决单点（seed-fail-loud 切片 E·人裁①）', () => {
+  it('生产缺键 → throw 拒跑且文案点名缺失键与后果（env 注入·不触全局不触库）', () => {
+    expect(() => enforceSeedPasswordPolicy({ NODE_ENV: 'production' })).toThrowError(
+      /Refusing to seed[\s\S]*ADMIN_PASSWORD[\s\S]*USER_PASSWORD/,
+    );
+    // 只缺一键也拒·且仅点名缺的那键（不吞未缺键）。
+    expect(() =>
+      enforceSeedPasswordPolicy({ NODE_ENV: 'production', ADMIN_PASSWORD: 'strong-pass' }),
+    ).toThrowError(/USER_PASSWORD/);
+  });
+
+  it('生产两键配齐（合成假值）→ 静默放行：不 throw 且零 warn', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(() =>
+      enforceSeedPasswordPolicy({
+        NODE_ENV: 'production',
+        ADMIN_PASSWORD: 'synthetic-a',
+        USER_PASSWORD: 'synthetic-b',
+      }),
+    ).not.toThrow();
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('非生产缺键 → 不拦 + 恰一条点名 warn（两键名与兜底值同形·承现路径）', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(() => enforceSeedPasswordPolicy({ NODE_ENV: 'development' })).not.toThrow();
+    expect(warn).toHaveBeenCalledTimes(1);
+    const line = String(warn.mock.calls[0][0]);
+    expect(line).toContain('ADMIN_PASSWORD / USER_PASSWORD');
+    expect(line).toContain('admin123/user123');
+    warn.mockRestore();
   });
 });
