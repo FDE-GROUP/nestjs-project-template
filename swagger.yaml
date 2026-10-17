@@ -165,205 +165,127 @@ paths:
       summary: Liveness probe (ping-only, no dependency checks)
       tags:
         - Health
-  /api/v1/users/me/data-export:
+  /api/v1/tenants/roles:
     get:
-      operationId: UsersController_exportMe_v1
+      operationId: AuthorizationAdminController_listRoles_v1
       parameters: []
       responses:
         '200':
-          description: Aggregated personal data (no credentials).
-        '401':
-          description: Missing or invalid session.
-      summary: 'PIPL right-to-access: export current user personal data (C1 · FR-7)'
+          description: Role views.
+        '403':
+          description: CASL deny (no Role read).
+      summary: List roles of the active tenant (system + custom)
       tags: &ref_3
-        - users
-  /api/v1/users/me:
-    delete:
-      operationId: UsersController_deleteMe_v1
-      parameters: []
-      responses:
-        '204':
-          description: User deleted; consent rows retained anonymously.
-        '401':
-          description: Missing or invalid session.
-      summary: 'PIPL right-to-erase: hard-delete current user (C1 · FR-7)'
-      tags: *ref_3
-  /api/v1/posts:
-    get:
-      operationId: PostsController_list_v1
-      parameters:
-        - name: limit
-          required: false
-          in: query
-          description: Page size (1-100)
-          schema:
-            example: 20
-        - name: cursor
-          required: false
-          in: query
-          description: >-
-            Opaque base64url cursor from a previous page (omit for the first
-            page).
-          schema:
-            example: WyIyMDI2LTAxLTAyVDAzOjA0OjA1LjAwMFoiLCJ1dWlkLWFiYyJd
-            type: string
-      responses:
-        '200':
-          description: Posts owned by the active tenant.
-        '400':
-          description: Malformed cursor.
-        '403':
-          description: No active tenant context.
-      summary: List posts in the active tenant (cursor-paginated)
-      tags: &ref_4
-        - posts
-    post:
-      operationId: PostsController_create_v1
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreatePostDto'
-      responses:
-        '201':
-          description: Created post stamped with the active tenant.
-        '403':
-          description: No active tenant context.
-      summary: Create a post in the active tenant
-      tags: *ref_4
-  /api/v1/workspaces:
-    get:
-      operationId: WorkspacesController_list_v1
-      parameters:
-        - name: limit
-          required: false
-          in: query
-          description: Page size (1-100)
-          schema:
-            example: 20
-        - name: offset
-          required: false
-          in: query
-          description: Offset (rows to skip)
-          schema:
-            example: 0
-      responses:
-        '200':
-          description: Workspaces owned by the active tenant.
-        '403':
-          description: No active tenant, or missing workspace:read.
-      summary: List workspaces in the active tenant
-      tags: &ref_5
-        - workspaces
-    post:
-      operationId: WorkspacesController_create_v1
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateWorkspaceDto'
-      responses:
-        '201':
-          description: Created workspace stamped with the active tenant.
-        '403':
-          description: Missing workspace:create (members are rejected).
-      summary: Create a workspace (owner/admin)
-      tags: *ref_5
-  /api/v1/workspaces/{id}:
-    patch:
-      operationId: WorkspacesController_update_v1
-      parameters:
-        - name: id
-          required: true
-          in: path
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateWorkspaceDto'
-      responses:
-        '200':
-          description: Updated workspace.
-        '404':
-          description: Workspace not found in the active tenant.
-      summary: Update a workspace (owner/admin)
-      tags: *ref_5
-    delete:
-      operationId: WorkspacesController_remove_v1
-      parameters:
-        - name: id
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Workspace deleted.
-        '404':
-          description: Workspace not found in the active tenant.
-      summary: Delete a workspace (owner/admin)
-      tags: *ref_5
-  /api/v1/tenants/applications:
-    post:
-      operationId: TenantsController_apply_v1
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTenantApplicationDto'
-      responses:
-        '201':
-          description: Pending tenant created; inactive until approved.
-        '401':
-          description: Missing or invalid session.
-      summary: Apply to create a tenant (user-level · lands pending_approval)
-      tags: &ref_6
         - tenants
-  /api/v1/tenants/applications/{id}/approve:
     post:
-      operationId: TenantsController_approve_v1
+      operationId: AuthorizationAdminController_createRole_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleDto'
+      responses:
+        '200':
+          description: Created role view.
+        '400':
+          description: Invalid/reserved role key.
+        '409':
+          description: Role key already exists.
+      summary: Create a custom role (owner/admin)
+      tags: *ref_3
+  /api/v1/tenants/roles/rename:
+    post:
+      operationId: AuthorizationAdminController_renameRole_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameRoleDto'
+      responses:
+        '200':
+          description: Renamed.
+        '404':
+          description: Role not found.
+        '409':
+          description: System role protected.
+      summary: Rename a custom role (system roles protected)
+      tags: *ref_3
+  /api/v1/tenants/roles/delete:
+    post:
+      operationId: AuthorizationAdminController_deleteRole_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteRoleDto'
+      responses:
+        '200':
+          description: Deleted.
+        '404':
+          description: Role not found.
+        '409':
+          description: System role protected.
+      summary: Delete a custom role (grants cascade; system roles protected)
+      tags: *ref_3
+  /api/v1/tenants/roles/grants:
+    get:
+      operationId: AuthorizationAdminController_listGrants_v1
       parameters:
-        - name: id
+        - name: roleKey
           required: true
-          in: path
+          in: query
           schema:
             type: string
       responses:
         '200':
-          description: Tenant activated.
-        '403':
-          description: Not a platform operator.
+          description: Grant views (subject/action/conditions).
         '404':
-          description: Tenant not found.
-      summary: Approve a pending tenant (platform operator · pending → active)
-      tags: *ref_6
-  /api/v1/tenants/applications/{id}/reject:
+          description: Role not found.
+      summary: List grant rows of a role (echo checked state)
+      tags: *ref_3
     post:
-      operationId: TenantsController_reject_v1
-      parameters:
-        - name: id
-          required: true
-          in: path
-          schema:
-            type: string
+      operationId: AuthorizationAdminController_grant_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantRolePermissionDto'
       responses:
-        '204':
-          description: Pending tenant discarded.
-        '403':
-          description: Not a platform operator.
+        '200':
+          description: Granted.
+        '400':
+          description: Invalid conditions (whitelist-only).
         '404':
-          description: Tenant not found.
-      summary: Reject a pending tenant (platform operator · hard-delete)
-      tags: *ref_6
+          description: Role not found.
+        '409':
+          description: Duplicate grant.
+      summary: Grant a permission cell to a role (multi-condition rows = OR union)
+      tags: *ref_3
+  /api/v1/tenants/roles/grants/revoke:
+    post:
+      operationId: AuthorizationAdminController_revoke_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeRolePermissionDto'
+      responses:
+        '200':
+          description: Revoked.
+        '404':
+          description: Role or matching grant not found.
+      summary: Revoke a grant (conditions null = whole-subject row; object = exact row)
+      tags: *ref_3
   /api/v1/platform/tenants:
     get:
       operationId: PlatformTenantsController_list_v1
@@ -392,7 +314,7 @@ paths:
         '403':
           description: Not the platform operator.
       summary: List all tenants across the platform (operator only)
-      tags: &ref_7
+      tags: &ref_4
         - platform
   /api/v1/platform/tenants/{id}:
     get:
@@ -409,7 +331,7 @@ paths:
         '404':
           description: Tenant not found.
       summary: Get one tenant (operator only)
-      tags: *ref_7
+      tags: *ref_4
     delete:
       operationId: PlatformTenantsController_remove_v1
       parameters:
@@ -426,7 +348,7 @@ paths:
         '409':
           description: Already deleted (illegal transition).
       summary: Soft-delete a tenant (→ deleted terminal · row kept for export)
-      tags: *ref_7
+      tags: *ref_4
   /api/v1/platform/tenants/{id}/diagnostics:
     get:
       operationId: PlatformTenantsController_diagnostics_v1
@@ -442,7 +364,7 @@ paths:
         '404':
           description: Tenant not found.
       summary: 'Per-tenant diagnostics: member/invitation/workspace/post counts'
-      tags: *ref_7
+      tags: *ref_4
   /api/v1/platform/tenants/{id}/export:
     get:
       operationId: PlatformTenantsController_exportData_v1
@@ -458,7 +380,7 @@ paths:
         '404':
           description: Tenant not found.
       summary: Export all tenant-owned data as a single JSON payload (NFR-6)
-      tags: *ref_7
+      tags: *ref_4
   /api/v1/platform/tenants/{id}/suspend:
     patch:
       operationId: PlatformTenantsController_suspend_v1
@@ -476,7 +398,7 @@ paths:
         '409':
           description: Illegal transition for the current status.
       summary: Suspend an active tenant (active → suspended · fail-closed失能)
-      tags: *ref_7
+      tags: *ref_4
   /api/v1/platform/tenants/{id}/resume:
     patch:
       operationId: PlatformTenantsController_resume_v1
@@ -494,7 +416,7 @@ paths:
         '409':
           description: Illegal transition for the current status.
       summary: Resume a suspended tenant (suspended → active)
-      tags: *ref_7
+      tags: *ref_4
   /api/v1/platform/tenants/{id}/permanent:
     delete:
       operationId: PlatformTenantsController_permanentRemove_v1
@@ -514,7 +436,7 @@ paths:
       summary: >-
         Hard-delete a deleted-terminal tenant (irreversible · FK cascade + event
         purge · NFR-6)
-      tags: *ref_7
+      tags: *ref_4
   /api/v1/platform/users:
     get:
       operationId: PlatformUsersController_list_v1
@@ -543,7 +465,7 @@ paths:
         '403':
           description: Not the platform operator.
       summary: List all platform users with lifecycle status (operator only)
-      tags: &ref_8
+      tags: &ref_5
         - platform
   /api/v1/platform/users/{id}/suspend:
     patch:
@@ -570,7 +492,7 @@ paths:
       summary: >-
         Suspend a platform user (active → suspended · sessions invalidated ·
         fail-closed失能)
-      tags: *ref_8
+      tags: *ref_5
   /api/v1/platform/users/{id}/resume:
     patch:
       operationId: PlatformUsersController_resume_v1
@@ -588,7 +510,397 @@ paths:
         '409':
           description: Illegal transition for the current status.
       summary: Resume a suspended platform user (suspended → active)
+      tags: *ref_5
+  /api/v1/users/me/data-export:
+    get:
+      operationId: UsersController_exportMe_v1
+      parameters: []
+      responses:
+        '200':
+          description: Aggregated personal data (no credentials).
+        '401':
+          description: Missing or invalid session.
+      summary: 'PIPL right-to-access: export current user personal data (C1 · FR-7)'
+      tags: &ref_6
+        - users
+  /api/v1/users/me:
+    delete:
+      operationId: UsersController_deleteMe_v1
+      parameters: []
+      responses:
+        '204':
+          description: User deleted; consent rows retained anonymously.
+        '401':
+          description: Missing or invalid session.
+      summary: 'PIPL right-to-erase: hard-delete current user (C1 · FR-7)'
+      tags: *ref_6
+  /api/v1/posts:
+    get:
+      operationId: PostsController_list_v1
+      parameters:
+        - name: limit
+          required: false
+          in: query
+          description: Page size (1-100)
+          schema:
+            example: 20
+        - name: cursor
+          required: false
+          in: query
+          description: >-
+            Opaque base64url cursor from a previous page (omit for the first
+            page).
+          schema:
+            example: WyIyMDI2LTAxLTAyVDAzOjA0OjA1LjAwMFoiLCJ1dWlkLWFiYyJd
+            type: string
+      responses:
+        '200':
+          description: Posts owned by the active tenant.
+        '400':
+          description: Malformed cursor.
+        '403':
+          description: No active tenant context.
+      summary: List posts in the active tenant (cursor-paginated)
+      tags: &ref_7
+        - posts
+    post:
+      operationId: PostsController_create_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostDto'
+      responses:
+        '201':
+          description: Created post stamped with the active tenant.
+        '403':
+          description: No active tenant context.
+      summary: Create a post in the active tenant
+      tags: *ref_7
+  /api/v1/workspaces:
+    get:
+      operationId: WorkspacesController_list_v1
+      parameters:
+        - name: limit
+          required: false
+          in: query
+          description: Page size (1-100)
+          schema:
+            example: 20
+        - name: offset
+          required: false
+          in: query
+          description: Offset (rows to skip)
+          schema:
+            example: 0
+      responses:
+        '200':
+          description: Workspaces owned by the active tenant.
+        '403':
+          description: No active tenant, or missing workspace:read.
+      summary: List workspaces in the active tenant
+      tags: &ref_8
+        - workspaces
+    post:
+      operationId: WorkspacesController_create_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceDto'
+      responses:
+        '201':
+          description: Created workspace stamped with the active tenant.
+        '403':
+          description: Missing workspace:create (members are rejected).
+      summary: Create a workspace (owner/admin)
       tags: *ref_8
+  /api/v1/workspaces/{id}:
+    patch:
+      operationId: WorkspacesController_update_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkspaceDto'
+      responses:
+        '200':
+          description: Updated workspace.
+        '404':
+          description: Workspace not found in the active tenant.
+      summary: Update a workspace (owner/admin)
+      tags: *ref_8
+    delete:
+      operationId: WorkspacesController_remove_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Workspace deleted.
+        '404':
+          description: Workspace not found in the active tenant.
+      summary: Delete a workspace (owner/admin)
+      tags: *ref_8
+  /api/v1/tenants/applications:
+    post:
+      operationId: TenantsController_apply_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantApplicationDto'
+      responses:
+        '201':
+          description: Pending tenant created; inactive until approved.
+        '401':
+          description: Missing or invalid session.
+      summary: Apply to create a tenant (user-level · lands pending_approval)
+      tags: &ref_9
+        - tenants
+  /api/v1/tenants/applications/{id}/approve:
+    post:
+      operationId: TenantsController_approve_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant activated.
+        '403':
+          description: Not a platform operator.
+        '404':
+          description: Tenant not found.
+      summary: Approve a pending tenant (platform operator · pending → active)
+      tags: *ref_9
+  /api/v1/tenants/applications/{id}/reject:
+    post:
+      operationId: TenantsController_reject_v1
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Pending tenant discarded.
+        '403':
+          description: Not a platform operator.
+        '404':
+          description: Tenant not found.
+      summary: Reject a pending tenant (platform operator · hard-delete)
+      tags: *ref_9
+  /api/v1/tenants/members:
+    get:
+      operationId: TenantsOrgAdminController_listMembers_v1
+      parameters: []
+      responses:
+        '200':
+          description: Member list (membership data from Better Auth).
+        '403':
+          description: No active tenant / CASL deny / not a member.
+      summary: List members of the active tenant (all roles · CASL read)
+      tags: &ref_10
+        - tenants
+  /api/v1/tenants/members/role:
+    post:
+      operationId: TenantsOrgAdminController_updateMemberRole_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMemberRoleDto'
+      responses:
+        '200':
+          description: Updated member.
+        '403':
+          description: CASL deny (member role) / last-owner guard (BA).
+      summary: Update a member role (owner/admin · CASL update)
+      tags: *ref_10
+  /api/v1/tenants/members/remove:
+    post:
+      operationId: TenantsOrgAdminController_removeMember_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveMemberDto'
+      responses:
+        '200':
+          description: Removed member.
+        '403':
+          description: CASL deny (member role) / self-removal guard (BA).
+      summary: Remove a member (owner/admin · CASL delete)
+      tags: *ref_10
+  /api/v1/tenants/invitations:
+    get:
+      operationId: TenantsOrgAdminController_listInvitations_v1
+      parameters: []
+      responses:
+        '200':
+          description: Invitation list (data from Better Auth).
+        '403':
+          description: No active tenant / CASL deny / not a member.
+      summary: List pending invitations of the active tenant (all roles)
+      tags: *ref_10
+    post:
+      operationId: TenantsOrgAdminController_createInvitation_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvitationDto'
+      responses:
+        '200':
+          description: Created invitation.
+        '403':
+          description: CASL deny (member role).
+      summary: Invite a member to the active tenant (owner/admin · CASL create)
+      tags: *ref_10
+  /api/v1/tenants/invitations/cancel:
+    post:
+      operationId: TenantsOrgAdminController_cancelInvitation_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationIdDto'
+      responses:
+        '200':
+          description: Cancelled invitation.
+        '403':
+          description: CASL deny (member role) / not cancellable (BA).
+      summary: Cancel an invitation (owner/admin · CASL cancel)
+      tags: *ref_10
+  /api/v1/tenants:
+    get:
+      operationId: TenantsSelfController_listMyOrganizations_v1
+      parameters: []
+      responses:
+        '200':
+          description: Membership organizations (data from Better Auth).
+        '401':
+          description: Missing or invalid session.
+      summary: List organizations the current user belongs to (personal channel)
+      tags: &ref_11
+        - tenants
+  /api/v1/tenants/active:
+    post:
+      operationId: TenantsSelfController_setActive_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetActiveTenantDto'
+      responses:
+        '200':
+          description: Session activated organization updated.
+        '401':
+          description: Missing or invalid session.
+        '403':
+          description: Not a member of the target organization (BA).
+      summary: Switch the session's active organization (must be a member)
+      tags: *ref_11
+  /api/v1/tenants/members/leave:
+    post:
+      operationId: TenantsSelfController_leave_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveTenantDto'
+      responses:
+        '200':
+          description: Membership removed.
+        '400':
+          description: Not a member / sole owner leaving the tenant (BA data guard).
+        '401':
+          description: Missing or invalid session.
+      summary: Leave a tenant (self-service · last-owner cannot leave)
+      tags: *ref_11
+  /api/v1/tenants/invitations/accept:
+    post:
+      operationId: TenantsSelfController_acceptInvitation_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationIdDto'
+      responses:
+        '200':
+          description: Invitation accepted; membership created.
+        '400':
+          description: >-
+            Invitation not found/expired/not the invitee/seat cap (BA guards +
+            hooks).
+        '401':
+          description: Missing or invalid session.
+      summary: Accept an invitation addressed to the current user
+      tags: *ref_11
+  /api/v1/tenants/invitations/reject:
+    post:
+      operationId: TenantsSelfController_rejectInvitation_v1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationIdDto'
+      responses:
+        '200':
+          description: Invitation rejected.
+        '400':
+          description: Invitation not found/expired/not the invitee (BA).
+        '401':
+          description: Missing or invalid session.
+      summary: Reject an invitation addressed to the current user
+      tags: *ref_11
+  /api/v1/tenants/invitations/mine:
+    get:
+      operationId: TenantsSelfController_listMyInvitations_v1
+      parameters: []
+      responses:
+        '200':
+          description: Invitation list (data from Better Auth).
+        '401':
+          description: Missing or invalid session.
+      summary: List pending invitations addressed to the current user
+      tags: *ref_11
   /api/v1/subscriptions/current:
     get:
       operationId: SubscriptionsController_getCurrent_v1
@@ -599,7 +911,7 @@ paths:
         '403':
           description: No active tenant context.
       summary: 'Current tenant subscription: plan, seat quota, usage, customer mapping'
-      tags: &ref_9
+      tags: &ref_12
         - subscriptions
   /api/v1/subscriptions:
     post:
@@ -621,7 +933,7 @@ paths:
       summary: >-
         Provision/upgrade the tenant subscription (creates the provider
         customer)
-      tags: *ref_9
+      tags: *ref_12
   /api/v1/storage/upload:
     post:
       operationId: StorageController_uploadFile_v1
@@ -641,7 +953,7 @@ paths:
         '201':
           description: ''
       summary: Upload a single file
-      tags: &ref_10
+      tags: &ref_13
         - storage
   /api/v1/storage/{key}:
     delete:
@@ -657,7 +969,7 @@ paths:
         '200':
           description: ''
       summary: Delete a file
-      tags: *ref_10
+      tags: *ref_13
   /api/v1/storage/{key}/url:
     get:
       operationId: StorageController_getFileUrl_v1
@@ -678,7 +990,7 @@ paths:
         '200':
           description: ''
       summary: Get a signed URL for a file
-      tags: *ref_10
+      tags: *ref_13
   /api/v1/payment/test:
     get:
       operationId: PaymentController_test_v1
@@ -687,7 +999,7 @@ paths:
         '200':
           description: Current provider selection and available channels
       summary: Payment integration status
-      tags: &ref_11
+      tags: &ref_14
         - payment
   /api/v1/payment/customers:
     post:
@@ -703,7 +1015,7 @@ paths:
         '201':
           description: Customer created successfully
       summary: Create a payment customer
-      tags: *ref_11
+      tags: *ref_14
   /api/v1/payment/checkouts:
     post:
       operationId: PaymentController_createCheckout_v1
@@ -720,7 +1032,7 @@ paths:
         '400':
           description: Bad request
       summary: Create a checkout (payment intent)
-      tags: *ref_11
+      tags: *ref_14
   /api/v1/payment/checkouts/{id}:
     get:
       operationId: PaymentController_retrieveCheckout_v1
@@ -737,7 +1049,7 @@ paths:
         '404':
           description: Checkout not found
       summary: Retrieve a checkout
-      tags: *ref_11
+      tags: *ref_14
   /api/v1/payment/refunds:
     post:
       operationId: PaymentController_refund_v1
@@ -754,7 +1066,7 @@ paths:
         '400':
           description: Bad request
       summary: Refund a checkout
-      tags: *ref_11
+      tags: *ref_14
   /api/v1/payment/webhooks:
     post:
       operationId: PaymentController_handleWebhook_v1
@@ -771,7 +1083,7 @@ paths:
         '400':
           description: Invalid webhook signature
       summary: Handle payment webhook events
-      tags: *ref_11
+      tags: *ref_14
 info:
   title: NestJS SaaS Start API
   description: NestJS SaaS Start API documentation
@@ -786,6 +1098,111 @@ components:
       bearerFormat: JWT
       type: http
   schemas:
+    CreateRoleDto:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Tenant-scoped role key (system key or custom key)
+          example: editor
+        name:
+          type: string
+          description: Human-readable role name
+          example: Editor
+      required:
+        - key
+        - name
+    RenameRoleDto:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Tenant-scoped role key (system key or custom key)
+          example: editor
+        name:
+          type: string
+          description: New human-readable role name
+          example: Editors
+      required:
+        - key
+        - name
+    DeleteRoleDto:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Tenant-scoped role key (system key or custom key)
+          example: editor
+      required:
+        - key
+    GrantRolePermissionDto:
+      type: object
+      properties:
+        roleKey:
+          type: string
+          description: Tenant-scoped role key (system key or custom key)
+          example: editor
+        subject:
+          type: string
+          description: Subject resource
+          enum: &ref_15
+            - Organization
+            - Member
+            - Invitation
+            - Workspace
+            - Role
+            - RoleGrant
+        action:
+          type: string
+          description: Action
+          enum: &ref_16
+            - create
+            - read
+            - update
+            - delete
+            - cancel
+        conditions:
+          type: object
+          description: >-
+            Instance-level conditions (whitelist-checked server-side; omit =
+            whole-subject grant)
+          example: &ref_17
+            ownerId: '{{userId}}'
+      required:
+        - roleKey
+        - subject
+        - action
+    RevokeRolePermissionDto:
+      type: object
+      properties:
+        roleKey:
+          type: string
+          description: Tenant-scoped role key (system key or custom key)
+          example: editor
+        subject:
+          type: string
+          description: Subject resource
+          enum: *ref_15
+        action:
+          type: string
+          description: Action
+          enum: *ref_16
+        conditions:
+          type: object
+          description: >-
+            Instance-level conditions (whitelist-checked server-side; omit =
+            whole-subject grant)
+          example: *ref_17
+      required:
+        - roleKey
+        - subject
+        - action
+    SuspendUserDto:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Free-text suspension reason (audit trail)
     CreatePostDto:
       type: object
       properties:
@@ -842,12 +1259,70 @@ components:
       required:
         - name
         - slug
-    SuspendUserDto:
+    UpdateMemberRoleDto:
       type: object
       properties:
-        reason:
+        memberId:
           type: string
-          description: Free-text suspension reason (audit trail)
+          description: Member id to update
+          example: member-1
+        role:
+          type: object
+          description: New tenant role (system key or existing custom role key)
+          example: admin
+      required:
+        - memberId
+        - role
+    RemoveMemberDto:
+      type: object
+      properties:
+        memberId:
+          type: string
+          description: Member id to remove
+          example: member-1
+      required:
+        - memberId
+    CreateInvitationDto:
+      type: object
+      properties:
+        email:
+          type: string
+          description: Invitee email
+          example: new@acme.com
+        role:
+          type: object
+          description: Role granted on accept (system key or existing custom role key)
+          example: member
+      required:
+        - email
+        - role
+    InvitationIdDto:
+      type: object
+      properties:
+        invitationId:
+          type: string
+          description: Invitation id
+          example: inv-1
+      required:
+        - invitationId
+    SetActiveTenantDto:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: Organization id to activate in session
+          example: org_1
+      required:
+        - organizationId
+    LeaveTenantDto:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: Organization id to leave
+          example: org_1
+      required:
+        - organizationId
     CreateSubscriptionDto:
       type: object
       properties:
