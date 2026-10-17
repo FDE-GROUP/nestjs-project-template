@@ -33,6 +33,7 @@ docker compose -f docker-compose.dev.yml up -d postgres
 docker compose -f docker-compose.dev.yml ps postgres   # 等 healthcheck = healthy
 pnpm run db:setup                                        # mikro-migrate + db:seed
 # 首跑 warn「弱口令兜底 admin123/user123（仅开发）」属预期
+# 重播种子：seed 对测试用户非幂等·裸跑 db:seed 再撞唯一键 → SEED_CLEANUP=true pnpm run db:seed（先清 post+user）或 pnpm run db:reset（破坏·仅 dev）
 ```
 
 ## 2b. pgadmin 调试台（可选·直观看库）
@@ -102,14 +103,16 @@ curl -s -b /tmp/ck.txt http://localhost:5173/api/v1/tenants/members | head -c 30
 
 ## 7. 登录兜底（若 §5② 返回 401）
 
-seed 仅写 `user` 表；若 Better Auth 无对应 credential，先经反代注册一个 BA 账号再登：
+**seed 号不能密码登录**：`db:seed` 只直插 `user` 表、**不建 Better Auth 的 `account`（credential）**，故 `admin@example.com`/`user1@example.com` 走 §5② 必 `401 User not found`——属设计（seed/BA 分离），非缺陷。且 `apps/web` 无注册页（F2a 只读）。dev 下邮箱密码面已开（`auth.implement.ts:213`·`NODE_ENV!=='production'`），**先经反代注册一个全新邮箱**（勿用已被 `user.email` 唯一占用的 admin@/user1@）：
 
 ```bash
 curl -s -X POST http://localhost:5173/api/v1/auth/sign-up/email \
   -H 'Content-Type: application/json' \
-  -d '{"email":"t@e.com","password":"Passw0rd!","name":"Tester"}' -w "\nHTTP %{http_code}\n"
-# 之后用 t@e.com / Passw0rd! 重跑 §5②③④⑤ 与 §6 浏览器登录
+  -d '{"email":"dev@example.com","password":"Passw0rd!","name":"Dev User"}' -w "\nHTTP %{http_code}\n"
+# 用 dev@example.com / Passw0rd! 重跑 §5② 及 §6 浏览器 /login 登录
 ```
+
+> 新注册号 `activeOrganizationId:null`（无租户/成员关系）→ §6 只读页（`/workspaces`、`/` 订阅）会显 **403/空态**，即 deny-by-default 的预期渲染，非登录失败；要看真实租户数据须先有 organization + membership（属 F2b 操作面·本只读片不覆盖）。
 
 ## 8. 收尾（用完即焚）
 

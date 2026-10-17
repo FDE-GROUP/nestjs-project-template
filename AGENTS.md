@@ -26,7 +26,7 @@
 ```bash
 pnpm install               # 依赖（registry 见 §6）
 pnpm run start:dev         # 开发（nest start --watch，端口 7009，前缀 /api/v1）
-pnpm run build             # 构建（先 build:libs 再 build:nest --builder swc）
+pnpm run build             # 构建（build:libs → build:client（产 @saas/api-client dist）→ build:nest --builder swc）
 pnpm run test              # 测试（Vitest）；check = Biome（lint+format）
 pnpm run ci                # L1 门禁：check → build → test（+ fallow 佐证）
 pnpm run ci:quick          # 轻量：check + test
