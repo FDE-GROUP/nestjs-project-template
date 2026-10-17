@@ -34,7 +34,7 @@
 | 覆盖率 | **@vitest/coverage-v8** | ^5.0.4 | v8 provider | 强制 |
 | HTTP 断言 | **supertest** | ^7.3.1 | 端到端断言（按需） | 推荐 |
 | Lint + 格式化 | **Biome** | ^2.5.15 | 单工具替代 ESLint+Prettier（文件级） | 强制（唯一） |
-| 代码库智能/静态分析 | **fallow** | 3.33.1 | 前置分析器（非判决）：跨文件仓库图给出未用代码/重复/循环/复杂度/架构边界的**候选线索**；结论须二次人工核验 | 推荐（经 `pnpm dlx`） |
+| 代码库智能/静态分析 | **fallow** | 3.33.0 | 前置分析器（非判决）：跨文件仓库图给出未用代码/重复/循环/复杂度/架构边界的**候选线索**；结论须二次人工核验 | 推荐（devDependency · `pnpm exec`） |
 | 本地 CI 编排 | **scripts/ci.ts**（node:child_process） | — | 一键全量门禁：`check`→`build`→`test` + fallow 佐证；pre-push 自动触发，**替代远程 CI** | 强制 |
 | 一次性测试库供给 | **Testcontainers**（`testcontainers` + `@testcontainers/postgresql`） | ^12.2.1 | `scripts/ci-fullstack.ts`（`pnpm run test:fullstack`，经 `ci:db` 串入）：拉一次性 PG（`postgres:16-alpine`·随机端口）→ 重放基线迁移建 schema → 跑 env-gated 全栈 e2e + BA 一致性套件，用完即焚零足迹；Ryuk 禁用（清理兜底=finally stop + 启动前标签清扫）；**默认 `ci` 仍 DB-free 不变量不动** | 推荐（带 DB 验收面） |
 | Git Hooks | **husky** | ^9.1.7 | pre-commit → `lint:fix`；pre-push → `ci` | 强制 |
@@ -112,8 +112,8 @@
 - **定位（关键）**：fallow 是**前置分析 / 候选生成工具**——它输出的是**待核验的线索，不是可直接执行的判决**。任何结论（尤以 dead-code、未用依赖、边界告警）在据此**动手**（删代码、删依赖、重构）之前，**必须进行二次人工核验**。
 - **为何必须复核**：fallow 基于静态仓库图，无法感知**运行时反射与框架魔法**调用，故必然存在假阳性与漏判。
 - **二次核验（强制流程）**：
-  1. `pnpm dlx fallow dead-code --type-aware` 收敛候选；
-  2. `pnpm dlx fallow dead-code --trace <入口>:<符号>` 追踪引用链；
+  1. `pnpm exec fallow dead-code --type-aware` 收敛候选；
+  2. `pnpm exec fallow dead-code --trace <入口>:<符号>` 追踪引用链；
   3. 全仓 `grep`（含非 `.ts`、配置、注释、动态 import）反查；
   4. 处置分级：**真实问题**→修复；**假阳性**→加 `// fallow-ignore-next-line <issue-type>` 抑制并留因由；**存疑**→保留并记录。
   5. 删依赖/删码后跑 `check` + `test` + `build` + 启动冒烟回归（必要时 `verify:prod-boot`）。
@@ -122,15 +122,15 @@
   - 经实例/`this` 调用但静态图漏判的公共方法（实证：`User.toPublicProjection` 实际被 handler 调用却被报为未用）；
   - 注释内出现的 `import` 关键字（fallow 正确判为未引用，但人工 grep 需排除注释造成的反向误判）；
   - DI 容器注入、装饰器元数据、动态 `require` 等运行时依赖。
-- **调用方式**：统一经 `pnpm dlx fallow ...`（遵守 §3「禁 bun/npm/yarn」红线），不直接用 `npx`。
-- **入口命令**：`pnpm dlx fallow`（健康/重复/未用一次跑完）、`pnpm dlx fallow audit`（仅卡本次变更引入的问题，PR 门禁首选）、`pnpm dlx fallow dead-code`、`pnpm dlx fallow dupes`、`pnpm dlx fallow health --score`。
-- **架构边界**：`pnpm dlx fallow architecture` / `fallow guard` 提供 layered/hexagonal/feature-sliced 预设，作为 §4（architecture.md）分层依赖规则的**静态佐证**（同样需人工确认，非唯一门禁），与域纯度测试互补。
-- **版本一致性**：当前仅全局安装（`3.33.1`，未入 `package.json`）。若需 CI/本地同版本，应固定为 devDependency 并在 `package.json` 写精确版本；在此之前，本工具为**推荐**而非强制门禁。
+- **调用方式**：fallow 现为项目 devDependency，统一经 `pnpm exec fallow ...`（调本地二进制·勿用 dlx 临时拉，缘由见下「版本一致性」），遵守 §3「禁 bun/npm/yarn」红线、不直接用 `npx`。
+- **入口命令**：`pnpm exec fallow`（健康/重复/未用一次跑完）、`pnpm exec fallow audit`（仅卡本次变更引入的问题，PR 门禁首选）、`pnpm exec fallow dead-code`、`pnpm exec fallow dupes`、`pnpm exec fallow health --score`。
+- **架构边界**：`pnpm exec fallow architecture`（CI 经 package.json 脚本 `fallow:arch`）/ `fallow guard` 提供 layered/hexagonal/feature-sliced 预设，作为 §4（architecture.md）分层依赖规则的**静态佐证**（同样需人工确认，非唯一门禁），与域纯度测试互补。
+- **版本一致性**：现为项目 devDependency（`package.json` 精确钉 `3.33.0`·**无 `^`**）。钉 3.33.0 而非 3.33.1 缘由：npmmirror 对 `@fallow-cli/*` 原生平台二进制同步滞后（仅到 3.33.0·缺 3.33.1），装 3.33.1 会使其 optionalDependencies 整组解析失败被跳过、运行时报 `Could not find @fallow-cli/linux-x64-gnu`（dlx 临时拉同因受累）。取镜像够用的 3.33.0 而非将 `@fallow-cli` scope 覆写 npmjs，守 §6 境内镜像优先；镜像补齐后可升版·本工具仍为**推荐佐证**而非强制门禁。
 - **退出码约定**：`0` 干净/仅告警，`1` 发现新增问题（正常门禁结果），`2` 输入或运行错误——脚本化时不得用 `|| true` 掩盖 `2`。
 
 ### 4.8 本地 CI（Local CI）
 - **定位**：本项目**不走远程 CI 做门禁**（GitHub Actions 仅部署 Swagger Pages）。质量门禁在**本地**由 `scripts/ci.ts` 一键执行，等价替代远程 CI。
-- **命令**：`pnpm run ci`（full，默认）—— 依序跑 `check` → `build`（`build:libs`→`build:nest`）→ `test` 三道**硬门禁**（快速失败），随后 `pnpm dlx fallow architecture` 作**佐证**（非阻断）；`pnpm run ci:quick` 仅跑 `check` + `test`（跳过 build 与 fallow，供快速回归）。pre-push 固定走 full。另提供 `pnpm run verify:prod-boot`：构建后真起服命中 `/api/v1/health` 200 的**prod 回归防线**（R-δ：CI 绿≠prod 可跑，需真起服实证）。
+- **命令**：`pnpm run ci`（full，默认）—— 依序跑 `check` → `build`（`build:libs`→`build:nest`）→ `test` 三道**硬门禁**（快速失败），随后经 package.json 脚本 `fallow:arch`（= `pnpm exec fallow architecture`）作**佐证**（非阻断）；`pnpm run ci:quick` 仅跑 `check` + `test`（跳过 build 与 fallow，供快速回归）。pre-push 固定走 full。另提供 `pnpm run verify:prod-boot`：构建后真起服命中 `/api/v1/health` 200 的**prod 回归防线**（R-δ：CI 绿≠prod 可跑，需真起服实证）。
 - **自动触发**：`.husky/pre-push` 在 push 前执行 `pnpm run ci`；未全绿则阻断 push。禁止 `--no-verify` 绕过（§3）。
 - **失败语义**：任一硬门禁非零退出 → 整体 `exit 1`；fallow 步骤即便有发现项或工具缺失也仅告警、不使流水线失败（遵循 §4.7「结论须二次人工核验」）。
 - **可复现性**：编排仅用 `node:child_process`（`spawnSync('pnpm', …)`），不引入 bash/Make 等其他编排工具，遵守 §1「运行时统一 Node」。
@@ -180,7 +180,7 @@
 | 迁移生成/执行 | `pnpm run migration:generate` / `migration:run` |
 | 数据 seed/reset/setup | `db:seed` / `db:reset` / `db:setup` |
 | OpenAPI 导出 | `pnpm run openapi:export` |
-| 代码库健康/审计（fallow） | `pnpm dlx fallow` / `pnpm dlx fallow audit` / `pnpm dlx fallow dead-code` |
+| 代码库健康/审计（fallow） | `pnpm exec fallow` / `pnpm exec fallow audit` / `pnpm exec fallow dead-code` |
 | 本地 CI（全量门禁，pre-push 自动触发） | `pnpm run ci` |
 | 本地 CI（快速：仅 check+test） | `pnpm run ci:quick` |
 | prod 启动回归防线（真起服验 /health） | `pnpm run verify:prod-boot` |

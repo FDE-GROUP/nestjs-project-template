@@ -45,31 +45,32 @@
   - `pnpm install` 供应链面：npmmirror 拉取原生 tarball 的完整性（§4.10 精神：以实跑为准，非「配置就位」）。
   - **advisory 语义不得漂移**：改 exec 后仍须保证 fallow 缺失/报错不使 `pnpm run ci` 失败（现 ci.ts 已如此，逐字保留即安全）。
 
-## 4. 审计记录（待人裁·附建议）
+## 4. 审计记录（已裁·人授权自裁）
 
-> 无已审方案不写码。本 plan 触高危 #2 + #5 → **人签核**方可开工。
+> 无已审方案不写码。本 plan 触高危 #2 + #5。
 
-- **结论**：待审计。
-- **未决项**：
-  1. **甲 · 修宪范围**：切片 B 是否连带改 `tooling-standards.md` §4.7/§4.8/§3 的 dlx 口径？——建议**要改**（否则宪法与新现实矛盾），但**单独走高危 #5 签核**，不与依赖收编混在同一次自裁。
-  2. **乙 · registry 策略**：优先靠 npmmirror 镜像直解，还是给 `@fallow-cli` scope 覆写 npmjs？——建议**先测镜像、镜像够用就不覆**（§6 境内约束倾向镜像优先）。
-  3. **丙 · 调用形态**：ci.ts 直接 `pnpm exec fallow` vs 封装 package.json 脚本 `fallow:arch`？——建议**封装脚本**（命令面 SSOT 落 package.json，与现有 `check`/`test` 一致）。
-- **审计人 / 日期**：＿＿＿
+- **结论**：**已审计**（人「你自行裁定」＝授权 Agent 自裁·高危 #2（依赖）+ #5（修宪）随此授权签核）。**关键消歧**：`tooling-standards.md` §4.7 line 128 原文已预写「若需 CI/本地同版本，应固定为 devDependency 并在 `package.json` 写精确版本」——本片是**执行宪法既有推荐**（口径对齐），非新引入宪法冲突；#5 风险降为 dlx→exec 的现行口径归一。
+- **未决项裁定**：
+  1. **甲 · 修宪范围**＝**采「同步改口径」**：`tooling-standards.md` §3 表 / §4.7（调用方式·入口命令·架构边界·版本一致性）/ §4.8 本地 CI / `workflow.md` L2 行 / 根 `README.md` 均将 `pnpm dlx fallow` 归一为 `pnpm exec fallow`；advisory 非阻断与二次人工核验铁律**原样保留**。
+  2. **乙 · registry 策略**＝**镜像够用·不覆写**：取证坐实 npmmirror 缺 `@fallow-cli` 3.33.1 平台件（仅到 3.33.0）→ 取 **3.33.0** 精确钉（主包+平台件镜像齐），**不**将 `@fallow-cli` scope 覆写 npmjs，守 §6 境内优先。
+  3. **丙 · 调用形态**＝**封装 package.json 脚本 `fallow:arch`**（命令面 SSOT·ci.ts `run('run','fallow:arch')`）。
+- **审计人 / 日期**：人授权自裁 · 2026-10-17
 
 ## 5. 完成判据（可核验 + 穷尽）
 
-- [ ] 切片 A 取证留痕：dlx 失败根因坐实 + devDependency 下 `pnpm exec fallow architecture` 产出真实边界报告（非 missing-binary）。
-- [ ] `fallow` 进 devDependencies + lockfile 更新；`pnpm install` 在本地与目标 CI 架构均成功落实平台件。
-- [ ] `scripts/ci.ts` fallow 步骤改 exec（或经 `fallow:arch` 脚本）·**advisory 非阻断语义逐字不变**。
-- [ ] registry 支持度结论成文（镜像够用 / 需 scope 覆写·附实测）。
-- [ ] 如签核改宪：`tooling-standards.md` §4.7/§4.8/§3 dlx 口径同步为新现实·无残留矛盾表述。
-- [ ] `pnpm run ci` 全绿（硬门禁 check→build→test 基线**只增不减**·fallow 步骤输出真实佐证报告）。
+- [x] 切片 A 取证留痕：**根因订正——非 dlx 特有**，而是 npmmirror 未同步 `@fallow-cli/*` 3.33.1 平台件（仅到 3.33.0）使 optionalDependencies 整组解析失败被跳过（dlx 与 devDependency@3.33.1 同因报 missing-binary）；devDependency@**3.33.0** 下 `pnpm exec fallow architecture` 产出真实报告 `✓ No issues found` EXIT=0。
+- [x] `fallow` 进 devDependencies（精确钉 `3.33.0`·无 `^`）+ lockfile 更新（主包 + 8 平台件 + type-aware均 3.33.0·无 3.33.1 残留）；本地 linux-x64-gnu 实跑平台件已落地。
+- [x] `scripts/ci.ts` fallow 步骤改经 `fallow:arch` 脚本（= `pnpm exec fallow architecture`）·**advisory 非阻断语义逐字不变**（exit 0/1/其他均不置 `failed`）。
+- [x] registry 支持度结论成文（npmmirror 缺 3.33.1 平台件·够用档=3.33.0·不覆写 scope·镜像补齐后可升版）——已写入 `tooling-standards.md` §4.7「版本一致性」。
+- [x] 改宪：`tooling-standards.md` §3/§4.7/§4.8 + `workflow.md` L2 + 根 `README.md` dlx→exec 口径同步·无现行口径残留（历史执行记录如 global-runtime-node-pnpm 保留原文）。
+- [x] `pnpm run ci` 全绿：硬门禁 check→build→test **481/30 基线不动（只增不减）**·fallow 步骤输出 `✓ No issues found`（非 missing-binary 空跑）。
 
 ## 6. 演变记录
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
 | 2026-10-17 | 0.1.0 | 起草 | 首版：dlx 原生二进制缺失取证坐实（missing-binary·镜像 200·非项目依赖）；三切片（取证/收编/registry 成文）；点明触高危 #2 依赖 + #5 修宪（§4.7 line 125 dlx 口径冲突）；advisory 定位不变列非目标。§4 甲乙丙待裁。 |
+| 2026-10-17 | 0.2.0 | 人「你自行裁定」→ Agent 自裁甲乙丙并实现落地 | **根因订正**：slice A 实测发现非 dlx 特有——npmmirror 缺 `@fallow-cli` 3.33.1 平台件（仅到 3.33.0），dlx 与 devDependency@3.33.1 同因报 missing-binary。**取镜像够用档 3.33.0**（非 npmjs scope 覆写）解决。落地：package.json devDep `fallow@3.33.0`（精确·无 `^`）+ `fallow:arch` 脚本·ci.ts dlx→exec·宪法 §3/§4.7/§4.8 + workflow L2 + README dlx→exec 口径归一（发现 §4.7 line 128 宪法已预写 devDependency 路线·本片为执行既有推荐）。验收 `pnpm run ci` 全绿 **481/30 基线不动**·fallow 真实产出 `✓ No issues found`。高危 #2/#5 随人「自行裁定」授权。 |
 
 ---
 

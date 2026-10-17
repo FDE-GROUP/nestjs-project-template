@@ -48,10 +48,11 @@ if (!quick) {
 step('Tests (vitest)', run('run', 'test'));
 
 // 佐证（advisory）：fallow 架构边界。工具未安装/报错也不阻断本地 CI；quick 模式跳过。
+// fallow 为项目 devDependency（非 dlx 临时拉），经 package.json 脚本 `fallow:arch` 调本地二进制。
 if (!quick) {
   console.log(`${BOLD}── Advisory (fallow) ──${RST}`);
   console.log(`${BOLD}▶ architecture boundaries${RST}`);
-  const arch = run('dlx', 'fallow', 'architecture');
+  const arch = run('run', 'fallow:arch');
   if (arch === 0) {
     console.log(`${GREEN}✓ no boundary violations${RST}\n`);
   } else if (arch === 1) {

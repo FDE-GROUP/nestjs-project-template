@@ -148,7 +148,7 @@ pnpm run ci:quick    # 轻量门禁：check + test
 
 - **Git Hooks**：Husky `pre-commit`（biome `lint:fix`）、`commit-msg`（commitlint）、`pre-push`（跑 `pnpm run ci`）。
 - **提交规范**：Conventional Commits，见 [约定文档](./COMMIT_CONVENTION.md)。
-- **代码智能分析**：`fallow`（经 `pnpm dlx fallow`）作为 L2 佐证工具（结果须人工二判），详见 [工具标准](./docs/specs/tooling-standards.md)。
+- **代码智能分析**：`fallow`（项目 devDependency·经 `pnpm exec fallow`）作为 L2 佐证工具（结果须人工二判），详见 [工具标准](./docs/specs/tooling-standards.md)。
 
 ## 联系方式
 

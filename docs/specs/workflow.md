@@ -89,7 +89,7 @@
 | 层 | 角色 | 本项目落点 | 判据地位 |
 |----|------|-----------|---------|
 | **L1 裁决门禁** | 合并与否唯一裁决 | 本地 CI（`pnpm run ci` = check→build→test）+ `.husky/pre-push` + commitlint | **硬门**，任何工具不越此层 |
-| **L2 前置发现** | 产出候选供人二判 | `pnpm dlx fallow`（dead-code / dupes / architecture） | 参考，**永不裁决**，须二次人工核验 |
+| **L2 前置发现** | 产出候选供人二判 | `pnpm exec fallow`（devDependency·dead-code / dupes / architecture） | 参考，**永不裁决**，须二次人工核验 |
 | **L3 AI 情报** | 只读取证 / 检索 / 导航 | 暂缓（后续章）；结论须**可引注到源** | 证据可引注 |
 | **L4 驾驶舱** | AI 编码工具与配置 | [`AGENTS.md`](../../AGENTS.md)（**统一入口 · §9.5 已引入**）+ `.claude/settings.local.json` | 消费者，**非裁判** |
 
