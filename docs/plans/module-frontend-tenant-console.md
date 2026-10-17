@@ -71,18 +71,19 @@
 
 > 无已审方案不写码。跨前后端消费面 → 人签核。
 
-- 结论：**待审计**——待人对 §2.3 五待裁点裁定后进入实施。
-- 未决项：§2.3（①范围切法 / ②数据层 / ③Playwright / ④api-client 解析 / ⑤基元深度）。
-- 审计人 / 日期：—— / ——
+- 结论：**已审计·放行**——人 2026-10-18 令「同意」：§2.3 五待裁点全采推荐档
+  （①甲·分 F2a 只读/F2b 操作两片串行；②甲·router loader + api-client 裸调；③甲·本片缓采 Playwright；④甲·根 build 纳入 api-client 构建步·web 走 exports→dist；⑤甲·shadcn 按需）。即刻实施 F2a。
+- 未决项：无（api-client 解析方式按 §3 风险走首日 spike，拓不动按既定降级档处置并登 §6，非未决）。
+- 审计人 / 日期：人 / 2026-10-18。
 
 ## 5. 完成判据（可核验 + 穷尽）
 
-- [ ] §2.3 五待裁点获人裁定
-- [ ] F2a：apps/web 消费 `@saas/api-client` typed 通（解析方案 spike 定案）；workspaces / 租户+订阅摘要 / 成员只读页落地，deny-by-default 与后端同向
+- [x] §2.3 五待裁点获人裁定（令「同意」= 推荐档全采）
+- [x] F2a：apps/web 消费 `@saas/api-client` typed 通（④甲 spike 定案：`build:client` 产 dist（含 schema.d.ts 拷贝步）·web `moduleResolution:bundler` 走 exports→dist·**typecheck EXIT=0 + vite build 打包通**）；`/workspaces` typed 列表 / 首页订阅摘要（SubscriptionResponse）/ `/settings/members`（BA 透传·诚实防御渲染）落地，deny-by-default（`requireSession`）与后端会话墙同向
 - [ ] F2b：邀请 / 成员 / workspace / 切当前租户 操作面落地，mutation 成功重载、失败据 `errorCode`/`message` 反馈
-- [ ] 新页组件测覆盖渲染 / 空态 / 错误窄化；关键路径 dev 反代真跑取证（非 Playwright·除非裁③乙）
-- [ ] `pnpm run ci` L1 全绿（基线只增不减·F1 后 **540/31·92 files** 起）
-- [ ] 后端零改动、F1 制品零触动（防已验收面回退）
+- [ ] 新页组件测覆盖渲染 / 空态 / 错误窄化（**F2a 已达成**：WorkspacesView/SubscriptionView/MembersView typed+空态测 + format 错误窄化单测·共 14 新测）；关键路径 **dev 反代真跑端到端**（需起 DB+后端+登录态）——本轮未跑，归人类验收执行（非 Playwright）
+- [x] `pnpm run ci` L1 全绿（基线只增不减·F1 后 540/31·92 → **F2a 554/31·96 files**·+14 测/+4 测文件·skip 稳 31）
+- [x] 后端零改动、F1 制品零触动（`git status` apps/api 无改动·契约锁测 `api-contracts.test.ts` 仍绿）
 - [ ] 人类验收（F2a、F2b 各自单独验收）
 
 ## 6. 演变记录
@@ -90,8 +91,10 @@
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
 | 2026-10-18 | 0.1.0 | 总纲 F1 结项后按 §2.2 串行呈 F2 | 首版呈审：apps/web F0 实态 + okee 数据层实据（无 query 库）+ 自助面 typed ops 清单（实采 openapi.yaml）+ 接线缺口（web 未依赖 api-client·exports→dist 无 dist）+ 五待裁点（含总纲 §2.3① Playwright 重呈） |
+| 2026-10-18 | 0.2.0 | 人令「同意」过审计门 | §4 翻「已审计·放行」（五裁点推荐档全采）；§5 首框勾；戳翻实施中（即刻起 F2a）。 |
+| 2026-10-18 | 0.3.0 | F2a 只读可见片实施落地 | 接线：根 `build:client` 步 + `packages/api-client` build 补 `cp schema.d.ts`（tsc 不复制生成 .d.ts）+ apps/web `@saas/api-client` 依赖 + `lib/api.ts` 单例（同源空 basePath）。页面：`/workspaces`（typed 分页表）·首页订阅摘要（SubscriptionResponse）·`/settings/members`（BA 透传·防御渲染·诚实标注非 Nest 契约形）。测：三 View typed/空态 + `format.test.ts`（errorCodeOf 窄化）=+14。L1 PASSED 554/31·96。**自捕**：openapi-fetch `new Request(相对URL)` 在 jsdom（undici 不解析 document base）抛错 → 弃 router+fetch 集成测（环境限制非产品缺陷·浏览器同源正常），端到端归 dev 反代真跑（未跑·待人类验收）。**降档**：members 系 F1 passthrough 面（无 Nest typed 契约）不假称 typed。 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-18 / v0.1.0 起草（**待审计——呈人裁 §2.3 五待裁点**）；发现登 §6 不入正文。
+正文已于 2026-10-18 / v0.3.0 更新（**F2a 已实施·待人类验收**——typed 接线+三可见页+组件测落·L1 554/31·96 只增不减·后端/F1 零触动；F2b 操作片与 dev 反代真跑待下一环）；发现登 §6 不入正文。
