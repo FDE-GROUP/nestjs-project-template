@@ -57,6 +57,10 @@ function resolveConditions(
  *
  * over-grant 防线（S2·类型级）：守卫热路径（`can` 不带 `resource`）用**仅含 conditions=null 行**的
  * 类型级 ability——CASL v7 类型级 `can(action, subject)` 不下推 conditions，纳入会静默升为全量放行。
+ * 人裁改判（module-rbac-guard-instance-read A1·2026-10-17「同意」·首批仅 list 面）：守卫路径仅对
+ * `action==='read'` 放宽为「存在任一匹配 grant 行（含 conditions 行）即放行」——判据直接复用
+ * 已验收的 `listPredicate` 三态（kind!=='none'），行可见集仍由列表面谓词下推治理（「列表 ⊆ 逐条」
+ * 同源同解·无越权增量）；写动作（create/update/delete/cancel）防线原样不变。
  * S4（check 级·乙裁）：当 `check.resource` 存在时走**实例判定**——纳入全部 grant 行、把 `{{userId}}`
  * 模板按 `check.userId` 解析为实值后携 `__caslSubjectType__` 交 CASL mongo 匹配；query 级列表过滤仍缓账。
  */
@@ -76,8 +80,16 @@ export class CaslTenantPermissionChecker
     const cacheKey = `${organizationId}\u0000${role}`;
     try {
       const entry = await this.entryFor(cacheKey, organizationId, role);
-      // 守卫路径（不带 resource）：类型级判定·复用缓存 ability·conditions 行保守 deny（S2 防线）。
+      // 守卫路径（不带 resource）。
       if (check.resource === undefined) {
+        // 人裁 A1（module-rbac-guard-instance-read·仅 list 面）：read 入口级判定复用
+        // `listPredicate` 三态——存在任一匹配 grant 行（含 conditions 行）即过门；行级可见
+        // 仍由列表面谓词下推治理。守卫面无 userId 不影响过门（模板留字面 → 行落空 deny）。
+        if (action === 'read') {
+          const pred = await this.listPredicate({ organizationId, role, action, subject });
+          return pred.kind !== 'none';
+        }
+        // 写动作：类型级判定·复用缓存 ability·conditions 行保守 deny（S2 防线原样）。
         return entry.typeLevel.can(action, subject);
       }
       // 实例路径（check 级·S4）：纳入全部 grant 行·按操作者解析 {{userId}} 后交 CASL mongo 匹配。

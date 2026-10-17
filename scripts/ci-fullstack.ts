@@ -7,7 +7,7 @@
  *     `assertScratchDb` 安全断言·防误指真实库的原前置原样生效）
  *   → 两库各**重放已提交基线迁移**（`initMigrationOrm` + `migrator.up()`·与 `db:setup` 同路径·
  *     永不 `schema.create/synchronize`，守 tooling §4「generate+migrate」纪律）
- *   → 跑 6 个 env-gated 全栈 e2e（`DATABASE_URL`=`E2E_DATABASE_URL`=ci_e2e 容器串·现契约两变量同指一库）
+ *   → 跑 9 个 env-gated 全栈 e2e（`DATABASE_URL`=`E2E_DATABASE_URL`=ci_e2e 容器串·现契约两变量同指一库）
  *   → 跑 BA authFlow 一致性套件（`DATABASE_URL`=mikro_ba_consistency 串 + `BA_MIKRO_CONSISTENCY=1`）
  *   → `finally` 显式 `container.stop()`——用完即焚、零足迹（§4.10 实跑对拍口径）。
  *
@@ -27,16 +27,20 @@ const IMAGE = 'postgres:16-alpine';
 const E2E_DB = 'ci_e2e';
 const CONSISTENCY_DB = 'mikro_ba_consistency';
 
-/** 现存 8 个 env-gated 真库 e2e（`E2E_DATABASE_URL` 开关）——新增 gated 文件时此处同步登记。 */
+/** 现存 9 个 env-gated 真库 e2e（`E2E_DATABASE_URL` 开关）——新增 gated 文件时此处同步登记。
+ *  路径订正注记（module-rbac-guard-instance-read 实跑自捕）：tenant-hard-delete/seat-quota-member
+ *  早先随 `9eec820` 域归位重构迁居 modules/ 下，本清单未同步→ vitest 对不存在路径静默不跑（漂移敞口）；
+ *  workspace-owner-rbac 为 owner-column 片漏登。均按清单自身声明规则补齐，非门禁语义变更。 */
 const GATED_E2E_FILES = [
   'apps/api/src/modules/posts/infrastructure/repositories/posts-cursor-pagination.e2e.test.ts',
   'apps/api/src/database/event-store.mikro.e2e.test.ts',
   'apps/api/src/database/outbox-relay.e2e.test.ts',
   'apps/api/src/database/mikro/tenant-status-subscription-link.e2e.test.ts',
-  'apps/api/src/tenancy/tenant-hard-delete.e2e.test.ts',
+  'apps/api/src/modules/tenants/tenant-hard-delete.e2e.test.ts',
   'apps/api/src/tenancy/tenant-isolation.e2e.test.ts',
   'apps/api/src/modules/auth/auth-http-surface.e2e.test.ts',
-  'apps/api/src/tenancy/seat-quota-member.e2e.test.ts',
+  'apps/api/src/modules/subscriptions/seat-quota-member.e2e.test.ts',
+  'apps/api/src/modules/workspaces/workspace-owner-rbac.e2e.test.ts',
 ];
 
 // Ryuk 禁用（见头注）；容器清理走 finally stop + 启动前遗留清扫。
@@ -125,7 +129,7 @@ try {
   }
 
   failed |= run(
-    'env-gated 全栈 e2e（8 文件·真容器真库）',
+    'env-gated 全栈 e2e（9 文件·真容器真库）',
     ['exec', 'vitest', 'run', ...GATED_E2E_FILES],
     {
       DATABASE_URL: e2eUrl,

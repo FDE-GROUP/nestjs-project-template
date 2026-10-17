@@ -19,15 +19,13 @@ import { AppModule } from '../../app.module';
  * Workspace 实例属主列 **全栈端到端演示**（module-workspace-owner-column 切片 B·env-gated）：
  * query 级片（module-rbac-query-level-filtering）当时只能单测锁形——本片在真库上兑现那笔缓账。
  *
- * 证真五向（盖章/伪造走真实 HTTP + 真 BA 会话；列表三向走 handler→repo 全链——plan §2B 预案档：
- * 实跑发现路由 guard 的类型级判定会把「纯实例受限角色」拦在 HTTP 入口（403·fail-closed 保守设计
- * 属实），放宽属已验收 checker 判定语义的改判·归人缓账，本片不改）：
+ * 证真五向（盖章/伪造/列表均走真实 HTTP + 真 BA 会话）：
  * 1. **盖章**：A（owner·seed 无条件 read=kind all）POST /workspaces → 行落 `ownerId=A`
  *    （handler 从 ALS 会话取 userId·人裁③）；
  * 2. **伪造负例**：受限角色 B 经同端点 body 塞 `ownerId:'<A>'` → 严格白名单管 400 拒入
  *    （DTO 面只有 name/slug·伪造面为零）；
  * 3. **owner 自见**：B（org 自定义角色 `limited`·`{ownerId:'{{userId}}'}` 条件 grant）
- *    创建 wB 后 list → 见 wB；
+ *    经真实 HTTP GET list → 见 wB 且仅 wB（人裁 A1 改判后 guard 入口级放行·行级仍由谓词下推）；
  * 4. **非 owner 盲**：B 的 list 不含 A 的 wA，也不含 `ownerId=NULL` 的系统行（人裁② fail-closed）；
  * 5. **all 全见**：A list → wA/wB/wNull 三行皆可见（类型级无条件授权不受 where 支影响）。
  *
@@ -247,14 +245,21 @@ gated('Workspace 实例属主端到端（RBAC query 级 where 支真库兑现 ·
     await em.flush();
 
     // — 3+4. B（where 支）：自见 wB；盲 A 的 wA 与 NULL 行（人裁②）。
-    // 现状登记（本片发现的真实边界）：纯实例受限角色在 HTTP 入口即被路由 guard 类型级判定 403
-    // ——放宽属已验收 checker 判定语义的改判，归人缓账（plan §3/§6），故列表三向走 handler 全链预案档。
-    const guardedB = await app.inject({
+    // 改判存照（module-rbac-guard-instance-read·人 2026-10-17 令「同意」采 A1·仅 list 面）：guard 对
+    // 纯实例受限角色的 read 入口级判定改委派 listPredicate——原「403 现状登记」断言翻正为真 HTTP 面：
+    // 过门放行，行可见集仍由 where 支下推治理（自见·盲他人与 NULL）。
+    const listB = await app.inject({
       method: 'GET',
       url: '/workspaces?limit=50',
       headers: { cookie: b.cookie },
     });
-    expect(guardedB.statusCode).toBe(403);
+    expect(listB.statusCode).toBe(200);
+    // 实测壳形（全链首测取证）：Page 无 meta 键→ TransformInterceptor 走普通包壳支，
+    // 响应 = {data:{items,total,limit,offset},statusCode,message}。
+    const slugsBHttp = (listB.json() as { data: { items: { slug: string }[] } }).data.items.map(
+      (w) => w.slug,
+    );
+    expect(slugsBHttp).toEqual([`beta-${stamp}`]);
 
     const slugsB = (
       await listWorkspacesViaHandler({ tenantId: orgId, userId: b.userId, role: 'limited' })

@@ -15,9 +15,11 @@ import type { TenantAction, TenantRole, TenantSubject } from './tenant-rules';
  *    守卫热路径不逐请求查库）。
  *
  * 形状扩展注记（dynamic-roles S4·乙裁「仅 check 级」·丁裁②契约）：
- *  - `resource` 可选——实例级判定的**逃生舱**：不带 = 类型级裁决（守卫路径·带 conditions 的行保守
- *    deny，承 S2 over-grant 防线）；带上 = 交出「先取资源再判」的应用层，适配侧纳入 conditions 行并按
+ *  - `resource` 可选——实例级判定的**逃生舱**：不带 = 类型级裁决（守卫路径）；带上 = 交出「先取资源再判」的应用层，适配侧纳入 conditions 行并按
  *    实例匹配（query 级列表过滤已由下方 `listPredicate` 兑现·module-rbac-query-level-filtering）；
+ *  - 守卫路径语义人裁改判（module-rbac-guard-instance-read A1·人 2026-10-17 令「同意」·首批仅 list 面）：
+ *    `action==='read'` 时存在任一匹配 grant 行（含 conditions 行）即放行（行可见集仍由 `listPredicate` 下推治理）；
+ *    写动作维持 conditions 行保守 deny（S2 over-grant 防线原样）；
  *  - `userId` 可选——绑定 grant conditions 里的 `{{userId}}` 模板为当前操作者实值（缺省即模板不可解析 → 保守 deny）。
  */
 
@@ -62,6 +64,7 @@ export interface TenantPermissionChecker {
   /**
    * 纯裁决：是否放行。异步签名（S2·规则源 DB）——deny 由守卫落 403（fail-closed）；
    * 适配器对「查无角色/无租户/词汇外」恒拒，绝不因加载失败视同放行。
+   * 守卫路径（无 resource）的 read/write 分治语义见上方「形状扩展注记」（人裁 A1）。
    */
   can(check: TenantPermissionCheck): Promise<boolean>;
 

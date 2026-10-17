@@ -427,3 +427,75 @@ describe('一致性回归（query 级列表过滤 切片 C·「listPredicate 与
     }
   });
 });
+
+describe('人裁 A1 read/write 分治（module-rbac-guard-instance-read·守卫路径入口级判定）', () => {
+  // 人 2026-10-17 令「同意」（首批仅 list 面）：read 入口级过门 = 存在任一匹配 grant 行（含 conditions 行），
+  // 判据复用 listPredicate 三态；写动作维持 S2 over-grant 防线。行可见集仍由列表面谓词下推治理。
+  const condReadGrants = () => [grant('Workspace', 'read', { ownerId: '{{userId}}' })];
+
+  it('conditions-only read 行 → 守卫路径（无 resource·无 userId）放行（入口级面·模板留字面不影响过门）', async () => {
+    const { checker } = makeChecker(condReadGrants);
+    await expect(
+      checker.can({
+        organizationId: 'orgA',
+        role: 'limited',
+        action: 'read',
+        subject: 'Workspace',
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it('同源同解：同一受限行 can() 过门且 listPredicate 归 where（行级可见仍由谓词治理·无越权增量）', async () => {
+    const { checker } = makeChecker(condReadGrants);
+    const check = {
+      organizationId: 'orgA',
+      role: 'limited',
+      action: 'read' as const,
+      subject: 'Workspace' as const,
+      userId: 'u9',
+    };
+    await expect(checker.can(check)).resolves.toBe(true);
+    await expect(checker.listPredicate(check)).resolves.toEqual({
+      kind: 'where',
+      where: { ownerId: 'u9' },
+    });
+  });
+
+  it('写动作 conditions-only 行 → 守卫路径四动作（create/update/delete/cancel）恒拒（over-grant 防线原样）', async () => {
+    const { checker } = makeChecker(() => [grant('Workspace', 'update', { ownerId: 'u1' })]);
+    for (const action of ['create', 'update', 'delete', 'cancel'] as const) {
+      await expect(
+        checker.can({ organizationId: 'orgA', role: 'limited', action, subject: 'Workspace' }),
+      ).resolves.toBe(false);
+    }
+  });
+
+  it('无任何匹配 read 行 → 守卫路径拒（none 不过门·fail-closed 不变）', async () => {
+    const { checker } = makeChecker(() => [grant('Workspace', 'create', null)]);
+    await expect(
+      checker.can({
+        organizationId: 'orgA',
+        role: 'limited',
+        action: 'read',
+        subject: 'Workspace',
+      }),
+    ).resolves.toBe(false);
+    // 受限 grammar 外脏行同样不过门（listPredicate catch 归 none 的入口级映像）。
+    const dirty = makeChecker(() => [grant('Workspace', 'read', { n: { $gt: 1 } })]);
+    await expect(
+      dirty.checker.can({
+        organizationId: 'orgA',
+        role: 'limited',
+        action: 'read',
+        subject: 'Workspace',
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it('conditions=null read 行 → 照常放行（零回归·all 分支与旧 typeLevel 判定同解）', async () => {
+    const { checker } = makeChecker(() => [grant('Workspace', 'read', null)]);
+    await expect(
+      checker.can({ organizationId: 'orgA', role: 'member', action: 'read', subject: 'Workspace' }),
+    ).resolves.toBe(true);
+  });
+});
