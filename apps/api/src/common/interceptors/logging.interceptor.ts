@@ -25,8 +25,18 @@ export class LoggingInterceptor implements NestInterceptor {
     // 弃旧自造 `req-${now}-${Math.random()}` 孤岛。
     const requestId = currentRequestId() ?? String(request.id ?? 'req-unknown');
 
+    // 人可读消息（首参·保留 `Request [id]` 前缀供回归测）+ pino 结构化字段（次参）：
+    // dev pretty 对齐展示、prod JSON 可按 method/statusCode/responseTimeMs 检索。
+    const bodySummary = body && Object.keys(body).length ? ` ${JSON.stringify(body)}` : '';
     this.loggerService.log(
-      `Request [${requestId}]: ${method} ${url} - ${ip} - ${userAgent} ${body && Object.keys(body).length ? JSON.stringify(body) : ''}`,
+      `Request [${requestId}]: ${method} ${url} - ${ip} - ${userAgent}${bodySummary}`,
+      {
+        requestId,
+        method,
+        url,
+        ip,
+        userAgent,
+      },
     );
 
     return next.handle().pipe(
@@ -35,6 +45,7 @@ export class LoggingInterceptor implements NestInterceptor {
           const responseTime = Date.now() - now;
           this.loggerService.log(
             `Response [${requestId}]: ${method} ${url} - ${responseTime}ms ${data && typeof data === 'object' ? JSON.stringify(data).substring(0, 100) : ''}`,
+            { requestId, method, url, responseTimeMs: responseTime },
           );
         },
         error: (error) => {
@@ -42,6 +53,13 @@ export class LoggingInterceptor implements NestInterceptor {
           this.loggerService.error(
             `Response Error [${requestId}]: ${method} ${url} - ${responseTime}ms`,
             error.stack || JSON.stringify(error),
+            {
+              requestId,
+              method,
+              url,
+              responseTimeMs: responseTime,
+              statusCode: error?.status ?? error?.statusCode,
+            },
           );
         },
       }),

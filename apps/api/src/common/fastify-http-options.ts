@@ -1,3 +1,4 @@
+import type { LoggerOptions } from 'pino';
 import { parseTrustedProxies } from './trusted-proxies';
 
 /**
@@ -10,14 +11,33 @@ import { parseTrustedProxies } from './trusted-proxies';
  * 返回类型采结构字面量而非具名 `FastifyServerOptions`：pnpm 仓内存在两份 fastify
  * 类型副本（5.12.5/5.12.7），具名类型跨副本不变异兼容（disableRequestLogging 函数型
  * 参数不协）；窄结构形对 FastifyAdapter 构造参恒可赋。
+ *
+ * `logger` 与 LoggerService 同策略（cn-adaptation §6.5）：dev/test 走 pino-pretty 彩色可读（便于开发查看），
+ * prod 保持结构化 JSON（stdout·机器可检索）；级别取 `LOG_LEVEL`。
  */
 export function buildFastifyHttpOptions(value?: string): {
-  logger: true;
+  logger: LoggerOptions;
   trustProxy?: string[];
 } {
   const trustedProxies = parseTrustedProxies(value);
+  const level = process.env.LOG_LEVEL || 'info';
+  const isProd = process.env.NODE_ENV === 'production';
+  const logger: LoggerOptions = isProd
+    ? { level }
+    : {
+        level,
+        transport: {
+          targets: [
+            {
+              target: 'pino-pretty',
+              level,
+              options: { colorize: true, translateTime: 'SYS:HH:MM:ss.l', ignore: 'pid,hostname' },
+            },
+          ],
+        },
+      };
   return {
-    logger: true,
+    logger,
     ...(trustedProxies ? { trustProxy: trustedProxies } : {}),
   };
 }

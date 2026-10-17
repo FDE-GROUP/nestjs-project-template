@@ -185,7 +185,8 @@ describe('buildFastifyHttpOptions trustProxy 透传（乙裁同源·四态）', 
   it('未配/空/全空白 → 不传 trustProxy 键（保持直连 socket IP 安全默认）', () => {
     for (const v of [undefined, '', ' , , ']) {
       const opts = buildFastifyHttpOptions(v);
-      expect(opts).toEqual({ logger: true });
+      // logger 现为按 NODE_ENV 选型的 pino 选项对象（dev pretty / prod JSON），不再是布尔 true。
+      expect(typeof opts.logger).toBe('object');
       expect('trustProxy' in (opts as object)).toBe(false);
     }
   });

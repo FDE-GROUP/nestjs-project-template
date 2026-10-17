@@ -38,7 +38,11 @@ export class LoggerService extends Logger {
                 {
                   target: 'pino-pretty',
                   level,
-                  options: { colorize: true },
+                  options: {
+                    colorize: true,
+                    translateTime: 'SYS:HH:MM:ss.l',
+                    ignore: 'pid,hostname',
+                  },
                 },
               ],
             },
@@ -46,18 +50,30 @@ export class LoggerService extends Logger {
     );
   }
 
-  log(message: string): void {
+  log(message: string, ...optionalParams: any[]): void {
     super.log(message);
-    this.pinoInstance.info(message);
+    const meta = optionalParams.find((p) => p && typeof p === 'object') as
+      | Record<string, unknown>
+      | undefined;
+    if (meta) this.pinoInstance.info(meta, message);
+    else this.pinoInstance.info(message);
   }
 
-  error(message: string, trace: string): void {
+  error(message: string, ...optionalParams: any[]): void {
+    const trace = optionalParams.find((p) => typeof p === 'string') as string | undefined;
+    const meta = optionalParams.find((p) => p && typeof p === 'object') as
+      | Record<string, unknown>
+      | undefined;
     super.error(message, trace);
-    this.pinoInstance.error({ message, trace });
+    this.pinoInstance.error({ ...(meta ?? {}), ...(trace ? { trace } : {}) }, message);
   }
 
-  warn(message: string): void {
+  warn(message: string, ...optionalParams: any[]): void {
     super.warn(message);
-    this.pinoInstance.warn(message);
+    const meta = optionalParams.find((p) => p && typeof p === 'object') as
+      | Record<string, unknown>
+      | undefined;
+    if (meta) this.pinoInstance.warn(meta, message);
+    else this.pinoInstance.warn(message);
   }
 }
