@@ -1,47 +1,53 @@
-# Installation and Running Guide
+# 安装与运行指南
 
-## Prerequisites
+## 前置条件
 
-- [Node.js](https://nodejs.org/) v22 or higher (LTS)
-- [pnpm](https://pnpm.io/) v11 (via `corepack enable`, which reads the `packageManager` field)
-- [PostgreSQL](https://www.postgresql.org/) server
+- [Node.js](https://nodejs.org/) v22 或更高（LTS）
+- [pnpm](https://pnpm.io/) v11（经 `corepack enable` 启用，读取 `package.json` 的 `packageManager` 字段锁定版本）
+- [PostgreSQL](https://www.postgresql.org/) 数据库服务
 
-> **Note:** This branch's runtime is **Node + pnpm** (migrated from Bun — see [runtime amendment plan](./plans/global-runtime-node-pnpm.md)).
+> **说明：** 本分支运行时为 **Node + pnpm**（已从 Bun 迁移，见 [运行时修宪案](./plans/global-runtime-node-pnpm.md)）。
+> 快速起一个本地 PostgreSQL 可用仓库自带的 `docker-compose.dev.yml`（`postgres:16-alpine` · db `nestjs_practice` · user/pass `postgres`）：
+> `docker compose -f docker-compose.dev.yml up -d postgres`。
 
-## Installation
+## 安装步骤
 
-1. Clone the repository
-2. Install dependencies:
+1. 克隆仓库
+2. 安装依赖：
 
 ```bash
 pnpm install
 ```
 
-3. Set up environment variables:
+3. 配置环境变量：
 
 ```bash
 cp .env.example .env
-# Edit .env with your configuration
+# 按需编辑 .env（数据库连接串、密钥等）
 ```
 
-4. Apply the database migrations (development):
+4. 应用数据库迁移（开发）：
 
 ```bash
 pnpm run migration:run
 ```
 
-5. Seed the database (optional):
+5. 写入种子数据（可选）：
 
 ```bash
 pnpm run db:seed
 ```
 
-## Additional Scripts
+> 第 4、5 步可用一条 `pnpm run db:setup`（= `migration:run` + `db:seed`）一次完成。
+>
+> 重新播种：seed 对测试用户非幂等，重复 `db:seed` 会撞唯一键；dev 重播用 `SEED_CLEANUP=true pnpm run db:seed`（先清 `post` + `user`）或 `pnpm run db:reset`（破坏性·仅限本地）。
 
-### Database Management
+## 其他脚本
+
+### 数据库管理
 
 ```bash
-# Generate and apply database migrations
+# 生成并应用数据库迁移
 pnpm run migration:generate
 pnpm run migration:run
 ```
@@ -56,78 +62,88 @@ schema 的唯一真相是实体模型（`apps/api/src/database/mikro/**`·迁移
 - `pnpm run db:reset`（= `mikro-migrate.ts --fresh` + seed）先 `schema.drop()` 删实体表 + 台账再重放基线——**破坏性·仅限本地一次性重建**，切勿指向生产。
 - ⚠️ 生产只走显式 `migration:generate` + `migration:run`；不存在 push / 隐式同步通道。
 
-### OpenAPI Documentation
+> ⚠️ schema 迁移属 **AGENTS §2 高危**，生产/破坏性操作须人自行执行、Agent 不代跑。
+
+### OpenAPI 文档
 
 ```bash
-# Export OpenAPI spec (DB-free codegen, no running server required)
+# 导出 OpenAPI 规格（DB-free 代码生成，无需起服务）
 pnpm run openapi:export
 ```
 
-## Running the Application
+## 运行应用
 
-Development mode:
+开发模式：
 
 ```bash
 pnpm run start:dev
 ```
 
-Production mode:
+生产模式：
 
 ```bash
 pnpm run build
 pnpm run start:prod
 ```
 
-## Code Quality
-
-### Checking and fixing code:
+前端自助面（`apps/web`·本地开发经 `/api` 同源反代到后端）：
 
 ```bash
-# Check code quality and formatting
+pnpm run dev:web    # Vite :5173 · /api/* 反代 → 后端 :7009
+```
+
+## 代码质量
+
+### 检查与修复：
+
+```bash
+# 检查代码质量与格式
 pnpm run check
 
-# Fix code quality and formatting issues automatically
+# 自动修复代码质量与格式问题
 pnpm run check:fix
 
-# Only check linting rules
+# 仅检查 lint 规则
 pnpm run lint
 
-# Fix linting issues automatically
+# 自动修复 lint 问题
 pnpm run lint:fix
 ```
 
-> **Note:** This project uses [Biome](https://biomejs.dev/) for code formatting and linting
+> **说明：** 本项目使用 [Biome](https://biomejs.dev/) 做代码格式化与 lint。
 
-### Formatting code:
+### 格式化代码：
 
 ```bash
 pnpm run format
 ```
 
-## Testing
+## 测试
 
-The project uses **Vitest** as the test runner. Config lives at `vitest.config.ts`.
+测试运行器为 **Vitest**，配置在 `vitest.config.ts`。
 
-Running unit tests:
+运行单元测试：
 
 ```bash
 pnpm run test
 ```
 
-Running tests with coverage:
+带覆盖率运行：
 
 ```bash
 pnpm run test:cov
 ```
 
-Running tests in watch mode:
+监听模式运行：
 
 ```bash
 pnpm run test:watch
 ```
 
-## API Documentation
+## API 文档
 
-API documentation is available at `/apidoc` when the application is running. It provides an interactive interface to explore and test the API endpoints.
+应用运行时，API 文档可在 `/apidoc` 访问（该路径已在全局前缀之外排除），提供交互式界面浏览与测试各端点：
 
-http://localhost:7009/apidoc#/
+- Swagger UI：`http://localhost:7009/apidoc`
+- OpenAPI JSON：`http://localhost:7009/openapi.json`
+- OpenAPI YAML：`http://localhost:7009/openapi.yaml`

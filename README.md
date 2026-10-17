@@ -50,17 +50,19 @@
 - **对象存储**：多云统一接口（[AWS S3](https://aws.amazon.com/s3/) / [阿里云 OSS](https://www.alibabacloud.com/product/object-storage-service) / [腾讯云 COS](https://www.tencentcloud.com/products/cos)）
 - **邮件**：[Nodemailer](https://nodemailer.com/) + [MJML](https://mjml.io/) 模板
 - **文档**：[Swagger / OpenAPI](https://swagger.io/)（`@nestjs/swagger`）
+- **前端**：[React 19](https://react.dev/) + [Vite](https://vitejs.dev/) + [TanStack Router](https://tanstack.com/router) + [Tailwind CSS 4](https://tailwindcss.com/)（租户自助面 `apps/web`）
+- **契约客户端**：`@saas/api-client`（由 OpenAPI 生成的类型安全 API 客户端·`packages/api-client`）
 - **容器化**：[Docker](https://www.docker.com/)（dev / prod）
 - **工程协作**：[Husky](https://typicode.github.io/husky/) + [Conventional Commits](./COMMIT_CONVENTION.md) + commitlint
 
 ## 架构
 
-采用 **Clean Architecture + DDD + CQRS 的垂直切片**与**分阶段 ES + EDA**（范式定义与阶段现状见 §技术栈·架构范式及[事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)：写路径统一 Command/Handler，跨上下文经领域事件通信，当前处 Phase B 影子追加）组织业务，并以 **pnpm workspace** 拆为共享内核与参考应用两包（参考应用目录按行业惯例命名 `apps/api`，“参考实现”语义由文档承担）：
+采用 **Clean Architecture + DDD + CQRS 的垂直切片**与**分阶段 ES + EDA**（范式定义与阶段现状见 §技术栈·架构范式及[事件溯源路线图](./docs/plans/event-sourcing-roadmap.md)：写路径统一 Command/Handler，跨上下文经领域事件通信，当前处 Phase B 影子追加）组织业务，并以 **pnpm workspace**（`apps/*` · `libs/*` · `packages/*`）组织为共享内核、参考后端应用、前端自助面与类型契约客户端（后端目录按行业惯例命名 `apps/api`，“参考实现”语义由文档承担）：
 
 ```
 libs/core/src/              # @core 共享内核：领域事件/聚合基类、tenancy 契约、subscriptions/workspaces 领域层
-apps/api/src/
-├─ modules/<上下文>/        # 限界上下文（users / auth / tenants / workspaces / payment / storage / subscriptions / posts）
+apps/api/src/               # 后端参考应用（NestJS + Fastify）
+├─ modules/<上下文>/        # 限界上下文（users / auth / authorization / tenants / workspaces / platform / payment / storage / subscriptions / posts）
 │  ├─ domain/               # 实体、值对象、领域事件、仓储接口
 │  ├─ application/          # 用例（command/query + handler）、DTO 编排
 │  ├─ infrastructure/       # 仓储实现、外部集成（MikroORM 等）
@@ -68,9 +70,11 @@ apps/api/src/
 ├─ tenancy/                 # 租户边界：生命周期 / RBAC / 配额 / 会话 / 平台治理 / 隔离
 ├─ common/ config/ database/ i18n/ logger/ mailer/   # 技术基础设施
 └─ main.ts / app.module.ts
+apps/web/                   # 前端租户自助面（React + Vite + TanStack Router + Tailwind·@saas/api-client 首消费者）
+packages/api-client/        # @saas/api-client：由 OpenAPI 生成的类型安全 API 客户端
 ```
 
-> 八个上下文均已按垂直切片就位（S 系列重构已收口）；结构规则以 [`docs/specs/architecture.md`](./docs/specs/architecture.md) 为准。
+> 各限界上下文（见 `apps/api/src/modules`）均已按垂直切片就位（S 系列重构已收口）；结构规则以 [`docs/specs/architecture.md`](./docs/specs/architecture.md) 为准。
 
 ## 文档
 
@@ -95,6 +99,7 @@ apps/api/src/
 **指南**（`docs/` — 操作手册）
 
 - [安装与运行](./docs/install&run.md)
+- [前端 dev 反代真跑手册](./docs/frontend-dev-proxy-runbook.md)
 - [Docker 部署](./docs/docker-deployment.md)
 - [MikroORM 迁移指南](./docs/mikro-migration-guide.md)
 - [邮件模块指南（英文）](./docs/mailer-en.md)
@@ -118,6 +123,7 @@ apps/api/src/
 - **邮件**：MJML 模板化发送（多语言 `i18n`）
 - **支付**：Stripe 客户 / 支付意图集成（境内通道规划中·provider 抽象预留）
 - **多语言**：`apps/api/src/i18n`（中 / 英 / 日）
+- **前端自助面**：`apps/web` 租户控制台（只读可见片·F2a），经 `@saas/api-client` 类型安全消费后端契约
 - **可观测**：Pino 结构化日志
 - **测试**：Vitest 单元与集成测试
 - **代码质量**：Biome lint/format + 本地 CI 门禁（见下）
@@ -133,7 +139,8 @@ cp .env.example .env        # 配置环境变量（数据库等）
 pnpm run db:setup           # 应用迁移并写入种子（migration:run + seed）
 
 pnpm run start:dev          # 开发：nest start --watch
-pnpm run build              # 构建：先 build:libs 再 nest build --builder swc
+pnpm run dev:web            # 前端：Vite :5173 · /api 反代 → 后端 :7009
+pnpm run build              # 构建：build:libs → build:client（产 @saas/api-client dist）→ build:nest（SWC）
 pnpm run start:prod         # 生产：node dist/apps/api/src/main.js
 ```
 
