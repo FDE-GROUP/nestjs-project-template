@@ -13,6 +13,7 @@
 - 机制：relay `tickOnce()` 按「全表未派发行」工作（被测行为本身如此），并行文件向 `event` 表插行 → 本文件 relay 捞到**他人行**投递到**自己的总线**、或他方 `lastEventId`/计数观测被本文件插行漂移——竞态双向成立；
 - 决定性归因（owner-column 片实跑）：**不带该片任何新文件**，仅并跑三既有触 event 表文件即复现 ×2 败；outbox-relay 单跑 5/5 绿 ⇒ 既有隔离策略缺陷，非迁移链问题、非任何单文件 bug；
 - 触 event 表/gated 组现有 10 文件（`outbox-relay` / `event-store.mikro` / `tenant-status-subscription-link` / `tenant-hard-delete` / `seat-quota-member` / `tenant-isolation` / `auth-http-surface` / `posts-cursor-pagination` / `workspace-owner-rbac` 等），互污面以 event 触集为核心。
+- 【对账实据 2026-10-17·guard 片实跑自捕 ×2】① `scripts/ci-fullstack.ts` 清单存在**登记漂移**：tenant-hard-delete/seat-quota-member 早先随 `9eec820` 域归位重构迁居 modules/ 下后清单未同步→ vitest 对不存在路径**静默不跑**（长期仅 6/8 文件在链·无告警）；workspace-owner-rbac 为 owner-column 片漏登——均已按清单自身规则补齐（8→9）并全链恢复绿。② 并跑集变化后 outbox 败相从 ×2（`expected false to be true`/`expected 3 to be 1`）漂为 ×1 且形变（`expected 5 to be 4`）——坐实其断言的**非确定性本质**，与 B1 档（全局观测改 scoped）论据同构；另：静默漏跑对 vitest 是默认行为，隔离策略修订时需一并考虑「清单与实存文件恒等校验」（防再漂移）。
 
 ## 2. 裁定议题（归人·本 plan 不自裁）
 
@@ -46,6 +47,7 @@
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
+| 2026-10-17 | 0.1.1 | guard 片实跑自捕两新事实入 §1（只补事实面·不改待裁性质） | ① ci-fullstack 清单登记漂移（2 stale 路径静默漏跑 + owner 漏登）已按清单规则机械补齐 8→9；② outbox 败相并跑集依赖漂变（×2→×1 且形变）坐实全局观测非确定性，B1 论据增补；新增「清单与实存恒等校验」需求入 B 面考量 |
 | 2026-10-17 | 0.1.0 | owner-column 片 §6 v0.3.0③ / ci-fullstack v0.2.2 缓账立片呈审（人令「你裁定，继续推进」→ 执行方**只起草不裁**：门禁面属高危#6，审计不放行） | 首版：事实链（全局 relay × 并行共享库竞态·决定性复现已在案）+ 议题 B1（scoped 断言推荐）/B2（串行）/B3（分库）+ 取证计划（红→绿复现集） |
 
 ---
