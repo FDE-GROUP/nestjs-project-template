@@ -56,17 +56,18 @@
 
 > 无已审方案不写码。契约面跨前后端 → 人签核。
 
-- 结论：**待审计**——待裁点 ①②③④。
-- 未决项：即待裁点。
-- 审计人 / 日期：— / —。
+- 结论：**已审计·放行**——人 2026-10-17 令「同意」：四待裁点全采推荐档
+  （①甲·34 Nest ops 一次补全；②甲·BA 面手写契约注明非 SSOT 成员；③openapi-typescript+openapi-fetch；④codegen 字节对拍进 ci 链）。
+- 未决项：无（泛型分页元数据退化风险按 §3 走首日 spike，拓不动按既定降级档处置并登 §6，非未决）。
+- 审计人 / 日期：人 / 2026-10-17。
 
 ## 5. 完成判据（可核验 + 穷尽）
 
-- [ ] §2.3 四待裁点获人裁定
-- [ ] `pnpm run gen:client`（或对应链）产出 + `openapi/openapi.yaml` 与实跑 codegen 字节级一致
-- [ ] `@saas/api-client` 构建通过；errors 单源锁测绿（re-export 与 `@core/saas-kit` 恒等）；envelope 对拍锁测绿
-- [ ] apps/web **零改动**（F0 已验收面不动·防验收回退）
-- [ ] `pnpm run ci` L1 全绿（基线 529/31·90 files 只增不减）
+- [x] §2.3 四待裁点获人裁定（令「同意」= 推荐档全采）
+- [x] `pnpm run openapi:codegen` 产出 + `openapi/openapi.yaml` 与实跑 codegen 字节级一致（`ci` 链 `openapi:drift` 步 `git diff --exit-code` 对拍绿）
+- [x] `@saas/api-client` 构建通过（`tsc` 净）；errors 单源锁测绿（re-export 与 `@core/saas-kit` 恒等）；envelope 对拍锁测绿（↔ `openapi.yaml` 逐字段）
+- [x] apps/web **零改动**（F0 已验收面不动·防验收回退）
+- [x] `pnpm run ci` L1 全绿（基线 529/31·90 files → **540/31·92 files** 只增不减；新增 = api-contracts.test.ts(3) + api-client.test.ts(8)）
 - [ ] 人类验收
 
 ## 6. 演变记录
@@ -74,8 +75,10 @@
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
 | 2026-10-17 | 0.1.0 | 总纲 F0 验收结项后按 §2.2 串行呈 F1 | 首版呈审：契约缺口实据（0/39 响应 schema）+ 码表单源确认 + 四待裁点 |
+| 2026-10-17 | 0.2.0 | 人令「同意」过审计门 | §4 翻「已审计·放行」（四裁点推荐档全采）；§5 首框勾；戳翻实施中。 |
+| 2026-10-17 | 0.3.0 | 实施收口·γ 翻账（自捕/降档均登此不入正文） | ①**契约非「34 全 typed」**：12 BA 透传面 + 2 bulk-export 聚合 + health 以 `apiOkPassthrough`（`data` 自由对象 + `description` 点名真相源 SSOT）**诚实降档**，若干 void/204 面无 payload 仅挂 `apiError`——不 overclaim。②**分页语义修正**：`Page<T>`/`CursorPage<T>` 契约**无 `meta` 键**，不触发拦截器 `{items,meta}` 提升，整个分页对象原样入 `data`（校正 §1 line16「分页形 `{ data, meta, … }`」旧述）。③**client 双前缀偏差**：`paths` 已含 `/api/v1`，§2.2.2 所设 basePath `/api/v1` 会致 `/api/v1/api/v1/…`→ `DEFAULT_BASE_PATH=''`（同源相对·Node/测试传绝对 baseUrl）。④**yaml 入库事故**：`openapi/openapi.yaml` 历史从未入库 → drift 门禁形同虚设；人「你裁定」采**纳入版本控制**（改 `.gitignore`）。⑤**ci 链新增 `openapi:drift` 硬门禁步**（build 后·需 dist），yaml 入库后方真生效。⑥**vitest 纳入 packages**：test/coverage include 加 `packages/**`，且 `test.exclude` 由裸串 `['node_modules','dist']`（覆盖默认·不排嵌套）修为 `['**/node_modules/**','**/dist/**']`——消 `packages/api-client/node_modules/@core` 符号链接致 @core 测试重复跑。⑦**契约地基自捕**：`api-contracts.test.ts` `contractProps` 原以 `design:type` 枚举 prototype 自身键取空（装饰属性不落 prototype 自有键）致 3 测红 → 改走 swagger `apiModelPropertiesArray` 元数据（继承链聚合去 `:` 前缀），并令错误面锁测以 object response **穷举可选字段**（errorCode+errors[]）方谈逐字段恒等。⑧read-model 手抄 `*.response.ts` 附**编译期双向赋值锁**（tsc 拓红·非 runtime），enum 字段以精确 union（TenantStatus/UserStatus）防 string 退化。⑨**生成类型被 bundle 规则吞**：`.gitignore` 既有 `packages/**/*.d.ts`（#bundle）无差别忽略刻意入库的 `packages/api-client/src/schema.d.ts`（§2.2.1 要求生成物同 routeTree.gen 入库）→ 加精准豁免 `!packages/api-client/src/schema.d.ts`（dist 编译产物仍由 `*.js`+`dist/` 双规则忽略）。⑩**Biome 同步豁免生成物**（高危·改 Biome 配置）：Biome 遵 `.gitignore`，`schema.d.ts` 豁免入库后即受格式检查（openapi-typescript 出 4 空格 vs Biome 2 空格→每次 `gen:types` 永冲）→ 按现有 `!**/*.gen.ts(x)` 生成物惯例同式加 `!packages/api-client/src/schema.d.ts`（**需人验收此门禁面变更**）。 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.1.0 起草（**呈审·待审计**）；发现登 §6 不入正文。
+正文已于 2026-10-17 / v0.3.0 更新（**已实施·待人类验收——L1 全绿、基线只增不减、契约缺口闭合**）；发现降档均登 §6 不入正文。
