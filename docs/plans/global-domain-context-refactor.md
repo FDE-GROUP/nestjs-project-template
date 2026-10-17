@@ -61,7 +61,7 @@
 
 ## 5. 执行记录
 
-- **A 片已落地（2026-10-17·工作区待提交）**：
+- **A 片已落地（2026-10-17·commit `198a5bd`·待推送）**：
   - A2：core `tenancy/rbac/` 四件迁 `libs/core/src/authorization/`；全仓 `@core/saas-kit/tenancy/rbac/*` → `@core/saas-kit/authorization/*` sweep（含 `tenant-context.service`/`request-session.port` 相对导入深度修正）；端口符号名未动。
   - A1：`apps/api/src/modules/authorization/` 建成——domain（`tenant-rbac.repository` 端口/`tenant-rbac-policy`/`system-role-seed`/新增 `role-assignability.port`）、application（`tenant-rbac-admin.service`·`implements RoleAssignabilityReader`）、infrastructure（`mikro-tenant-rbac.repository`/`casl-ability.factory`/`casl-tenant-permission.checker`）、api（`authorization-admin.controller` + `dto/authorization.dto`·路由 `tenants/roles` 不变·`tenant-permission.guard.test` 随迁入内）。
   - A5：org-admin 控制器改注入 `@Inject(ROLE_ASSIGNABILITY_READER)`（不再直 import 授权侧应用服务类）；facade/dto 测试同步改形。
@@ -74,4 +74,5 @@
 
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
-| 2026-10-17 | v0.1 | 立项（plan 经人多轮审计后批准） | A 片落地全绿（未提交）；B/D/C 未开工·各片开工前高危逐签 |
+| 2026-10-17 | v0.1 | 立项（plan 经人多轮审计后批准） | A 片落地全绿并 commit `198a5bd`（待推送）；B/D/C 未开工·各片开工前高危逐签 |
+| 2026-10-17 | v0.2 | 人授「三项归 Agent 自行裁定」 | 裁 1 本地提交 A 片（推送归人）；裁 2 B 片签核开工；裁 3 未决项 2＝保留 `modules/auth` 目录名·仅宪法定名 authentication·物理更名另片缓行 |
