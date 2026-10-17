@@ -1,7 +1,7 @@
 import { EVENT_TYPE_REGISTRY } from '@app/database/event-type-registry';
-import { TenantStatusTransitionedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-status-transitioned.event';
-import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
-import { SUBSCRIPTION_STATUS } from '@core/saas-kit/tenancy/quota/tenant-plans';
+import { SUBSCRIPTION_STATUS } from '@core/saas-kit/modules/subscriptions/quota/tenant-plans';
+import { TenantStatusTransitionedEvent } from '@core/saas-kit/modules/tenants/lifecycle/events/tenant-status-transitioned.event';
+import { TENANT_STATUS } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TenantStatusSubscriptionLinkHandler } from './tenant-status-subscription-link.handler';
 

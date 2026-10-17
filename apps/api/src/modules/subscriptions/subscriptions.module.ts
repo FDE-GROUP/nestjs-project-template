@@ -3,10 +3,14 @@ import { GetSubscriptionQueryHandler } from '@core/saas-kit/modules/subscription
 import { CUSTOMER_PROVISIONER } from '@core/saas-kit/modules/subscriptions/domain/ports/customer-provisioner.port';
 import { SUBSCRIPTION_LIFECYCLE } from '@core/saas-kit/modules/subscriptions/domain/ports/subscription-lifecycle.port';
 import { SUBSCRIPTION_REPOSITORY } from '@core/saas-kit/modules/subscriptions/domain/repositories/subscription.repository';
-import { Module } from '@nestjs/common';
+import { QuotaGuard } from '@core/saas-kit/modules/subscriptions/quota/quota.guard';
+import { QuotaService } from '@core/saas-kit/modules/subscriptions/quota/quota.service';
+import { QUOTA_STORE } from '@core/saas-kit/modules/subscriptions/quota/quota.store';
+import { Global, Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { SubscriptionsController } from './api/subscriptions.controller';
 import { TenantStatusSubscriptionLinkHandler } from './infrastructure/dispatchers/tenant-status-subscription-link.handler';
+import { MikroQuotaStore } from './infrastructure/mikro-quota.store';
 import { MikroSubscriptionLifecycle } from './infrastructure/mikro-subscription.lifecycle';
 import { PaymentCustomerProvisioner } from './infrastructure/payment-customer.provisioner';
 import { MikroSubscriptionRepository } from './infrastructure/repositories/mikro-subscription.repository';
@@ -20,10 +24,16 @@ const EventHandlers = [TenantStatusSubscriptionLinkHandler];
  * Tenant subscription slice (global-tenancy S7 · FR-7/FR-8/D5).
  *
  * Dependencies resolve without extra imports: `原数据库服务` (DatabaseModule @Global),
- * `QuotaService` / `TenantContextService` (TenancyModule @Global) and `PaymentService`
+ * `TenantContextService` (TenancyModule @Global) and `PaymentService`
  * (PaymentModule now @Global). Dependency inversion: the domain owns the subscription
  * repository port; the ORM adapter stamps/scope the ALS tenant (FR-5 choke-point).
+ *
+ * 机制层提纯（未决项 4·module-tenancy-lifecycle-quota-relocation）：席位配额
+ * （`QuotaService`/`QuotaGuard` + `QUOTA_STORE` Mikro 适配）由 TenancyModule 归位本上下文
+ * （配额是订阅域策略·FR-7）；沿 Authorization/Platform 先例升 `@Global` 保持原可见性语义
+ * （auth `seats-quota.hook` 与路由 opt-in 消费面零行为变更）。
  */
+@Global()
 @Module({
   imports: [CqrsModule],
   controllers: [SubscriptionsController],
@@ -37,7 +47,17 @@ const EventHandlers = [TenantStatusSubscriptionLinkHandler];
     { provide: SUBSCRIPTION_LIFECYCLE, useClass: MikroSubscriptionLifecycle },
     // §9.5.4①B/④ · P1c：订阅 domain/application 经端口消费客户开通，PaymentService 适配留应用侧。
     { provide: CUSTOMER_PROVISIONER, useClass: PaymentCustomerProvisioner },
+    // 机制层提纯（未决项 4）：quota 服务/守卫与 store 适配自 TenancyModule 归位本上下文。
+    // §9.5.4①B 端口倒置：core 服务经端口消费持久化，适配由本（参考）应用装配。
+    QuotaService,
+    QuotaGuard,
+    { provide: QUOTA_STORE, useClass: MikroQuotaStore },
   ],
-  exports: [],
+  exports: [
+    // 随 @Global 导出：跨上下文消费面（auth seats-quota.hook·路由 @Quota opt-in）保形。
+    QuotaService,
+    QuotaGuard,
+    QUOTA_STORE,
+  ],
 })
 export class SubscriptionsModule {}

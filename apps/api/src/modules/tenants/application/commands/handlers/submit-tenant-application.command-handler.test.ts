@@ -1,4 +1,4 @@
-import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+import { TENANT_STATUS } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
 import { describe, expect, it, vi } from 'vitest';
 import type { TenantProvisioningRepository } from '../../../domain/repositories/tenant-provisioning.repository';
 import { SubmitTenantApplicationCommand } from '../submit-tenant-application.command';

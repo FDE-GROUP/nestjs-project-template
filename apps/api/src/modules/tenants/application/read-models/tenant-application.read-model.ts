@@ -1,4 +1,4 @@
-import type { TenantStatus } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+import type { TenantStatus } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
 
 /**
  * Read-model projection for the tenant application/approval flow (CQRS read side).

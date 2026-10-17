@@ -1,6 +1,6 @@
 import { TenantSubscription } from '@app/database/mikro/four-tables';
 import type { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
-import { SUBSCRIPTION_STATUS } from '@core/saas-kit/tenancy/quota/tenant-plans';
+import { SUBSCRIPTION_STATUS } from '@core/saas-kit/modules/subscriptions/quota/tenant-plans';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MikroSubscriptionLifecycle } from './mikro-subscription.lifecycle';
 

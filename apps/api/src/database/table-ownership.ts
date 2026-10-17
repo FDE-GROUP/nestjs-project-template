@@ -10,6 +10,9 @@
  * `modules/<ctx>/**` 与 `tenancy/**`（归 `tenants`）为守卫扫描的上下文推导源。
  * 领域细化重构定态：RBAC 三表属主已翻账 `authorization`（A 片·守卫 `contextOf` 按
  * `modules/authorization/**` 自动推导）；`platform` 为治理门面上下文·**无自有表**（不在本清单出现）。
+ * 机制层提纯（未决项 4·module-tenancy-lifecycle-quota-relocation）：lifecycle 适配归 `modules/tenants/**`
+ * （推导仍属 tenants·写侧红牌语义不变）·quota 适配归 `modules/subscriptions/**`（纯读侧·读侧宽松）；
+ * `tenancy/**` 现仅剩会话/机制适配，推导源保留防散点。
  */
 export const TABLE_OWNERSHIP: Record<string, string> = {
   // auth core：Better Auth adapter 运行时写 + users 注册路径源码写
@@ -18,7 +21,7 @@ export const TABLE_OWNERSHIP: Record<string, string> = {
   session: 'auth',
   verification: 'auth',
   consent: 'auth',
-  // tenancy：审批制生命周期与成员域（BA organization/member/invitation 由本侧服务端 SDK 写）
+  // tenants：审批制生命周期与成员域（BA organization/member/invitation 由本侧服务端 SDK 写）
   organization: 'tenants',
   member: 'tenants',
   invitation: 'tenants',

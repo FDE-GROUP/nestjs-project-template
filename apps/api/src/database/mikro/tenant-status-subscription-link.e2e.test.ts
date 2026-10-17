@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 import type { ConfigService } from '@app/config/config.service';
 import { Organization } from '@app/database/mikro/entities';
+import { SUBSCRIPTION_STATUS } from '@core/saas-kit/modules/subscriptions/quota/tenant-plans';
+import { TenantStatusTransitionedEvent } from '@core/saas-kit/modules/tenants/lifecycle/events/tenant-status-transitioned.event';
+import { TENANT_STATUS } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
 import type { DomainEvent } from '@core/saas-kit/shared-kernel/domain/domain-event';
 import { uuidv7 } from '@core/saas-kit/shared-kernel/util/uuid-v7';
-import { TenantStatusTransitionedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-status-transitioned.event';
-import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
-import { SUBSCRIPTION_STATUS } from '@core/saas-kit/tenancy/quota/tenant-plans';
 import type { EventBus } from '@nestjs/cqrs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MikroEventStore } from '../mikro-event-store';

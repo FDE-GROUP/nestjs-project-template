@@ -1,5 +1,5 @@
+import type { TenantStatus } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
 import type { Page, PageRequest } from '@core/saas-kit/shared-kernel/domain/pagination';
-import type { TenantStatus } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
 
 /**
  * Platform governance repository port (domain-owned · global-tenancy S5 · FR-6).

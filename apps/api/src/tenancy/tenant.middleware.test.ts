@@ -1,5 +1,5 @@
-import type { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
-import type { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
+import type { TenantStatusService } from '@core/saas-kit/modules/tenants/lifecycle/tenant-status.service';
+import type { UserStatusService } from '@core/saas-kit/modules/tenants/lifecycle/user-status.service';
 import type { RequestSessionReader } from '@core/saas-kit/tenancy/session/request-session.port';
 import { TenantMiddleware } from '@core/saas-kit/tenancy/tenant.middleware';
 import { type TenantContext, tenantStorage } from '@core/saas-kit/tenancy/tenant-context';

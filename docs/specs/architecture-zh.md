@@ -27,7 +27,7 @@ src/
 │   │   └── users.module.ts  #   装配 CqrsModule + 处理器 + 端口→适配器绑定
 │   ├── auth/                # 认证（宪法名 authentication·Better Auth 适配层：凭证/会话/因子/OAuth 渠道；仅成员数据面）
 │   ├── authorization/       # 授权支撑域：角色/授予/裁决/审计·两作用域层（租户 scope + 平台 scope）
-│   ├── tenants/             # 租户/组织核心域：生命周期/成员/邀请 + 治理命令 handlers
+│   ├── tenants/             # 租户/组织核心域：生命周期/成员/邀请 + deny-list 状态机（tenant/user status）+ 治理命令 handlers
 │   ├── platform/            # 平台治理门面：operator 闸门/审计/身份+配置端口（无自有表）
 │   ├── workspaces/          # 租户内资源分区（是授权的 subject·非第二道隔离墙）
 │   ├── posts/               # 内容上下文
@@ -35,7 +35,8 @@ src/
 │   ├── payment/             # 支付上下文
 │   └── storage/             # 云存储上下文（S3/OSS/COS）
 ├── tenancy/                 # 横切多租户隔离机制层（非业务上下文）：ALS 租户上下文 +
-│                            #   TenantScopeGuard + middleware + exempt/public；状态/会话/配额适配；
+│                            #   TenantScopeGuard + middleware + exempt/public；会话适配
+│                            #   （deny-list 状态机已归位 `tenants`、席位配额已归位 `subscriptions`·未决项 4 已落地）；
 │                            #   消费 authorization 的裁决端口
 ├── database/                # 全局基础设施：MikroORM 客户端、实体、迁移、seed
 ├── config/                  # 全局基础设施：类型安全配置 + Joi 校验
@@ -109,7 +110,7 @@ OAuth 渠道——Better Auth 适配面，`session-resolver.ts` 为每请求会�
 同一用户在不同租户可持不同角色。
 
 挂载在认证面上的治理钩子（`seats-quota.hook.ts`）是 Better Auth 挂载点的传送带胶水；
-席位裁决本体在 `tenancy/quota`（`QuotaService`）——挂载位置不得误读为属主。
+席位裁决本体在订阅上下文的 quota 域策略（core `modules/subscriptions/quota`·`QuotaService`）——挂载位置不得误读为属主。
 
 ## 常量契约归属
 

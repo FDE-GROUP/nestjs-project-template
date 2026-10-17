@@ -19,9 +19,9 @@
 - `posts`/`subscriptions`/`payment`/`storage` 保持不动
 
 横切机制层（非业务上下文）：
-- `tenancy/`：多租户隔离机制（ALS 租户上下文 + TenantScopeGuard + middleware + exempt/public）+ 状态/会话/配额适配·**消费** authorization 裁决端口
+- `tenancy/`：多租户隔离机制（ALS 租户上下文 + TenantScopeGuard + middleware + exempt/public）+ 会话适配·**消费** authorization 裁决端口（状态/配额适配已归位·未决项 4 另片）
 
-术语纪律：「租户 Tenant」=业务概念（tenants 核心域聚合）；「多租户 Multi-tenancy」=隔离机制（基础设施·无聚合无生命周期）。lifecycle（deny-list）与 quota（席位）是**借用机制的域策略**——归位见 §4 未决项 4。
+术语纪律：「租户 Tenant」=业务概念（tenants 核心域聚合）；「多租户 Multi-tenancy」=隔离机制（基础设施·无聚合无生命周期）。lifecycle（deny-list）与 quota（席位）是**借用机制的域策略**——归位已落地（未决项 4·另片 `module-tenancy-lifecycle-quota-relocation`）。
 
 三条划界纪律（全程遵守·防误并/误拆）：
 1. **成员归属边界只认 Organization**：`user` 平台级跨租唯一；`member`（user×org）是联结实体·角色挂 Member 不挂 User。
@@ -56,7 +56,7 @@
 1. **A5 端口形状**：采独立 `ROLE_ASSIGNABILITY_READER`（已实现·弱耦合最优）vs 直接导出 `TENANT_RBAC_REPOSITORY` 供 tenants 注入——**已裁**：取前者（A 片落地）。
 2. **B**：`modules/auth` 是否物理更名 `modules/authentication`（churn vs 自解释）——**已裁（人授自裁 2026-10-17）**：不更名·宪法定名 authentication·物理更名缓行。
 3. **D 接缝**：治理命令/查询 handlers 是否随门面搬入 platform（建议：**留 tenants**·platform 只持闸门+审计+门面）——**已裁（D 片落地）**：取建议档·handlers/读模型留 tenants·controller 经 CQRS Bus 委派。
-4. **quota/lifecycle 归位**：域策略终态应还业务域（lifecycle→tenants、quota→subscriptions/平台治理）——本 plan 不动仅地图定位·归位时机另裁。
+4. **quota/lifecycle 归位**：域策略终态应还业务域（lifecycle→tenants、quota→subscriptions/平台治理）——**已裁·已落地（2026-10-17·另片 `module-tenancy-lifecycle-quota-relocation`·人「按建议自裁」签核）**：core 契约迁 `modules/tenants/lifecycle`与 `modules/subscriptions/quota`（api 侧适配/测试/e2e 同迁），tenancy 提纯为纯机制层；两归宿模块升 @Global 保可见性语义（非@Global 旧事实经执行期直查订正）。
 5. **平台层授权形态**：(a) 概念归 authorization、实现维持 guard 现状（**本 plan 默认**）；(b) D 内收敛为消费 authorization 平台 scope 接口；(c) 平台角色表化（#1·schema 另片）。
 6. **机制层命名**：`tenancy/` 是否改名 `multi-tenancy/` 以区别租户业务域——**已裁（人同意 2026-10-17）**：不改名。理：① tenancy 本就是业界机制名（如 nestjs-tenancy·tenant=业务概念/tenancy=隔离机制的词义区分既存）；② 歧义源是 tenancy↔tenants 近形词·已由宪法术语纪律条款消歧·改名后内部 `TenantContext`/`TenantScopeGuard` 等 tenant* 词汇与目录名反而打架；③ 改名触高危 #3（全仓 `@core/saas-kit/tenancy/*` import + 宪法 ±zh 条目再修）。强化自解释的优先级：先推未决项 4（lifecycle/quota 归位·机制层提纯），物理改名（含未决项 2 的 auth→authentication）另片合并归人签核。
 
@@ -102,3 +102,4 @@
 | 2026-10-17 | v0.4 | D 片落地 | platform 上下文抽出（core 契约迁址+适配/门面/测试归位+PlatformModule 装配+未决项 3 裁留 handlers）·di-context ⑤ 新锁测·基线 480→481 只增不减 |
 | 2026-10-17 | v0.5 | C 片落地·整 plan 四片入库 | tenancy 定型横切机制层入宪（±zh 树重写+上下文地图节·§9.3 定态+演变 0.23.0·table-ownership 语境注·树↔目录对拍）·ci 全绿 481/30 不动·高危 #3 完成·推送归人·未决项 4/5 仍挂账另片 |
 | 2026-10-17 | v0.6 | 收口后命名质疑裁定（未决项 6 落定） | 人问「tenancy 改名 multi-tenancy 是否更合理」→ Agent 建议不改·人「同意」：tenancy 即业界机制名·歧义由宪法术语纪律消解·改名触高危 #3 churn；落点加宪法指针 docstring·优先序＝未决项 4 机制层提纯另片 |
+| 2026-10-17 | v0.7 | 未决项 4 另片落地（回灌定态） | `module-tenancy-lifecycle-quota-relocation` 实现入库：lifecycle→tenants、quota→subscriptions（core 契约 + api 适配/装配/测试全迁·两归宿模块升 @Global·宪法 ±zh 同步）·本 plan §1/§4 未决项 4 翻账·基线 481→483 只增不减 |

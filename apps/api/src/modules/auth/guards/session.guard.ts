@@ -1,5 +1,5 @@
+import { UserStatusService } from '@core/saas-kit/modules/tenants/lifecycle/user-status.service';
 import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
-import { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
 import { IS_PUBLIC_KEY } from '@core/saas-kit/tenancy/public.decorator';
 import {
   type CanActivate,

@@ -1,5 +1,5 @@
-import { QuotaGuard } from '@core/saas-kit/tenancy/quota/quota.guard';
-import type { QuotaService } from '@core/saas-kit/tenancy/quota/quota.service';
+import { QuotaGuard } from '@core/saas-kit/modules/subscriptions/quota/quota.guard';
+import type { QuotaService } from '@core/saas-kit/modules/subscriptions/quota/quota.service';
 import type { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import type { ExecutionContext } from '@nestjs/common';
 import { ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';

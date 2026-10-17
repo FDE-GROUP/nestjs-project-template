@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import type { ConfigService } from '@app/config/config.service';
 import { Organization } from '@app/database/mikro/entities';
+import { TenantRejectedEvent } from '@core/saas-kit/modules/tenants/lifecycle/events/tenant-rejected.event';
 import type { DomainEvent } from '@core/saas-kit/shared-kernel/domain/domain-event';
-import { TenantRejectedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-rejected.event';
 import type { EventBus } from '@nestjs/cqrs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DefaultDomainEventPublisher } from './domain-event-publisher';

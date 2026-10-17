@@ -1,6 +1,6 @@
 import { Organization } from '@app/database/mikro/entities';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
-import type { TenantStatusStore } from '@core/saas-kit/tenancy/lifecycle/tenant-status.store';
+import type { TenantStatusStore } from '@core/saas-kit/modules/tenants/lifecycle/tenant-status.store';
 import { Inject, Injectable } from '@nestjs/common';
 
 /**

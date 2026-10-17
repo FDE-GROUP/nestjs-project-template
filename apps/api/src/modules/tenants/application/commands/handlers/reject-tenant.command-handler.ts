@@ -1,3 +1,6 @@
+import { TenantRejectedEvent } from '@core/saas-kit/modules/tenants/lifecycle/events/tenant-rejected.event';
+import { TENANT_STATUS } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
+import { TenantStatusService } from '@core/saas-kit/modules/tenants/lifecycle/tenant-status.service';
 import { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
 import { currentRequestId } from '@core/saas-kit/shared-kernel/context/request-context';
 import {
@@ -9,9 +12,6 @@ import {
   type UnitOfWork,
 } from '@core/saas-kit/shared-kernel/domain/unit-of-work.port';
 import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
-import { TenantRejectedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-rejected.event';
-import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
-import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
 import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import {

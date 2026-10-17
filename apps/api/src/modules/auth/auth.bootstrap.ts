@@ -3,7 +3,7 @@
 import { ConfigService } from '@app/config/config.service';
 // 切片 3b：S9 铁律——构造注入的类必**值导入** + 显式 @Inject（`MikroOrmService` 经 @Global `MikroOrmModule` 可达）。
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
-import { QuotaService } from '@core/saas-kit/tenancy/quota/quota.service';
+import { QuotaService } from '@core/saas-kit/modules/subscriptions/quota/quota.service';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import type { BetterAuthOptions } from 'better-auth';

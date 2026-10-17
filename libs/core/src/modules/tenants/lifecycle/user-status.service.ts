@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { currentRequestId } from '../../shared-kernel/context/request-context';
+import { currentRequestId } from '../../../shared-kernel/context/request-context';
 import {
   DOMAIN_EVENT_PUBLISHER,
   type DomainEventPublisher,
-} from '../../shared-kernel/domain/event-publisher.port';
-import { UNIT_OF_WORK, type UnitOfWork } from '../../shared-kernel/domain/unit-of-work.port';
+} from '../../../shared-kernel/domain/event-publisher.port';
+import { UNIT_OF_WORK, type UnitOfWork } from '../../../shared-kernel/domain/unit-of-work.port';
 import { UserStatusTransitionedEvent } from './events/user-status-transitioned.event';
 import { canTransition, TENANT_STATUS, type TenantStatus } from './tenant-lifecycle';
 import { USER_STATUS_STORE, type UserStatusStore } from './user-status.store';

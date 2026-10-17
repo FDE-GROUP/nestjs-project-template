@@ -1,11 +1,11 @@
-import type { DomainEvent } from '@core/saas-kit/shared-kernel/domain/domain-event';
-import type { DomainEventPublisher } from '@core/saas-kit/shared-kernel/domain/event-publisher.port';
-import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+import { TENANT_STATUS } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
 import {
   USER_STATUS,
   UserStatusService,
-} from '@core/saas-kit/tenancy/lifecycle/user-status.service';
-import type { UserStatusStore } from '@core/saas-kit/tenancy/lifecycle/user-status.store';
+} from '@core/saas-kit/modules/tenants/lifecycle/user-status.service';
+import type { UserStatusStore } from '@core/saas-kit/modules/tenants/lifecycle/user-status.store';
+import type { DomainEvent } from '@core/saas-kit/shared-kernel/domain/domain-event';
+import type { DomainEventPublisher } from '@core/saas-kit/shared-kernel/domain/event-publisher.port';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**

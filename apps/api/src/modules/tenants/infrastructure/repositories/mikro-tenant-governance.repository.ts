@@ -2,12 +2,12 @@ import { Invitation, Member, Organization, User } from '@app/database/mikro/enti
 import { TenantSubscription, Workspace } from '@app/database/mikro/four-tables';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { Post } from '@app/database/mikro/post.entity';
-import { createPage } from '@core/saas-kit/shared-kernel/domain/pagination';
 import {
   readTenantStatus,
   TENANT_STATUS,
   type TenantStatus,
-} from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+} from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
+import { createPage } from '@core/saas-kit/shared-kernel/domain/pagination';
 import { type InferEntity, QueryOrder } from '@mikro-orm/core';
 import { Inject, Injectable } from '@nestjs/common';
 import type {

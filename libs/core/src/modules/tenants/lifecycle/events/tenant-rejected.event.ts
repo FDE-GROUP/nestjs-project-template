@@ -1,5 +1,5 @@
-import { DomainEvent, type DomainEventProps } from '../../../shared-kernel/domain/domain-event';
-import { DOMAIN_EVENTS } from '../../../shared-kernel/domain/domain-event-names';
+import { DomainEvent, type DomainEventProps } from '../../../../shared-kernel/domain/domain-event';
+import { DOMAIN_EVENTS } from '../../../../shared-kernel/domain/domain-event-names';
 
 export interface TenantRejectedPayload {
   /** 驳回动作主体（会话用户 id）。 */

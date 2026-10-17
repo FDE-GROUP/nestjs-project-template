@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { ERROR_CODES } from '../../shared-kernel/errors/error-codes';
+import { ERROR_CODES } from '../../../shared-kernel/errors/error-codes';
 import { type ActiveSubscriptionView, QUOTA_STORE, type QuotaStore } from './quota.store';
 import { FREE_PLAN } from './tenant-plans';
 

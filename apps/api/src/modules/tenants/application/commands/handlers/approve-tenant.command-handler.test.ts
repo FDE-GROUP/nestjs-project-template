@@ -1,6 +1,6 @@
+import { TENANT_STATUS } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
+import type { TenantStatusService } from '@core/saas-kit/modules/tenants/lifecycle/tenant-status.service';
 import type { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
-import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
-import type { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
 import { ConflictException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { ApproveTenantCommand } from '../approve-tenant.command';

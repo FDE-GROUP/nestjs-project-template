@@ -1,8 +1,8 @@
 import { UserRegisteredEvent } from '@app/modules/users/domain/events/user-registered.event';
+import { TenantRejectedEvent } from '@core/saas-kit/modules/tenants/lifecycle/events/tenant-rejected.event';
+import { TenantStatusTransitionedEvent } from '@core/saas-kit/modules/tenants/lifecycle/events/tenant-status-transitioned.event';
+import { UserStatusTransitionedEvent } from '@core/saas-kit/modules/tenants/lifecycle/events/user-status-transitioned.event';
 import { DOMAIN_EVENTS } from '@core/saas-kit/shared-kernel/domain/domain-event-names';
-import { TenantRejectedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-rejected.event';
-import { TenantStatusTransitionedEvent } from '@core/saas-kit/tenancy/lifecycle/events/tenant-status-transitioned.event';
-import { UserStatusTransitionedEvent } from '@core/saas-kit/tenancy/lifecycle/events/user-status-transitioned.event';
 import { describe, expect, it } from 'vitest';
 import { EVENT_TYPE_REGISTRY } from './event-type-registry';
 import { OutboxRelay } from './outbox-relay';

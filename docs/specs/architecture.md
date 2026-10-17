@@ -29,7 +29,7 @@ src/
 │   │   └── users.module.ts  #   wires CqrsModule + handlers + port→adapter binding
 │   ├── auth/                # Authentication (constitution name; Better Auth adapter: credentials/session/factors/OAuth · membership data only)
 │   ├── authorization/       # Authorization supporting domain: roles/grants/adjudication/audit · two scope layers (tenant + platform)
-│   ├── tenants/             # Tenant/organization core domain: lifecycle/members/invitations + governance handlers
+│   ├── tenants/             # Tenant/organization core domain: lifecycle/members/invitations + deny-list status machine (tenant/user status) + governance handlers
 │   ├── platform/            # Platform-governance facade: operator gate/audit/identity+settings ports (no owned tables)
 │   ├── workspaces/          # In-tenant resource partitioning (an authorization subject; NOT a second isolation wall)
 │   ├── posts/               # Content context
@@ -37,8 +37,9 @@ src/
 │   ├── payment/             # Payment context
 │   └── storage/             # Cloud storage context (S3/OSS/COS)
 ├── tenancy/                 # Cross-cutting multi-tenancy MECHANISM layer (not a business context): ALS tenant
-│                            #   context + TenantScopeGuard + middleware + exempt/public; state/session/quota
-│                            #   adapters; CONSUMES authorization's ruling ports
+│                            #   context + TenantScopeGuard + middleware + exempt/public; session adapters
+│                            #   (deny-list status machine relocated to `tenants`, seat quota to `subscriptions` —
+│                            #   open item 4 landed); CONSUMES authorization's ruling ports
 ├── database/                # Global infra: MikroORM client, entities, migrations, seed
 ├── config/                  # Global infra: typed config + Joi validation
 ├── logger/  mailer/  common/  i18n/   # Cross-cutting infrastructure
@@ -121,8 +122,9 @@ roles attach to the member, never to the global user, so the same user may hold 
 roles in different tenants.
 
 Governance hooks mounted on the authentication plane (`seats-quota.hook.ts`) are transport
-glue at the Better Auth mount point; the seat ruling itself lives in `tenancy/quota`
-(`QuotaService`) — a mounting location must not be read as ownership.
+glue at the Better Auth mount point; the seat ruling itself lives in the subscriptions
+context's quota domain policy (core `modules/subscriptions/quota`, `QuotaService`) — a
+mounting location must not be read as ownership.
 
 ## Constant Contract Placement
 

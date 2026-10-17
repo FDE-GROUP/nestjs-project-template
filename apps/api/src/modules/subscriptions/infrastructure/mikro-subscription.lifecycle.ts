@@ -1,7 +1,7 @@
 import { TenantSubscription } from '@app/database/mikro/four-tables';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import type { SubscriptionLifecycle } from '@core/saas-kit/modules/subscriptions/domain/ports/subscription-lifecycle.port';
-import type { SubscriptionStatus } from '@core/saas-kit/tenancy/quota/tenant-plans';
+import type { SubscriptionStatus } from '@core/saas-kit/modules/subscriptions/quota/tenant-plans';
 import { QueryOrder } from '@mikro-orm/core';
 import { Inject, Injectable } from '@nestjs/common';
 

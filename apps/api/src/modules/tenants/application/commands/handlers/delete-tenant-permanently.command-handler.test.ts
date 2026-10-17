@@ -1,9 +1,9 @@
-import type { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
-import type { EventStore } from '@core/saas-kit/shared-kernel/domain/event-store.port';
 import {
   TENANT_STATUS,
   type TenantStatus,
-} from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+} from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
+import type { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
+import type { EventStore } from '@core/saas-kit/shared-kernel/domain/event-store.port';
 import { ConflictException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import type { TenantGovernanceRepository } from '../../../domain/repositories/tenant-governance.repository';

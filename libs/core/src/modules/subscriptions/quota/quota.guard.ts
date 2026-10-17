@@ -6,8 +6,8 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ERROR_CODES } from '../../shared-kernel/errors/error-codes';
-import { TenantContextService } from '../tenant-context.service';
+import { ERROR_CODES } from '../../../shared-kernel/errors/error-codes';
+import { TenantContextService } from '../../../tenancy/tenant-context.service';
 import { QUOTA_KEY, type QuotaRequirement } from './quota.decorator';
 import { QuotaService } from './quota.service';
 

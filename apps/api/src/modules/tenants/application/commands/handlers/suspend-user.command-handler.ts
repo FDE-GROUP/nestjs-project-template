@@ -1,11 +1,11 @@
 import { Session } from '@app/database/mikro/entities';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
-import { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
-import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import {
   USER_STATUS,
   UserStatusService,
-} from '@core/saas-kit/tenancy/lifecycle/user-status.service';
+} from '@core/saas-kit/modules/tenants/lifecycle/user-status.service';
+import { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import type { UserGovernanceResult } from '../../read-models/platform-user.read-model';

@@ -5,15 +5,15 @@ import { Invitation, Member, Organization, User } from '@app/database/mikro/enti
 import { Event, TenantSubscription, Workspace } from '@app/database/mikro/four-tables';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { Post } from '@app/database/mikro/post.entity';
-import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+import { TENANT_STATUS } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
 import type { EntityManager } from '@mikro-orm/core';
 import { CommandBus } from '@nestjs/cqrs';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { AppModule } from '../app.module';
-import { DeleteTenantCommand } from '../modules/tenants/application/commands/delete-tenant.command';
-import { DeleteTenantPermanentlyCommand } from '../modules/tenants/application/commands/delete-tenant-permanently.command';
+import { AppModule } from '../../app.module';
+import { DeleteTenantCommand } from '../tenants/application/commands/delete-tenant.command';
+import { DeleteTenantPermanentlyCommand } from '../tenants/application/commands/delete-tenant-permanently.command';
 
 /**
  * NFR-6 删除半 · env-gated 真库 e2e（module-tenancy-hard-delete §4-3）：

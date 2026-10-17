@@ -5,8 +5,8 @@ import type {
   SubscriptionRecord,
   SubscriptionRepository,
 } from '@core/saas-kit/modules/subscriptions/domain/repositories/subscription.repository';
+import { SUBSCRIPTION_STATUS } from '@core/saas-kit/modules/subscriptions/quota/tenant-plans';
 import { uuidv7 } from '@core/saas-kit/shared-kernel/util/uuid-v7';
-import { SUBSCRIPTION_STATUS } from '@core/saas-kit/tenancy/quota/tenant-plans';
 import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { QueryOrder } from '@mikro-orm/core';
 import { Inject, Injectable } from '@nestjs/common';

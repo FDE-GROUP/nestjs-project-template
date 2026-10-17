@@ -1,8 +1,8 @@
+import { TENANT_STATUS } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
+import { TenantStatusService } from '@core/saas-kit/modules/tenants/lifecycle/tenant-status.service';
+import type { TenantStatusStore } from '@core/saas-kit/modules/tenants/lifecycle/tenant-status.store';
 import type { DomainEvent } from '@core/saas-kit/shared-kernel/domain/domain-event';
 import type { DomainEventPublisher } from '@core/saas-kit/shared-kernel/domain/event-publisher.port';
-import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
-import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
-import type { TenantStatusStore } from '@core/saas-kit/tenancy/lifecycle/tenant-status.store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**

@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, type NestMiddleware } from '@nestjs/common';
-import { TenantStatusService } from './lifecycle/tenant-status.service';
-import { UserStatusService } from './lifecycle/user-status.service';
+import { TenantStatusService } from '../modules/tenants/lifecycle/tenant-status.service';
+import { UserStatusService } from '../modules/tenants/lifecycle/user-status.service';
 import { type RequestSessionReader, SESSION_READER } from './session/request-session.port';
 import { type TenantContext, tenantStorage } from './tenant-context';
 

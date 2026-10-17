@@ -1,7 +1,5 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
-import { QuotaService } from '../../../../../tenancy/quota/quota.service';
-import { resolvePlanDef } from '../../../../../tenancy/quota/tenant-plans';
 import { TenantContextService } from '../../../../../tenancy/tenant-context.service';
 import {
   CUSTOMER_PROVISIONER,
@@ -11,6 +9,8 @@ import {
   SUBSCRIPTION_REPOSITORY,
   type SubscriptionRepository,
 } from '../../../domain/repositories/subscription.repository';
+import { QuotaService } from '../../../quota/quota.service';
+import { resolvePlanDef } from '../../../quota/tenant-plans';
 import type { TenantSubscriptionView } from '../../read-models/subscription.read-model';
 import { CreateSubscriptionCommand } from '../create-subscription.command';
 

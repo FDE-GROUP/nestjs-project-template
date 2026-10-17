@@ -1,11 +1,11 @@
 import { User } from '@app/database/mikro/entities';
 import { UserStatus } from '@app/database/mikro/four-tables';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
-import { createPage } from '@core/saas-kit/shared-kernel/domain/pagination';
 import {
   TENANT_STATUS,
   type TenantStatus,
-} from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+} from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
+import { createPage } from '@core/saas-kit/shared-kernel/domain/pagination';
 import { QueryOrder } from '@mikro-orm/core';
 import { Inject, Injectable } from '@nestjs/common';
 import type {

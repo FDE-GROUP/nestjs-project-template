@@ -6,7 +6,7 @@ import {
   readTenantStatus,
   TENANT_STATUS,
   type TenantStatus,
-} from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+} from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
 import { Inject, Injectable } from '@nestjs/common';
 import type {
   TenantProvisioningReceipt,

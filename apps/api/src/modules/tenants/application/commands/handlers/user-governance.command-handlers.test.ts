@@ -1,10 +1,10 @@
 import type { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
-import type { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
-import { TENANT_STATUS } from '@core/saas-kit/tenancy/lifecycle/tenant-lifecycle';
+import { TENANT_STATUS } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
 import {
   USER_STATUS,
   type UserStatusService,
-} from '@core/saas-kit/tenancy/lifecycle/user-status.service';
+} from '@core/saas-kit/modules/tenants/lifecycle/user-status.service';
+import type { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
 import { ConflictException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { ResumeUserCommand } from '../resume-user.command';

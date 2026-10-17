@@ -1,4 +1,7 @@
-import type { QuotaService, SeatQuotaSnapshot } from '@core/saas-kit/tenancy/quota/quota.service';
+import type {
+  QuotaService,
+  SeatQuotaSnapshot,
+} from '@core/saas-kit/modules/subscriptions/quota/quota.service';
 import type { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GetSubscriptionQueryHandler } from './get-current-subscription.query-handler';

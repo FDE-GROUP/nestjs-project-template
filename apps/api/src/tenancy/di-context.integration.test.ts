@@ -11,12 +11,12 @@ import { ConfigPlatformSettings } from '@app/modules/platform/infrastructure/con
 import { MikroPlatformIdentityLookup } from '@app/modules/platform/infrastructure/mikro-platform-identity.lookup';
 import { TenantPermissionGuard } from '@core/saas-kit/authorization/tenant-permission.guard';
 import { TENANT_PERMISSION_CHECKER } from '@core/saas-kit/authorization/tenant-permission.port';
+import { TenantStatusService } from '@core/saas-kit/modules/tenants/lifecycle/tenant-status.service';
+import { UserStatusService } from '@core/saas-kit/modules/tenants/lifecycle/user-status.service';
 import { PlatformAuditService } from '@core/saas-kit/platform/platform-audit.service';
 import { PLATFORM_SETTINGS } from '@core/saas-kit/platform/platform-config.port';
 import { PLATFORM_IDENTITY_LOOKUP } from '@core/saas-kit/platform/platform-identity.port';
 import { PlatformOperatorGuard } from '@core/saas-kit/platform/platform-operator.guard';
-import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
-import { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
 import { SESSION_READER } from '@core/saas-kit/tenancy/session/request-session.port';
 import { TenantMiddleware } from '@core/saas-kit/tenancy/tenant.middleware';
 import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
