@@ -14,6 +14,8 @@
  *   pnpm run migration:generate                     # 增量生成（默认名·safe）
  *   pnpm run migration:generate -- add_user_avatar  # 指定迁移名
  */
+// 先载 .env（与 main.ts / seed.ts 同源单例 load-env）：裸终端跑 migration:generate 时 DATABASE_URL 由此注入。
+import '../apps/api/src/load-env.ts';
 import { initMigrationOrm } from '../apps/api/src/database/mikro/migration/mikro-migration.config.ts';
 
 const url = process.env.DATABASE_URL;

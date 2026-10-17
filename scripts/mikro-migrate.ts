@@ -12,6 +12,8 @@
  * 运行器＝`tsx`（沿 `db:seed` 先例：本脚本值导入 `.ts` 后缀的迁移装配，Node 原生 type-stripping
  * 不解析扩展名省略的相对 ESM 导入·见 seed.ts 头注 R-η）。
  */
+// 先载 .env（与 main.ts / seed.ts 同源单例 load-env）：裸终端跑 db:setup/db:reset 时 DATABASE_URL 由此注入。
+import '../apps/api/src/load-env.ts';
 import { initMigrationOrm } from '../apps/api/src/database/mikro/migration/mikro-migration.config.ts';
 
 const url = process.env.DATABASE_URL;
