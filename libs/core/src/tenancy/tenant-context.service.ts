@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
+import type { TenantRole } from '../authorization/tenant-rules';
 import { ERROR_CODES } from '../shared-kernel/errors/error-codes';
-import type { TenantRole } from './rbac/tenant-rules';
 import { type TenantContext, tenantStorage } from './tenant-context';
 
 /**

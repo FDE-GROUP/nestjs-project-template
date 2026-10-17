@@ -12,6 +12,7 @@ import { AppI18nModule } from './i18n/i18n.module';
 import { LoggerModule } from './logger/logger.module';
 import { MailerModule } from './mailer/mailer.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AuthorizationModule } from './modules/authorization/authorization.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { StorageModule } from './modules/storage/storage.module';
@@ -32,6 +33,9 @@ import { TenancyModule } from './tenancy/tenancy.module';
     CommonModule,
     HealthModule,
     AuthModule.forRoot(),
+    // 领域细化重构 A3：授权上下文（@Global·guard/裁决端口/published port 的全局供给源），
+    // 注册于 TenancyModule 前——两者互不依赖（guard 的 TenantContextService 经全局解析）。
+    AuthorizationModule,
     TenancyModule,
     UsersModule,
     PostsModule,

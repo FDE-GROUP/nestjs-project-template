@@ -1,4 +1,4 @@
-import type { TenantRole } from '@core/saas-kit/tenancy/rbac/tenant-rules';
+import type { TenantRole } from '@core/saas-kit/authorization/tenant-rules';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
 
@@ -9,7 +9,7 @@ import { IsNotEmpty, IsString } from 'class-validator';
  *
  * module-rbac-dynamic-roles S3 改形（丙裁连锁）：`role` 域从旧 `@IsIn(SYSTEM_ROLE_KEYS)`
  * 放宽为非空串（自定义角色入运行时词汇）——**存在性不在 DTO 判**（class-validator 同步装饰式
- * 不可查库），由门面经 `TenantRbacAdminService.isRoleAssignable`（系统三 key ∪ 本租户在库自定义
+ * 不可查库），由门面经 `RoleAssignabilityReader.isRoleAssignable`（authorization published port·系统三 key ∪ 本租户在库自定义
  * 角色）严格在库 fail-closed 裁决。
  */
 

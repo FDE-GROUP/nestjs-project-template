@@ -1,7 +1,7 @@
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
+import type { RoleAssignabilityReader } from '@app/modules/authorization/domain/role-assignability.port';
 import { BadRequestException, ForbiddenException, HttpException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
-import type { TenantRbacAdminService } from '../application/tenant-rbac-admin.service';
 import { TenantsOrgAdminController } from './tenants-org-admin.controller';
 import { TenantsSelfController } from './tenants-self.controller';
 
@@ -16,11 +16,11 @@ function instanceWith(api: Record<string, unknown>): InjectAuthInstance {
   return { get: () => ({ api }) as never, set: () => {} } as unknown as InjectAuthInstance;
 }
 
-/** RBAC 门面桩（默认一切角色可挂载，透传至 BA）。 */
-function rbacStub(assignable = true): TenantRbacAdminService {
+/** 角色可挂载读端口桩（默认一切角色可挂载，透传至 BA）。领域细化重构 A5：经 published port 相遇。 */
+function rbacStub(assignable = true): RoleAssignabilityReader {
   return {
     isRoleAssignable: vi.fn().mockResolvedValue(assignable),
-  } as unknown as TenantRbacAdminService;
+  } as unknown as RoleAssignabilityReader;
 }
 
 const HEADERS = { cookie: 'session=abc' };

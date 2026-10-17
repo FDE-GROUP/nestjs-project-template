@@ -1,8 +1,8 @@
+import { Can } from '@core/saas-kit/authorization/can.decorator';
+import { TenantPermissionGuard } from '@core/saas-kit/authorization/tenant-permission.guard';
 import { CreateSubscriptionCommand } from '@core/saas-kit/modules/subscriptions/application/commands/create-subscription.command';
 import { GetSubscriptionQuery } from '@core/saas-kit/modules/subscriptions/application/queries/get-current-subscription.query';
 import type { TenantSubscriptionView } from '@core/saas-kit/modules/subscriptions/application/read-models/subscription.read-model';
-import { Can } from '@core/saas-kit/tenancy/rbac/can.decorator';
-import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import {
   Body,

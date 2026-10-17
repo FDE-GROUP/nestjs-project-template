@@ -1,4 +1,4 @@
-import type { TenantPermissionInvalidator } from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
+import type { TenantPermissionInvalidator } from '@core/saas-kit/authorization/tenant-permission.port';
 import type { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

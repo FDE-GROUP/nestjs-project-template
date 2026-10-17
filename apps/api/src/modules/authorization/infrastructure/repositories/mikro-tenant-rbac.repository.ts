@@ -7,7 +7,7 @@ import {
   type TenantRoleGrantRow,
   type TenantRoleRow,
 } from '@app/database/mikro/rbac-tables';
-import type { TenantAction, TenantSubject } from '@core/saas-kit/tenancy/rbac/tenant-rules';
+import type { TenantAction, TenantSubject } from '@core/saas-kit/authorization/tenant-rules';
 import { Inject, Injectable } from '@nestjs/common';
 import type {
   TenantRbacRepository,
@@ -29,7 +29,7 @@ import {
 /**
  * `TenantRbacRepository` 的 MikroORM 适配（module-rbac-dynamic-roles S1·授权事实 SSOT 的读写通道）。
  *
- * 表属主纪律：`tenant_role*` 三表属 `tenants` 上下文，本类在自身 owned 表内读写（写侧合规）。
+ * 表属主纪律：`tenant_role*` 三表属 `authorization` 上下文（领域细化重构），本类在自身 owned 表内读写（写侧合规）。
  * 每操作 `fork()` 独立 em（V4 串租户教训·同治理仓储纪律）；实体为运行时扁平形
  * （`rbac-tables.ts` companion·FK 裸值列，关系约束由 DB 物理层强制）。
  *

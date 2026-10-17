@@ -1,7 +1,7 @@
 import { AUTH_BYPASS_PATHS, AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { AuthInstance, InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { resolveRequestSession } from '@app/modules/auth/session-resolver';
-import type { TenantRole } from '@core/saas-kit/tenancy/rbac/tenant-rules';
+import type { TenantRole } from '@core/saas-kit/authorization/tenant-rules';
 import type {
   RequestSessionReader,
   SessionRequestLike,

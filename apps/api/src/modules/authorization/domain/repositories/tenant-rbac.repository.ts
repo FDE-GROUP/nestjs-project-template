@@ -1,4 +1,4 @@
-import type { TenantAction, TenantSubject } from '@core/saas-kit/tenancy/rbac/tenant-rules';
+import type { TenantAction, TenantSubject } from '@core/saas-kit/authorization/tenant-rules';
 
 /**
  * 租户 RBAC 仓储端口（domain-owned · module-rbac-dynamic-roles §2.2/§2.3）。

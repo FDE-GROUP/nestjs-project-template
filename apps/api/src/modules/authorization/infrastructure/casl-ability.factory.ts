@@ -1,5 +1,5 @@
 import { AbilityBuilder, createMongoAbility, type MongoAbility } from '@casl/ability';
-import type { TenantAction, TenantSubject } from '@core/saas-kit/tenancy/rbac/tenant-rules';
+import type { TenantAction, TenantSubject } from '@core/saas-kit/authorization/tenant-rules';
 
 /**
  * grant 行（DB `tenant_role_grant` / seed 死数据同形）→ CASL ability 的**纯投影**

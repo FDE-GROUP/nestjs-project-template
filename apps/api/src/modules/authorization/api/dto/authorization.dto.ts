@@ -3,7 +3,7 @@ import {
   TENANT_SUBJECT_VALUES,
   type TenantAction,
   type TenantSubject,
-} from '@core/saas-kit/tenancy/rbac/tenant-rules';
+} from '@core/saas-kit/authorization/tenant-rules';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
 

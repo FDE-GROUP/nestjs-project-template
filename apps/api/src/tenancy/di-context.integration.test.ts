@@ -4,14 +4,15 @@ import { SessionGuard } from '@app/modules/auth/guards/session.guard';
 import {
   TENANT_RBAC_REPOSITORY,
   type TenantRbacRepository,
-} from '@app/modules/tenants/domain/repositories/tenant-rbac.repository';
+} from '@app/modules/authorization/domain/repositories/tenant-rbac.repository';
+import { CaslTenantPermissionChecker } from '@app/modules/authorization/infrastructure/casl-tenant-permission.checker';
+import { TenantPermissionGuard } from '@core/saas-kit/authorization/tenant-permission.guard';
+import { TENANT_PERMISSION_CHECKER } from '@core/saas-kit/authorization/tenant-permission.port';
 import { TenantStatusService } from '@core/saas-kit/tenancy/lifecycle/tenant-status.service';
 import { UserStatusService } from '@core/saas-kit/tenancy/lifecycle/user-status.service';
 import { PLATFORM_SETTINGS } from '@core/saas-kit/tenancy/platform/platform-config.port';
 import { PLATFORM_IDENTITY_LOOKUP } from '@core/saas-kit/tenancy/platform/platform-identity.port';
 import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
-import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
-import { TENANT_PERMISSION_CHECKER } from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
 import { SESSION_READER } from '@core/saas-kit/tenancy/session/request-session.port';
 import { TenantMiddleware } from '@core/saas-kit/tenancy/tenant.middleware';
 import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
@@ -21,7 +22,6 @@ import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthSessionReader } from './infrastructure/auth-session.reader';
-import { CaslTenantPermissionChecker } from './infrastructure/casl-tenant-permission.checker';
 
 /**
  * S9 · NFR-7 DI / 租户上下文集成测试（对齐 `design:paramtypes` 回归）。

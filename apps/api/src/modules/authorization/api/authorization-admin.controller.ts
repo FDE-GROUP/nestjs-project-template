@@ -1,5 +1,5 @@
-import { Can } from '@core/saas-kit/tenancy/rbac/can.decorator';
-import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
+import { Can } from '@core/saas-kit/authorization/can.decorator';
+import { TenantPermissionGuard } from '@core/saas-kit/authorization/tenant-permission.guard';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import {
   BadRequestException,
@@ -25,7 +25,7 @@ import {
   GrantRolePermissionDto,
   RenameRoleDto,
   RevokeRolePermissionDto,
-} from './dto/tenants-rbac.dto';
+} from './dto/authorization.dto';
 
 /**
  * 角色/授权**管理门面**（module-rbac-dynamic-roles §2.5·S3·甲裁自建角色 + 丁裁随片授权面）。
@@ -41,7 +41,7 @@ import {
 @ApiTags('tenants')
 @Controller('tenants/roles')
 @UseGuards(TenantScopeGuard, TenantPermissionGuard)
-export class TenantsRbacAdminController {
+export class AuthorizationAdminController {
   constructor(@Inject(TenantRbacAdminService) private readonly rbac: TenantRbacAdminService) {}
 
   @Get()

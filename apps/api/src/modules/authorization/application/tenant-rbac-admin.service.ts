@@ -1,10 +1,10 @@
-import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import {
   TENANT_PERMISSION_INVALIDATOR,
   type TenantPermissionInvalidator,
-} from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
-import type { TenantAction, TenantSubject } from '@core/saas-kit/tenancy/rbac/tenant-rules';
-import { SYSTEM_ROLE_KEYS } from '@core/saas-kit/tenancy/rbac/tenant-rules';
+} from '@core/saas-kit/authorization/tenant-permission.port';
+import type { TenantAction, TenantSubject } from '@core/saas-kit/authorization/tenant-rules';
+import { SYSTEM_ROLE_KEYS } from '@core/saas-kit/authorization/tenant-rules';
+import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
 import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import {
   BadRequestException,
@@ -19,6 +19,7 @@ import {
   type TenantRoleGrantView,
   type TenantRoleView,
 } from '../domain/repositories/tenant-rbac.repository';
+import type { RoleAssignabilityReader } from '../domain/role-assignability.port';
 
 /**
  * 角色/授权**管理门面应用服务**（module-rbac-dynamic-roles §2.5/§2.6·S3）。
@@ -33,7 +34,7 @@ import {
  * 本服务不复权限判定（禁散点特判）；自定义角色对成员的挂载存在性校验见 `isRoleAssignable`。
  */
 @Injectable()
-export class TenantRbacAdminService {
+export class TenantRbacAdminService implements RoleAssignabilityReader {
   constructor(
     @Inject(TENANT_RBAC_REPOSITORY) private readonly rbac: TenantRbacRepository,
     @Inject(TENANT_PERMISSION_INVALIDATOR)

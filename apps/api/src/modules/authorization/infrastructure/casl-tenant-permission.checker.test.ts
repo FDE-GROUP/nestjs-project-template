@@ -1,7 +1,7 @@
 import type {
   TenantRbacRepository,
   TenantRoleGrantView,
-} from '@app/modules/tenants/domain/repositories/tenant-rbac.repository';
+} from '@app/modules/authorization/domain/repositories/tenant-rbac.repository';
 import { describe, expect, it, vi } from 'vitest';
 import { CaslTenantPermissionChecker } from './casl-tenant-permission.checker';
 

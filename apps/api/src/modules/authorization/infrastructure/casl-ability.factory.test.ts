@@ -1,4 +1,4 @@
-import type { TenantAction, TenantSubject } from '@core/saas-kit/tenancy/rbac/tenant-rules';
+import type { TenantAction, TenantSubject } from '@core/saas-kit/authorization/tenant-rules';
 import { describe, expect, it } from 'vitest';
 import { buildTenantAbility, type TenantAbilityGrant } from './casl-ability.factory';
 

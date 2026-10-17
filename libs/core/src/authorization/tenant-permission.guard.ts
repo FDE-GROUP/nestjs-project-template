@@ -6,8 +6,8 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ERROR_CODES } from '../../shared-kernel/errors/error-codes';
-import { TenantContextService } from '../tenant-context.service';
+import { ERROR_CODES } from '../shared-kernel/errors/error-codes';
+import { TenantContextService } from '../tenancy/tenant-context.service';
 import { CAN_KEY, type CanRequirement } from './can.decorator';
 import { TENANT_PERMISSION_CHECKER, type TenantPermissionChecker } from './tenant-permission.port';
 

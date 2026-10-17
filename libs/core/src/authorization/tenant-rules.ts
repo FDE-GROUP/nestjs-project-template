@@ -14,8 +14,9 @@
  * isMember·全成员可读），该事实现由 seed 承载，非词汇表职责。词表与 `@Can(action,
  * subject)` 装饰器对齐：subject 用 CASL 惯用 PascalCase 资源名。
  *
- * 纯 TS 零依赖（框架/CASL 均不入本层·architecture 分层矩阵）；本表属 tenancy
- * 上下文自有的领域语言（global-contract-placement 判据②：留属主上下文）。
+ * 纯 TS 零依赖（框架/CASL 均不入本层·architecture 分层矩阵）；本表属 authorization
+ * 上下文自有的领域语言（global-contract-placement 判据②：留属主上下文；领域细化
+ * 重构自 `tenancy/rbac` 迁居至此，消费方仍含全部业务上下文的 `@Can` 声明）。
  */
 
 /** 租户级角色 = DB 运行时词汇（系统三 key + per-tenant 自定义角色 key）·不再是封闭枚举。 */

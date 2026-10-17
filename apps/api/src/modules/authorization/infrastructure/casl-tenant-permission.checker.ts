@@ -1,13 +1,13 @@
 import type {
   TenantRbacRepository,
   TenantRoleGrantView,
-} from '@app/modules/tenants/domain/repositories/tenant-rbac.repository';
-import { TENANT_RBAC_REPOSITORY } from '@app/modules/tenants/domain/repositories/tenant-rbac.repository';
+} from '@app/modules/authorization/domain/repositories/tenant-rbac.repository';
+import { TENANT_RBAC_REPOSITORY } from '@app/modules/authorization/domain/repositories/tenant-rbac.repository';
 import type {
   TenantPermissionCheck,
   TenantPermissionChecker,
   TenantPermissionInvalidator,
-} from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
+} from '@core/saas-kit/authorization/tenant-permission.port';
 import { Inject, Injectable } from '@nestjs/common';
 import { buildTenantAbility, type TenantCaslAbility } from './casl-ability.factory';
 

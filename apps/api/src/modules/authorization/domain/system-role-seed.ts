@@ -2,7 +2,7 @@ import type {
   SystemRoleKey,
   TenantAction,
   TenantSubject,
-} from '@core/saas-kit/tenancy/rbac/tenant-rules';
+} from '@core/saas-kit/authorization/tenant-rules';
 
 /**
  * 系统角色静态 seed 死数据（module-rbac-dynamic-roles §2.1/§2.3·丙裁「全 DB 化删代码表」）。

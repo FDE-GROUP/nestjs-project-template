@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { TenantRole } from './rbac/tenant-rules';
+import type { TenantRole } from '../authorization/tenant-rules';
 
 /**
  * Per-request tenant scope (global-tenancy §9.3 / FR-2).

@@ -1,12 +1,12 @@
 import 'reflect-metadata';
-import { CAN_KEY, type CanRequirement } from '@core/saas-kit/tenancy/rbac/can.decorator';
+import { CAN_KEY, type CanRequirement } from '@core/saas-kit/authorization/can.decorator';
 import { describe, expect, it } from 'vitest';
+import { AuthorizationAdminController } from './authorization-admin.controller';
 import {
   CreateRoleDto,
   GrantRolePermissionDto,
   RevokeRolePermissionDto,
-} from './dto/tenants-rbac.dto';
-import { TenantsRbacAdminController } from './tenants-rbac-admin.controller';
+} from './dto/authorization.dto';
 
 /**
  * 角色/授权管理门面元数据锁（module-rbac-dynamic-roles S3·§2.5）。
@@ -17,11 +17,11 @@ import { TenantsRbacAdminController } from './tenants-rbac-admin.controller';
  */
 
 // `@Can` = `SetMetadata`：元数据挂在方法函数（descriptor.value）上，与 Reflector 读回同源。
-const proto = TenantsRbacAdminController.prototype as unknown as Record<string, unknown>;
+const proto = AuthorizationAdminController.prototype as unknown as Record<string, unknown>;
 const can = (method: string): CanRequirement | undefined =>
   Reflect.getMetadata(CAN_KEY, proto[method] as object) as CanRequirement | undefined;
 
-describe('TenantsRbacAdminController @Can 声明元数据', () => {
+describe('AuthorizationAdminController @Can 声明元数据', () => {
   it('角色管理端点声明落 Role 职权格', () => {
     expect(can('listRoles')).toEqual({ action: 'read', subject: 'Role' });
     expect(can('createRole')).toEqual({ action: 'create', subject: 'Role' });
@@ -36,11 +36,11 @@ describe('TenantsRbacAdminController @Can 声明元数据', () => {
   });
 });
 
-describe('TenantsRbacAdminController DTO design:paramtypes（S9 值导入防线）', () => {
+describe('AuthorizationAdminController DTO design:paramtypes（S9 值导入防线）', () => {
   const paramTypes = (method: string) =>
     Reflect.getMetadata(
       'design:paramtypes',
-      TenantsRbacAdminController.prototype,
+      AuthorizationAdminController.prototype,
       method,
     ) as unknown[];
 

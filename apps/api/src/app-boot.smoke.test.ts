@@ -1,12 +1,12 @@
 import { ConfigModule } from '@app/config/config.module';
 import { SessionGuard } from '@app/modules/auth/guards/session.guard';
 import { PostsController } from '@app/modules/posts/api/posts.controller';
-import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
-import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
+import { TenantPermissionGuard } from '@core/saas-kit/authorization/tenant-permission.guard';
 import {
   TENANT_PERMISSION_CHECKER,
   TENANT_PERMISSION_INVALIDATOR,
-} from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
+} from '@core/saas-kit/authorization/tenant-permission.port';
+import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import { Test } from '@nestjs/testing';
 import { describe, expect, it } from 'vitest';

@@ -1,4 +1,4 @@
-import type { TenantRole } from '../rbac/tenant-rules';
+import type { TenantRole } from '../../authorization/tenant-rules';
 
 /**
  * 请求会话读取端口（global-tenancy §9.5.4①B · P1b 会话端口倒置）。

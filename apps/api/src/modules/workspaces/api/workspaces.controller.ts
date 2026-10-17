@@ -1,3 +1,5 @@
+import { Can } from '@core/saas-kit/authorization/can.decorator';
+import { TenantPermissionGuard } from '@core/saas-kit/authorization/tenant-permission.guard';
 import { CreateWorkspaceCommand } from '@core/saas-kit/modules/workspaces/application/commands/create-workspace.command';
 import { DeleteWorkspaceCommand } from '@core/saas-kit/modules/workspaces/application/commands/delete-workspace.command';
 import { UpdateWorkspaceCommand } from '@core/saas-kit/modules/workspaces/application/commands/update-workspace.command';
@@ -5,8 +7,6 @@ import { ListWorkspacesQuery } from '@core/saas-kit/modules/workspaces/applicati
 import type { WorkspaceReadModel } from '@core/saas-kit/modules/workspaces/application/read-models/workspace.read-model';
 import type { Page } from '@core/saas-kit/shared-kernel/domain/pagination';
 import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
-import { Can } from '@core/saas-kit/tenancy/rbac/can.decorator';
-import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import {
   Body,

@@ -1,5 +1,5 @@
-import { buildTenantAbility } from '@app/tenancy/infrastructure/casl-ability.factory';
-import type { TenantAction, TenantSubject } from '@core/saas-kit/tenancy/rbac/tenant-rules';
+import { buildTenantAbility } from '@app/modules/authorization/infrastructure/casl-ability.factory';
+import type { TenantAction, TenantSubject } from '@core/saas-kit/authorization/tenant-rules';
 import { describe, expect, it } from 'vitest';
 import { SYSTEM_ROLE_SEED, type SystemRoleSeed } from './system-role-seed';
 

@@ -1,6 +1,6 @@
-import type { CanRequirement } from '@core/saas-kit/tenancy/rbac/can.decorator';
-import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
-import type { TenantPermissionChecker } from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
+import type { CanRequirement } from '@core/saas-kit/authorization/can.decorator';
+import { TenantPermissionGuard } from '@core/saas-kit/authorization/tenant-permission.guard';
+import type { TenantPermissionChecker } from '@core/saas-kit/authorization/tenant-permission.port';
 import { type ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

@@ -1,8 +1,12 @@
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
+import {
+  ROLE_ASSIGNABILITY_READER,
+  type RoleAssignabilityReader,
+} from '@app/modules/authorization/domain/role-assignability.port';
+import { Can } from '@core/saas-kit/authorization/can.decorator';
+import { TenantPermissionGuard } from '@core/saas-kit/authorization/tenant-permission.guard';
 import { ERROR_CODES } from '@core/saas-kit/shared-kernel/errors/error-codes';
-import { Can } from '@core/saas-kit/tenancy/rbac/can.decorator';
-import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import {
   BadRequestException,
@@ -18,7 +22,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { TenantRbacAdminService } from '../application/tenant-rbac-admin.service';
 import { mapBaError } from './ba-error.mapping';
 import {
   CreateInvitationDto,
@@ -57,7 +60,8 @@ interface TenantOrgApi {
 export class TenantsOrgAdminController {
   constructor(
     @Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance,
-    @Inject(TenantRbacAdminService) private readonly rbacAdmin: TenantRbacAdminService,
+    // 领域细化重构 A5：角色存在性知识属 authorization，经 published port 消费（不再直注应用服务类）。
+    @Inject(ROLE_ASSIGNABILITY_READER) private readonly roleAssignability: RoleAssignabilityReader,
   ) {}
 
   private ba(): TenantOrgApi {
@@ -74,7 +78,7 @@ export class TenantsOrgAdminController {
    * 在库自定义角色——严格在库 fail-closed，词汇外角色不得挂成员/邀请（DTO 仅校形态）。
    */
   private async assertRoleAssignable(role: string): Promise<void> {
-    if (!(await this.rbacAdmin.isRoleAssignable(role))) {
+    if (!(await this.roleAssignability.isRoleAssignable(role))) {
       throw new BadRequestException(`Role not assignable in this tenant: ${role}`, {
         errorCode: ERROR_CODES.TENANCY_ROLE_NOT_FOUND,
       });
