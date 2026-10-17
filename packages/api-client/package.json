@@ -14,7 +14,7 @@
   },
   "scripts": {
     "gen:types": "openapi-typescript ../../openapi/openapi.yaml -o src/schema.d.ts",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json && cp src/schema.d.ts dist/schema.d.ts"
   },
   "dependencies": {
     "@core/saas-kit": "workspace:*",
