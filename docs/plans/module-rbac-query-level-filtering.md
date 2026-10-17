@@ -72,7 +72,7 @@ dynamic-roles 片乙裁「本阶段仅 check 级实例授权」，明确登记�
 - [x] 切片 B：`listPredicate` 三态锁测九例绿（all / where / $or / none fail-closed / 缓存复用）
 - [x] 切片 C：Workspace 读链三分支（all/where/none）+ 「organizationId 不可被覆盖」合并序锁测 + 「listPredicate 与逐行 can() 同解」一致性回归（锁测已绿；gated e2e 因无实例属主列载体降级为单测锁形·已登 §1 缓账）
 - [x] 切片 D：活文档无「列表面不过滤」旧表述（architecture 中英双份补 query 级条款·dynamic-roles §2.4/未决项翻兑现·端口注释翻正；plan/audit 历史快照按例不改写）
-- [ ] `pnpm run ci` 全绿·基线只增不减（≥483）+ Biome 净 + fallow 零边界违规
+- [x] `pnpm run ci` 全绿·基线只增不减（实测 483→510·净增 27）+ Biome 净 + fallow 零边界违规
 - [x] 端口新增方法在 architecture 有对应条款（契约↔宪对账）
 
 ## 6. 演变记录
@@ -82,8 +82,9 @@ dynamic-roles 片乙裁「本阶段仅 check 级实例授权」，明确登记�
 | 2026-10-17 | 0.1.0 | 人裁「3」→ 兑现 dynamic-roles §2.4 query 级缓账·依「无已审方案不写码」起草 | 首版（零代码·只提议）：直查钉牢缺陷（`list()` 仅 tenantFilter·checker 无查询面）+ 四切片（A 受限转换器纯函数 / B 端口 `listPredicate` additive 契约 / C posts 读链下推 + 一致性回归 / D 文档对账）；三条 fail-closed 防线 + 三个归人待裁点显式列出不预设 |
 | 2026-10-17 | 0.2.0 | 人 AskUserQuestion 四裁定档·签署 GO（A→D 连做） | 裁点定档：①支持形=**含 $in 多值**（⇒坐实一条实现前置：写侧闸 `isValidGrantConditions` 现拒 $in·不同步放宽则 $in grant 存不进库、query 级成死码→并入切片 A 作前置·写读两侧共 grammar）②合并=**$or 并语义**（conditions=null 行→null 全量·无匹配行→空集 fail-closed·与 CASL check 级同解）③注入点=**handler 侧**④开工=**GO A→D 连做**；§2 切片 A/B 据实重写·§3 高危面补写侧闸放宽·词汇核实无 manage/all 通配（按精确 action×subject 匹配） |
 | 2026-10-17 | 0.3.0 | 切片 A/B 实施中撞出 plan 前提级缺陷（Post 非 RBAC subject + 无实例属主列）·归人再裁（人裁⑤：改投 Workspace 读链） | §1 缺陷载体改靶钉牢（posts 作废理由如实登记·Workspace 为真实载体 + 「无实例列 ⇒ where 支单测锁形、端到端挂缓账」声明）·§2 切片 B 行文对齐落地三态判别式（kind 判别替代 null/空集谓词措辞·消除 Mikro 空 `$or` 语义歧义赌注）·§2 切片 C 重写（`WorkspaceRepository.list` additive `authorizationWhere` + 固定展开序保租户卡点不可覆盖 + `TenantContextService.userId` getter + 无上下文「403→空页」行为注记）·§4 补人裁⑤·§5 判据据实同步（A/B 已绿打勾） |
+| 2026-10-17 | 0.3.1 | 人类验收·结项 | 人签核验收通过：A→D 四切片全部交付（实现 `66e3b0e` + 账目 `607addd` 均在 origin/main·pre-push 全量 CI 复验 PASSED）；L1 510/30（基线 483 只增不减）·Biome 净·fallow 零边界违规；§5 末项 CI 判据据实勾齐；遗留缓账如实保留：实例属主列端到端演示（待任一 RBAC subject 实体具列）·多实例缓存一致性仍归 dynamic-roles 缓账 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.3.0 变更（实施中撞出前提级缺陷·人裁⑤改靶 Workspace 读链·切片 B 行文对齐落地契约），以当前正文内容为准。
+正文停 v0.3.0 实体变更（人裁⑤改靶 Workspace 读链·切片 B 行文对齐落地契约）；v0.3.1 仅为人类验收结项戳（仅翻 §5/§6 账行·正文未动），以当前正文内容为准。
