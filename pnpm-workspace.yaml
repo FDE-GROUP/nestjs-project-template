@@ -14,3 +14,9 @@ allowBuilds:
   cpu-features: false
   protobufjs: false
   ssh2: false
+
+minimumReleaseAgeExclude:
+  - '@tanstack/react-router@1.170.45'
+  - '@tanstack/router-core@1.171.38'
+  - '@tanstack/router-generator@1.167.45'
+  - '@tanstack/router-plugin@1.168.47'

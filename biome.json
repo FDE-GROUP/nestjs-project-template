@@ -7,7 +7,16 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**/*.ts", "**/*.js", "**/*.json", "!.claude", "!.qoder"]
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.json",
+      "!.claude",
+      "!.qoder",
+      "!**/*.gen.ts",
+      "!**/*.gen.tsx"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -92,7 +101,7 @@
       }
     },
     {
-      "includes": ["**/*.test.ts", "**/*.spec.ts"],
+      "includes": ["**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx"],
       "linter": {
         "rules": {
           "suspicious": {

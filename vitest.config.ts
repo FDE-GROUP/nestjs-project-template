@@ -23,6 +23,8 @@ export default defineConfig({
         transform: {
           legacyDecorator: true,
           decoratorMetadata: true,
+          // apps/web 的 .tsx 经同一 swc 链变换（后端 .ts 无 JSX，此配置不触）。
+          react: { runtime: 'automatic' },
         },
         keepClassNames: true,
       },
@@ -35,7 +37,7 @@ export default defineConfig({
     // swc transform can exceed the 5s default on the first test.
     testTimeout: 20000,
     hookTimeout: 20000,
-    include: ['apps/**/*.test.ts', 'libs/**/*.test.ts'],
+    include: ['apps/**/*.test.ts', 'apps/**/*.test.tsx', 'libs/**/*.test.ts'],
     exclude: ['node_modules', 'dist'],
     env: {
       NODE_ENV: 'test',

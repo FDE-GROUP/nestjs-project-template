@@ -9,5 +9,14 @@
       "@shared/*": ["apps/api/src/shared/*"]
     }
   },
-  "exclude": ["node_modules", "test", "dist", "coverage", "libs", "**/*.spec.ts", "**/*.test.ts"]
+  "exclude": [
+    "node_modules",
+    "test",
+    "dist",
+    "coverage",
+    "libs",
+    "apps/web",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
 }
