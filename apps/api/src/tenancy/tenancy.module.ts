@@ -38,6 +38,12 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
  * （`PlatformOperatorGuard`/`PlatformAuditService` + `PLATFORM_IDENTITY_LOOKUP`/`PLATFORM_SETTINGS`
  * 适配）亦迁出，归 `PlatformModule`（@Global 供给）——本模块只留隔离机制与
  * 状态/会话/配额适配，不再依赖 TenantsModule。
+ *
+ * 命名纪律（global-domain-context-refactor 未决项 6·不改名裁定）：本目录定名 `tenancy/`
+ * （业界机制名，如 nestjs-tenancy），不改 `multi-tenancy/`——`tenant`=业务概念 / `tenancy`=隔离机制
+ * 的词义区分已由宪法「限界上下文地图与多租户机制层」节（`docs/specs/architecture.md` ±zh）术语纪律
+ * 条款消解；物理改名反与内部 `TenantContext`/`TenantScopeGuard` 等 tenant* 词汇打架，且触高危 #3 全仓
+ * churn。机制层提纯（lifecycle/quota 归位·未决项 4）另片处理，本处仅立指针不复述宪法细节。
  */
 @Global()
 @Module({

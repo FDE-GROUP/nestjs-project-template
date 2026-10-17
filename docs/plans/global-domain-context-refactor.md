@@ -58,6 +58,7 @@
 3. **D 接缝**：治理命令/查询 handlers 是否随门面搬入 platform（建议：**留 tenants**·platform 只持闸门+审计+门面）——**已裁（D 片落地）**：取建议档·handlers/读模型留 tenants·controller 经 CQRS Bus 委派。
 4. **quota/lifecycle 归位**：域策略终态应还业务域（lifecycle→tenants、quota→subscriptions/平台治理）——本 plan 不动仅地图定位·归位时机另裁。
 5. **平台层授权形态**：(a) 概念归 authorization、实现维持 guard 现状（**本 plan 默认**）；(b) D 内收敛为消费 authorization 平台 scope 接口；(c) 平台角色表化（#1·schema 另片）。
+6. **机制层命名**：`tenancy/` 是否改名 `multi-tenancy/` 以区别租户业务域——**已裁（人同意 2026-10-17）**：不改名。理：① tenancy 本就是业界机制名（如 nestjs-tenancy·tenant=业务概念/tenancy=隔离机制的词义区分既存）；② 歧义源是 tenancy↔tenants 近形词·已由宪法术语纪律条款消歧·改名后内部 `TenantContext`/`TenantScopeGuard` 等 tenant* 词汇与目录名反而打架；③ 改名触高危 #3（全仓 `@core/saas-kit/tenancy/*` import + 宪法 ±zh 条目再修）。强化自解释的优先级：先推未决项 4（lifecycle/quota 归位·机制层提纯），物理改名（含未决项 2 的 auth→authentication）另片合并归人签核。
 
 ## 5. 执行记录
 
@@ -100,3 +101,4 @@
 | 2026-10-17 | v0.3 | B 片落地 | 边界条款入宪 ±zh·错件复核裁定皆合规原位（seats-quota.hook 搬离否决·挂载≠属主）·基线 480/30 不动 |
 | 2026-10-17 | v0.4 | D 片落地 | platform 上下文抽出（core 契约迁址+适配/门面/测试归位+PlatformModule 装配+未决项 3 裁留 handlers）·di-context ⑤ 新锁测·基线 480→481 只增不减 |
 | 2026-10-17 | v0.5 | C 片落地·整 plan 四片入库 | tenancy 定型横切机制层入宪（±zh 树重写+上下文地图节·§9.3 定态+演变 0.23.0·table-ownership 语境注·树↔目录对拍）·ci 全绿 481/30 不动·高危 #3 完成·推送归人·未决项 4/5 仍挂账另片 |
+| 2026-10-17 | v0.6 | 收口后命名质疑裁定（未决项 6 落定） | 人问「tenancy 改名 multi-tenancy 是否更合理」→ Agent 建议不改·人「同意」：tenancy 即业界机制名·歧义由宪法术语纪律消解·改名触高危 #3 churn；落点加宪法指针 docstring·优先序＝未决项 4 机制层提纯另片 |
