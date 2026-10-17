@@ -4,6 +4,7 @@ import { Account, Member, Organization, Session, User } from '@app/database/mikr
 import { Workspace } from '@app/database/mikro/four-tables';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { TenantRole, TenantRoleGrant, type TenantRoleRow } from '@app/database/mikro/rbac-tables';
+import { OutboxRelay } from '@app/database/outbox-relay';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { ListWorkspacesQueryHandler } from '@core/saas-kit/modules/workspaces/application/queries/handlers/list-workspaces.query-handler';
@@ -68,7 +69,18 @@ gated('Workspace 实例属主端到端（RBAC query 级 where 支真库兑现 ·
   const authApi = () => app.get<InjectAuthInstance>(AuthInstanceInjectKey).get().api;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      // B1 隔离（module-ci-gated-e2e-isolation·人 2026-10-17 令「同意」裁 B1）：把本进程 outbox 后台
+      // 轮询循环节掉根——outbox 模式下 AppModule 每 pollMs 起全局 relay，与共享库的其它 gated 文件竞抢
+      // event 行（跨进程互污竞态主体）。本文件断言不依赖后台投递；tenant-status-link「pollMs 拨大」为
+      // 同方向进程内先例。override 于 init 前生效 = 零启动窗口。
+      .overrideProvider(OutboxRelay)
+      .useValue({
+        onApplicationBootstrap: () => {},
+        onModuleDestroy: () => {},
+        tickOnce: async () => 0,
+      })
+      .compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     app.useGlobalPipes(createValidationPipe());
     await app.init();

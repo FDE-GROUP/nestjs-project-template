@@ -3,6 +3,7 @@ import { createValidationPipe } from '@app/common/validation-pipe';
 import { Account, Member, Organization, Session, User } from '@app/database/mikro/entities';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { Post } from '@app/database/mikro/post.entity';
+import { OutboxRelay } from '@app/database/outbox-relay';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -69,7 +70,18 @@ gated('租户隔离全栈 e2e（真·Better Auth 登录编排 · 无认证桩 ·
   const authApi = () => app.get<InjectAuthInstance>(AuthInstanceInjectKey).get().api;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      // B1 隔离（module-ci-gated-e2e-isolation·人 2026-10-17 令「同意」裁 B1）：把本进程 outbox 后台
+      // 轮询循环节掉根——outbox 模式下 AppModule 每 pollMs 起全局 relay，与共享库的其它 gated 文件竞抢
+      // event 行（跨进程互污竞态主体）。本文件断言不依赖后台投递；tenant-status-link「pollMs 拨大」为
+      // 同方向进程内先例。override 于 init 前生效 = 零启动窗口。
+      .overrideProvider(OutboxRelay)
+      .useValue({
+        onApplicationBootstrap: () => {},
+        onModuleDestroy: () => {},
+        tickOnce: async () => 0,
+      })
+      .compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     // 与生产入口同装配（global-ci-fullstack-pg 首跑拓出：无全局管时 @Query DTO 默认值失效 → limit undefined）。
     app.useGlobalPipes(createValidationPipe());

@@ -9,6 +9,7 @@ import {
   User,
 } from '@app/database/mikro/entities';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
+import { OutboxRelay } from '@app/database/outbox-relay';
 import { AuthInstanceInjectKey } from '@app/modules/auth/auth.constant';
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
 import { FREE_PLAN } from '@core/saas-kit/modules/subscriptions/quota/tenant-plans';
@@ -71,7 +72,18 @@ gated('seats 配额 hook 全栈 e2e（真·BA HTTP 入组通道 · env-gated）'
   const authApi = () => app.get<InjectAuthInstance>(AuthInstanceInjectKey).get().api;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      // B1 隔离（module-ci-gated-e2e-isolation·人 2026-10-17 令「同意」裁 B1）：把本进程 outbox 后台
+      // 轮询循环节掉根——outbox 模式下 AppModule 每 pollMs 起全局 relay，与共享库的其它 gated 文件竞抢
+      // event 行（跨进程互污竞态主体）。本文件断言不依赖后台投递；tenant-status-link「pollMs 拨大」为
+      // 同方向进程内先例。override 于 init 前生效 = 零启动窗口。
+      .overrideProvider(OutboxRelay)
+      .useValue({
+        onApplicationBootstrap: () => {},
+        onModuleDestroy: () => {},
+        tickOnce: async () => 0,
+      })
+      .compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     // 与生产入口同装配（global-ci-fullstack-pg 切片 A′：校验管单源见 common/validation-pipe.ts）。
     app.useGlobalPipes(createValidationPipe());

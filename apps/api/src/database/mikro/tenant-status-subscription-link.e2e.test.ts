@@ -1,4 +1,7 @@
 import 'reflect-metadata';
+import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ConfigService } from '@app/config/config.service';
 import { Organization } from '@app/database/mikro/entities';
 import { SUBSCRIPTION_STATUS } from '@core/saas-kit/modules/subscriptions/quota/tenant-plans';
@@ -29,6 +32,59 @@ import { MikroOrmService } from './mikro-orm.service';
  */
 const E2E_DB = process.env.E2E_DATABASE_URL;
 const gated = E2E_DB ? describe : describe.skip;
+
+/**
+ * B1 互斥锁（module-ci-gated-e2e-isolation·人 2026-10-17 裁 B1）：本文件 relay 为手动 tickOnce 全局
+ * 捞行（生产语义·设计行为），与并行跑的 outbox-relay.e2e（其断言依赖「自属行由自属 relay 投递到
+ * 自属总线」，跨进程 bus 互不可见）存在结构性窃取竞态。两文件共用的 O_EXCL 锁文件实现在
+ * outbox-relay.e2e.test.ts 头注有完整背景；此处内联同款（test-only·免新增文件触构建收集面），
+ * 仅围每轮 drain tick 短持，outbox 全文件为临界区。
+ */
+const RELAY_LOCK = join(tmpdir(), 'nestjs-e2e-outbox-relay.lock');
+
+async function acquireRelayLock(): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  for (;;) {
+    try {
+      writeFileSync(RELAY_LOCK, String(process.pid), { flag: 'wx' });
+      return;
+    } catch {
+      let holderAlive = true;
+      try {
+        const owner = Number(readFileSync(RELAY_LOCK, 'utf8').trim());
+        if (!Number.isInteger(owner) || owner <= 0) {
+          holderAlive = false;
+        } else {
+          process.kill(owner, 0); // 存活 → 不抛；不存在 → ESRCH
+        }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ESRCH')
+          holderAlive = false; // stale → 夺回
+        else if ((error as NodeJS.ErrnoException).code === 'ENOENT')
+          continue; // 锁刚释放 → 重试
+        else throw error;
+      }
+      if (holderAlive) {
+        if (Date.now() > deadline) throw new Error('relay e2e lock acquire timeout (30s)');
+      } else {
+        try {
+          unlinkSync(RELAY_LOCK);
+        } catch {
+          /* 并发夺回已做 */
+        }
+      }
+      await new Promise((r) => setTimeout(r, 20));
+    }
+  }
+}
+
+function releaseRelayLock(): void {
+  try {
+    unlinkSync(RELAY_LOCK);
+  } catch {
+    /* 幂等 */
+  }
+}
 
 gated('Tenant-status → subscription link real-DB round trip (治理档 S3 · env-gated)', () => {
   let mikro: MikroOrmService;
@@ -71,7 +127,7 @@ gated('Tenant-status → subscription link real-DB round trip (治理档 S3 · e
     return rows[0]?.done === true;
   }
 
-  /** 排空 relay 直至指定 eventId 的行已投递（残留行只延迟到达，不改变收敛结果）。 */
+  /** 排空 relay 直至指定 eventId 的行已投递（残留行只延迟到达，不改变收敛结果）。本文件已持文件级锁，tick 不再重复围锁。 */
   async function drainUntilDispatched(eventId: string): Promise<void> {
     for (let i = 0; i < 10; i++) {
       if (await isDispatched(eventId)) return;
@@ -96,6 +152,11 @@ gated('Tenant-status → subscription link real-DB round trip (治理档 S3 · e
   }
 
   beforeAll(async () => {
+    // 文件级临界区（B1 锁·人裁）：与 outbox-relay.e2e 全生命周期串行——两文件共用一把锁后并行会互吞
+    // 对方未派发行（tickOnce 全局捞行），被吞方面对自己的 bus 拿不到事件 → 消费者永不收敛；
+    // 串行化保证「插行→自属 tick→投递」闭环内无对侧 relay 窥伺（其余 gated 文件的 app 启动循环已
+    // override 节除，不参与竞态；其插入的旁观行不依赖投递权，历史全绿已证）。
+    await acquireRelayLock();
     scope = new TransactionScope();
     mikro = new MikroOrmService({ getDatabaseConfig: () => ({ url: E2E_DB }) } as never, scope);
     store = new MikroEventStore(mikro);
@@ -184,11 +245,15 @@ gated('Tenant-status → subscription link real-DB round trip (治理档 S3 · e
   });
 
   afterAll(async () => {
-    const em = await mikro.fork();
-    await em.nativeDelete(TenantSubscription, { id: subId } as never);
-    await em.nativeDelete(Event, { aggregateType: 'tenant', aggregateId: tenantId } as never);
-    await em.nativeDelete(Organization, { id: tenantId } as never);
-    await (mikro as unknown as { onModuleDestroy(): Promise<void> }).onModuleDestroy();
+    try {
+      const em = await mikro.fork();
+      await em.nativeDelete(TenantSubscription, { id: subId } as never);
+      await em.nativeDelete(Event, { aggregateType: 'tenant', aggregateId: tenantId } as never);
+      await em.nativeDelete(Organization, { id: tenantId } as never);
+      await (mikro as unknown as { onModuleDestroy(): Promise<void> }).onModuleDestroy();
+    } finally {
+      releaseRelayLock();
+    }
   });
 
   it('suspend：outbox 行经 relay 投递 → 订阅行 active→suspended（真实 SQL 收敛）', async () => {

@@ -5,6 +5,7 @@ import { Invitation, Member, Organization, User } from '@app/database/mikro/enti
 import { Event, TenantSubscription, Workspace } from '@app/database/mikro/four-tables';
 import { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import { Post } from '@app/database/mikro/post.entity';
+import { OutboxRelay } from '@app/database/outbox-relay';
 import { TENANT_STATUS } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
 import type { EntityManager } from '@mikro-orm/core';
 import { CommandBus } from '@nestjs/cqrs';
@@ -97,7 +98,18 @@ gated('按租户硬删全栈 e2e（真库 FK cascade + 事件补删 · env-gated
   }
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      // B1 隔离（module-ci-gated-e2e-isolation·人 2026-10-17 令「同意」裁 B1）：把本进程 outbox 后台
+      // 轮询循环节掉根——outbox 模式下 AppModule 每 pollMs 起全局 relay，与共享库的其它 gated 文件竞抢
+      // event 行（跨进程互污竞态主体）。本文件断言不依赖后台投递；tenant-status-link「pollMs 拨大」为
+      // 同方向进程内先例。override 于 init 前生效 = 零启动窗口。
+      .overrideProvider(OutboxRelay)
+      .useValue({
+        onApplicationBootstrap: () => {},
+        onModuleDestroy: () => {},
+        tickOnce: async () => 0,
+      })
+      .compile();
     // 必须建真实 Fastify 应用（同 auth-http-surface.e2e 先例）：AppModule 的 AuthBootstrapService
     // 在 onApplicationBootstrap 挂 BA 原生路由，裸 TestingModule.init() 下 `httpAdapter.getInstance()`
     // 为 undefined 会崩；`createNestApplication(FastifyAdapter)` + `init()` 才实例化适配器（无需 listen）。
