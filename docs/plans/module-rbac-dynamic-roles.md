@@ -48,7 +48,7 @@
 ## 4. 审计记录
 
 - 结论：**已审计·GO**（人签核 2026-10-17·AskUserQuestion 四裁）——甲=《行式 grant 表 + 审计表》（三表全落库）；乙=《仅 check 级实例授权》（query 级列表过滤缓账另片，仓储 find 链不动）；丙=《全 DB 化删代码表》（TENANT_RULES 矩阵整表删净·seed 死数据双路·仅留编译期词汇表；连锁面：reader/DTO 存在性校验改形）；丁=《高危三项随片签》（schema 迁移+公共契约修订+specs 修宪）。被否备选：系统角色镜像保留（丙-1）·check+query 两层（乙-1）·JSON 列整存/仅日志审计（甲-2/3）。
-- 未决项：query 级列表过滤的端点清单与转换策略（缓账片·**2026-10-17 已另片立案 [module-rbac-query-level-filtering](./module-rbac-query-level-filtering.md) 兑现**——`listPredicate` 三态契约 + 写侧闸放宽 $in + conditions→Mikro 受限转换器已实施·列表面接入 Workspace 读链（人裁⑤：Post 非 RBAC subject 且无实例列→改靶）·**已人类验收·结项（2026-10-17·v0.3.1·L1 510/30）**；实例属主列的端到端演示仍挂缓账）；多实例缓存一致性（Redis pub/sub·缓账）。
+- 未决项：query 级列表过滤的端点清单与转换策略（缓账片·**2026-10-17 已另片立案 [module-rbac-query-level-filtering](./module-rbac-query-level-filtering.md) 兑现**——`listPredicate` 三态契约 + 写侧闸放宽 $in + conditions→Mikro 受限转换器已实施·列表面接入 Workspace 读链（人裁⑤：Post 非 RBAC subject 且无实例列→改靶）·**已人类验收·结项（2026-10-17·v0.3.1·L1 510/30）**；实例属主列的端到端演示已兑现——[module-workspace-owner-column](./module-workspace-owner-column.md)（2026-10-17·`workspace.ownerId` + gated 五向真库演示；同片登记两笔新缓账：guard 对 conditions-only 角色的 HTTP 入口拦截放宽与否归人、ci:db env-gated 组既有并发互污归人））；多实例缓存一致性（Redis pub/sub·缓账）。
 - 审计人 / 日期：人（FDE·AskUserQuestion）· 2026-10-17
 
 ## 4.1 偏差留痕（实施中相对 §2 拟案的落定偏差·非改判）
