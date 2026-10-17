@@ -7,7 +7,7 @@ paths:
       responses:
         '200':
           description: |-
-            Service is alive.
+            Service is alive（透传面·形参真相源 = @nestjs/terminus HealthCheckResult）
 
             The Health Check is successful
           content:
@@ -172,8 +172,23 @@ paths:
       responses:
         '200':
           description: Role views.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TenantRoleViewResponse'
         '403':
           description: CASL deny (no Role read).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: List roles of the active tenant (system + custom)
       tags: &ref_3
         - tenants
@@ -189,10 +204,27 @@ paths:
       responses:
         '200':
           description: Created role view.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TenantRoleViewResponse'
         '400':
           description: Invalid/reserved role key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: Role key already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Create a custom role (owner/admin)
       tags: *ref_3
   /api/v1/tenants/roles/rename:
@@ -210,8 +242,16 @@ paths:
           description: Renamed.
         '404':
           description: Role not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: System role protected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Rename a custom role (system roles protected)
       tags: *ref_3
   /api/v1/tenants/roles/delete:
@@ -229,8 +269,16 @@ paths:
           description: Deleted.
         '404':
           description: Role not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: System role protected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Delete a custom role (grants cascade; system roles protected)
       tags: *ref_3
   /api/v1/tenants/roles/grants:
@@ -245,8 +293,23 @@ paths:
       responses:
         '200':
           description: Grant views (subject/action/conditions).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TenantRoleGrantViewResponse'
         '404':
           description: Role not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: List grant rows of a role (echo checked state)
       tags: *ref_3
     post:
@@ -263,10 +326,22 @@ paths:
           description: Granted.
         '400':
           description: Invalid conditions (whitelist-only).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '404':
           description: Role not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: Duplicate grant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Grant a permission cell to a role (multi-condition rows = OR union)
       tags: *ref_3
   /api/v1/tenants/roles/grants/revoke:
@@ -284,6 +359,10 @@ paths:
           description: Revoked.
         '404':
           description: Role or matching grant not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Revoke a grant (conditions null = whole-subject row; object = exact row)
       tags: *ref_3
   /api/v1/platform/tenants:
@@ -311,8 +390,21 @@ paths:
       responses:
         '200':
           description: A page of tenants with lifecycle status.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PlatformTenantPageResponse'
         '403':
           description: Not the platform operator.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: List all tenants across the platform (operator only)
       tags: &ref_4
         - platform
@@ -328,8 +420,21 @@ paths:
       responses:
         '200':
           description: Tenant row.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PlatformTenantRowResponse'
         '404':
           description: Tenant not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Get one tenant (operator only)
       tags: *ref_4
     delete:
@@ -343,10 +448,27 @@ paths:
       responses:
         '200':
           description: Tenant marked deleted.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TenantApplicationResponse'
         '404':
           description: Tenant not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: Already deleted (illegal transition).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Soft-delete a tenant (→ deleted terminal · row kept for export)
       tags: *ref_4
   /api/v1/platform/tenants/{id}/diagnostics:
@@ -361,8 +483,21 @@ paths:
       responses:
         '200':
           description: Diagnostics bundle.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TenantDiagnosticsResponse'
         '404':
           description: Tenant not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: 'Per-tenant diagnostics: member/invitation/workspace/post counts'
       tags: *ref_4
   /api/v1/platform/tenants/{id}/export:
@@ -376,9 +511,25 @@ paths:
             type: string
       responses:
         '200':
-          description: Six-section tenant data export (credentials excluded).
+          description: >-
+            Six-section tenant data export (credentials excluded)（透传面·形参真相源 =
+            TenantDataExport（bulk-export·六段聚合））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '404':
           description: Tenant not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Export all tenant-owned data as a single JSON payload (NFR-6)
       tags: *ref_4
   /api/v1/platform/tenants/{id}/suspend:
@@ -393,10 +544,27 @@ paths:
       responses:
         '200':
           description: Tenant suspended.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TenantApplicationResponse'
         '404':
           description: Tenant not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: Illegal transition for the current status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Suspend an active tenant (active → suspended · fail-closed失能)
       tags: *ref_4
   /api/v1/platform/tenants/{id}/resume:
@@ -411,10 +579,27 @@ paths:
       responses:
         '200':
           description: Tenant resumed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TenantApplicationResponse'
         '404':
           description: Tenant not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: Illegal transition for the current status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Resume a suspended tenant (suspended → active)
       tags: *ref_4
   /api/v1/platform/tenants/{id}/permanent:
@@ -429,10 +614,27 @@ paths:
       responses:
         '200':
           description: Tenant rows purged; payload carries purgedEvents for audit核对.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TenantHardDeleteResultResponse'
         '404':
           description: Tenant not found (or already hard-deleted · idempotent).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: Not in deleted terminal state — soft-delete first.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: >-
         Hard-delete a deleted-terminal tenant (irreversible · FK cascade + event
         purge · NFR-6)
@@ -462,8 +664,21 @@ paths:
       responses:
         '200':
           description: A page of users with suspension status.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PlatformUserPageResponse'
         '403':
           description: Not the platform operator.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: List all platform users with lifecycle status (operator only)
       tags: &ref_5
         - platform
@@ -485,10 +700,27 @@ paths:
       responses:
         '200':
           description: User suspended.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserGovernanceResultResponse'
         '404':
           description: User not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: Illegal transition for the current status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: >-
         Suspend a platform user (active → suspended · sessions invalidated ·
         fail-closed失能)
@@ -505,10 +737,27 @@ paths:
       responses:
         '200':
           description: User resumed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserGovernanceResultResponse'
         '404':
           description: User not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '409':
           description: Illegal transition for the current status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Resume a suspended platform user (suspended → active)
       tags: *ref_5
   /api/v1/users/me/data-export:
@@ -517,9 +766,25 @@ paths:
       parameters: []
       responses:
         '200':
-          description: Aggregated personal data (no credentials).
+          description: >-
+            Aggregated personal data (no credentials)（透传面·形参真相源 =
+            UserDataExportReadModel（bulk-export·四段聚合））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '401':
           description: Missing or invalid session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: 'PIPL right-to-access: export current user personal data (C1 · FR-7)'
       tags: &ref_6
         - users
@@ -532,6 +797,10 @@ paths:
           description: User deleted; consent rows retained anonymously.
         '401':
           description: Missing or invalid session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: 'PIPL right-to-erase: hard-delete current user (C1 · FR-7)'
       tags: *ref_6
   /api/v1/posts:
@@ -555,11 +824,28 @@ paths:
             type: string
       responses:
         '200':
-          description: Posts owned by the active tenant.
+          description: Cursor page of posts owned by the active tenant.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PostCursorPageResponse'
         '400':
           description: Malformed cursor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '403':
           description: No active tenant context.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: List posts in the active tenant (cursor-paginated)
       tags: &ref_7
         - posts
@@ -575,8 +861,21 @@ paths:
       responses:
         '201':
           description: Created post stamped with the active tenant.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PostResponse'
         '403':
           description: No active tenant context.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Create a post in the active tenant
       tags: *ref_7
   /api/v1/workspaces:
@@ -597,9 +896,22 @@ paths:
             example: 0
       responses:
         '200':
-          description: Workspaces owned by the active tenant.
+          description: Workspaces owned by the active tenant (offset page).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WorkspacePageResponse'
         '403':
           description: No active tenant, or missing workspace:read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: List workspaces in the active tenant
       tags: &ref_8
         - workspaces
@@ -615,8 +927,21 @@ paths:
       responses:
         '201':
           description: Created workspace stamped with the active tenant.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WorkspaceResponse'
         '403':
           description: Missing workspace:create (members are rejected).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Create a workspace (owner/admin)
       tags: *ref_8
   /api/v1/workspaces/{id}:
@@ -637,8 +962,21 @@ paths:
       responses:
         '200':
           description: Updated workspace.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WorkspaceResponse'
         '404':
           description: Workspace not found in the active tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Update a workspace (owner/admin)
       tags: *ref_8
     delete:
@@ -654,6 +992,10 @@ paths:
           description: Workspace deleted.
         '404':
           description: Workspace not found in the active tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Delete a workspace (owner/admin)
       tags: *ref_8
   /api/v1/tenants/applications:
@@ -669,8 +1011,21 @@ paths:
       responses:
         '201':
           description: Pending tenant created; inactive until approved.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TenantApplicationResponse'
         '401':
           description: Missing or invalid session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Apply to create a tenant (user-level · lands pending_approval)
       tags: &ref_9
         - tenants
@@ -686,10 +1041,27 @@ paths:
       responses:
         '200':
           description: Tenant activated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TenantApplicationResponse'
         '403':
           description: Not a platform operator.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '404':
           description: Tenant not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Approve a pending tenant (platform operator · pending → active)
       tags: *ref_9
   /api/v1/tenants/applications/{id}/reject:
@@ -706,8 +1078,16 @@ paths:
           description: Pending tenant discarded.
         '403':
           description: Not a platform operator.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '404':
           description: Tenant not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Reject a pending tenant (platform operator · hard-delete)
       tags: *ref_9
   /api/v1/tenants/members:
@@ -716,9 +1096,25 @@ paths:
       parameters: []
       responses:
         '200':
-          description: Member list (membership data from Better Auth).
+          description: >-
+            Member list (membership data from Better Auth)（透传面·形参真相源 = Better
+            Auth auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '403':
           description: No active tenant / CASL deny / not a member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: List members of the active tenant (all roles · CASL read)
       tags: &ref_10
         - tenants
@@ -734,9 +1130,23 @@ paths:
               $ref: '#/components/schemas/UpdateMemberRoleDto'
       responses:
         '200':
-          description: Updated member.
+          description: Updated member（透传面·形参真相源 = Better Auth auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '403':
           description: CASL deny (member role) / last-owner guard (BA).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Update a member role (owner/admin · CASL update)
       tags: *ref_10
   /api/v1/tenants/members/remove:
@@ -751,9 +1161,23 @@ paths:
               $ref: '#/components/schemas/RemoveMemberDto'
       responses:
         '200':
-          description: Removed member.
+          description: Removed member（透传面·形参真相源 = Better Auth auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '403':
           description: CASL deny (member role) / self-removal guard (BA).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Remove a member (owner/admin · CASL delete)
       tags: *ref_10
   /api/v1/tenants/invitations:
@@ -762,9 +1186,25 @@ paths:
       parameters: []
       responses:
         '200':
-          description: Invitation list (data from Better Auth).
+          description: >-
+            Invitation list (data from Better Auth)（透传面·形参真相源 = Better Auth
+            auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '403':
           description: No active tenant / CASL deny / not a member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: List pending invitations of the active tenant (all roles)
       tags: *ref_10
     post:
@@ -778,9 +1218,23 @@ paths:
               $ref: '#/components/schemas/CreateInvitationDto'
       responses:
         '200':
-          description: Created invitation.
+          description: Created invitation（透传面·形参真相源 = Better Auth auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '403':
           description: CASL deny (member role).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Invite a member to the active tenant (owner/admin · CASL create)
       tags: *ref_10
   /api/v1/tenants/invitations/cancel:
@@ -795,9 +1249,23 @@ paths:
               $ref: '#/components/schemas/InvitationIdDto'
       responses:
         '200':
-          description: Cancelled invitation.
+          description: Cancelled invitation（透传面·形参真相源 = Better Auth auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '403':
           description: CASL deny (member role) / not cancellable (BA).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Cancel an invitation (owner/admin · CASL cancel)
       tags: *ref_10
   /api/v1/tenants:
@@ -806,9 +1274,25 @@ paths:
       parameters: []
       responses:
         '200':
-          description: Membership organizations (data from Better Auth).
+          description: >-
+            Membership organizations (data from Better Auth)（透传面·形参真相源 = Better
+            Auth auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '401':
           description: Missing or invalid session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: List organizations the current user belongs to (personal channel)
       tags: &ref_11
         - tenants
@@ -824,11 +1308,31 @@ paths:
               $ref: '#/components/schemas/SetActiveTenantDto'
       responses:
         '200':
-          description: Session activated organization updated.
+          description: >-
+            Session activated organization updated（透传面·形参真相源 = Better Auth
+            auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '401':
           description: Missing or invalid session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '403':
           description: Not a member of the target organization (BA).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Switch the session's active organization (must be a member)
       tags: *ref_11
   /api/v1/tenants/members/leave:
@@ -843,11 +1347,29 @@ paths:
               $ref: '#/components/schemas/LeaveTenantDto'
       responses:
         '200':
-          description: Membership removed.
+          description: Membership removed（透传面·形参真相源 = Better Auth auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '400':
           description: Not a member / sole owner leaving the tenant (BA data guard).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '401':
           description: Missing or invalid session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Leave a tenant (self-service · last-owner cannot leave)
       tags: *ref_11
   /api/v1/tenants/invitations/accept:
@@ -862,13 +1384,33 @@ paths:
               $ref: '#/components/schemas/InvitationIdDto'
       responses:
         '200':
-          description: Invitation accepted; membership created.
+          description: >-
+            Invitation accepted; membership created（透传面·形参真相源 = Better Auth
+            auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '400':
           description: >-
             Invitation not found/expired/not the invitee/seat cap (BA guards +
             hooks).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '401':
           description: Missing or invalid session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Accept an invitation addressed to the current user
       tags: *ref_11
   /api/v1/tenants/invitations/reject:
@@ -883,11 +1425,29 @@ paths:
               $ref: '#/components/schemas/InvitationIdDto'
       responses:
         '200':
-          description: Invitation rejected.
+          description: Invitation rejected（透传面·形参真相源 = Better Auth auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '400':
           description: Invitation not found/expired/not the invitee (BA).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '401':
           description: Missing or invalid session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Reject an invitation addressed to the current user
       tags: *ref_11
   /api/v1/tenants/invitations/mine:
@@ -896,9 +1456,25 @@ paths:
       parameters: []
       responses:
         '200':
-          description: Invitation list (data from Better Auth).
+          description: >-
+            Invitation list (data from Better Auth)（透传面·形参真相源 = Better Auth
+            auth.api.*（服务端直调透传））
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
         '401':
           description: Missing or invalid session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: List pending invitations addressed to the current user
       tags: *ref_11
   /api/v1/subscriptions/current:
@@ -908,8 +1484,21 @@ paths:
       responses:
         '200':
           description: Effective subscription snapshot for the active tenant.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SubscriptionResponse'
         '403':
           description: No active tenant context.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: 'Current tenant subscription: plan, seat quota, usage, customer mapping'
       tags: &ref_12
         - subscriptions
@@ -926,10 +1515,27 @@ paths:
       responses:
         '201':
           description: Subscription created; returns the updated snapshot.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SubscriptionResponse'
         '403':
           description: Not allowed to update the organization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         '503':
           description: No payment provider configured.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: >-
         Provision/upgrade the tenant subscription (creates the provider
         customer)
@@ -951,7 +1557,16 @@ paths:
                   description: File to upload
       responses:
         '201':
-          description: ''
+          description: Uploaded file result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FileUploadResultDto'
       summary: Upload a single file
       tags: &ref_13
         - storage
@@ -967,7 +1582,16 @@ paths:
             type: string
       responses:
         '200':
-          description: ''
+          description: Delete result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/StorageDeleteResponse'
       summary: Delete a file
       tags: *ref_13
   /api/v1/storage/{key}/url:
@@ -988,7 +1612,16 @@ paths:
             type: number
       responses:
         '200':
-          description: ''
+          description: Signed URL payload.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/StorageUrlResponse'
       summary: Get a signed URL for a file
       tags: *ref_13
   /api/v1/payment/test:
@@ -998,6 +1631,15 @@ paths:
       responses:
         '200':
           description: Current provider selection and available channels
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PaymentStatusResponse'
       summary: Payment integration status
       tags: &ref_14
         - payment
@@ -1014,6 +1656,15 @@ paths:
       responses:
         '201':
           description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PaymentCustomerRefResponse'
       summary: Create a payment customer
       tags: *ref_14
   /api/v1/payment/checkouts:
@@ -1029,8 +1680,21 @@ paths:
       responses:
         '201':
           description: Checkout created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PaymentCheckoutRefResponse'
         '400':
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Create a checkout (payment intent)
       tags: *ref_14
   /api/v1/payment/checkouts/{id}:
@@ -1046,8 +1710,21 @@ paths:
       responses:
         '200':
           description: Checkout retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PaymentCheckoutRefResponse'
         '404':
           description: Checkout not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Retrieve a checkout
       tags: *ref_14
   /api/v1/payment/refunds:
@@ -1063,8 +1740,21 @@ paths:
       responses:
         '201':
           description: Refund created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PaymentRefundRefResponse'
         '400':
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Refund a checkout
       tags: *ref_14
   /api/v1/payment/webhooks:
@@ -1080,8 +1770,21 @@ paths:
       responses:
         '200':
           description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WebhookAckResponse'
         '400':
           description: Invalid webhook signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
       summary: Handle payment webhook events
       tags: *ref_14
 info:
@@ -1098,6 +1801,132 @@ components:
       bearerFormat: JWT
       type: http
   schemas:
+    ApiEnvelope:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          description: HTTP 状态码回显（响应体字段，非状态码本身）。
+        message:
+          type: string
+          description: 人面可读消息（成功面恒 "Success"）。
+        data:
+          type: object
+          description: 业务载荷；具体形状见 allOf 第二项的 $ref。
+          additionalProperties: true
+      required:
+        - statusCode
+        - message
+        - data
+    ApiErrorDetail:
+      type: object
+      properties:
+        path:
+          type: string
+          description: 字段路径（校验失败 = property；业务失败可缺省）。
+        code:
+          type: string
+          description: 细分机器码（业务子错误给；校验面留空）。
+        message:
+          type: string
+          description: 人面可读（随 i18n 译文）。
+      required:
+        - message
+    ApiErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          description: HTTP 状态码。
+        message:
+          description: 人面可读消息；校验失败时为逐字段消息数组。
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        error:
+          type: string
+          description: HTTP 类别名（如 "Not Found"）。
+        timestamp:
+          type: string
+          format: date-time
+          description: 服务端时刻 ISO 串。
+        path:
+          type: string
+          description: 请求路径。
+        requestId:
+          type: string
+          description: 请求关联 id（与 x-request-id 头、日志、领域事件 correlationId 同源）。
+        errorCode:
+          type: string
+          description: >-
+            业务错误码（`NAMESPACE:NAME` 冒号文法·单源 = @core ERROR_CODES，前端据 code 分支、据
+            message 展示）。
+        errors:
+          description: 字段级结构化明细。
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiErrorDetail'
+      required:
+        - statusCode
+        - message
+        - error
+        - timestamp
+        - path
+        - requestId
+    TenantRoleViewResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: UUIDv7。
+        key:
+          type: string
+          description: 角色 key（租户内唯一）。
+        name:
+          type: string
+          description: 人面可读名。
+        isSystem:
+          type: boolean
+          description: 系统内置角色（不可改名/删除）。
+      required:
+        - id
+        - key
+        - name
+        - isSystem
+    TenantRoleGrantViewResponse:
+      type: object
+      properties:
+        subject:
+          type: string
+          enum:
+            - Organization
+            - Member
+            - Invitation
+            - Workspace
+            - Role
+            - RoleGrant
+          description: 授权主体词汇。
+        action:
+          type: string
+          enum:
+            - create
+            - read
+            - update
+            - delete
+            - cancel
+          description: 动作词汇。
+        conditions:
+          type:
+            - object
+            - 'null'
+          additionalProperties: true
+          description: CASL 条件（白名单字段）；null = 无约束。
+      required:
+        - subject
+        - action
+        - conditions
     CreateRoleDto:
       type: object
       properties:
@@ -1197,12 +2026,224 @@ components:
         - roleKey
         - subject
         - action
+    PlatformTenantRowResponse:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: organization 主键（= 租户 id）。
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+          enum: &ref_18
+            - pending_approval
+            - active
+            - suspended
+            - deleted
+          description: 生命周期状态（无记录视同 active）。
+        createdAt:
+          format: date-time
+          type: string
+      required:
+        - organizationId
+        - name
+        - slug
+        - status
+        - createdAt
+    PlatformTenantPageResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlatformTenantRowResponse'
+        total:
+          type: number
+          description: 全量行数。
+        limit:
+          type: number
+          description: 回显页宽。
+        offset:
+          type: number
+          description: 回显偏移。
+      required:
+        - items
+        - total
+        - limit
+        - offset
+    TenantDiagnosticsResponse:
+      type: object
+      properties:
+        tenant:
+          description: 租户行。
+          allOf:
+            - $ref: '#/components/schemas/PlatformTenantRowResponse'
+        memberCount:
+          type: number
+          description: 成员数。
+        invitationCount:
+          type: number
+          description: 待处理邀请数。
+        workspaceCount:
+          type: number
+          description: 工作区数。
+        postCount:
+          type: number
+          description: 帖子数。
+      required:
+        - tenant
+        - memberCount
+        - invitationCount
+        - workspaceCount
+        - postCount
+    TenantHardDeleteResultResponse:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: 被硬删的 organization 主键。
+        purgedEvents:
+          type: number
+          description: 本次清除的 lifecycle 事件数（供审计核对）。
+      required:
+        - organizationId
+        - purgedEvents
+    TenantApplicationResponse:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: organization 主键（= 租户 id）。
+        status:
+          type: string
+          enum:
+            - pending_approval
+            - active
+            - suspended
+            - deleted
+          description: 生命周期状态。
+      required:
+        - organizationId
+        - status
+    PlatformUserRowResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: 用户主键。
+        name:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+          enum: *ref_18
+          description: 治理状态（无记录视同 active）。
+        createdAt:
+          format: date-time
+          type: string
+      required:
+        - userId
+        - name
+        - email
+        - status
+        - createdAt
+    PlatformUserPageResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlatformUserRowResponse'
+        total:
+          type: number
+          description: 全量行数。
+        limit:
+          type: number
+          description: 回显页宽。
+        offset:
+          type: number
+          description: 回显偏移。
+      required:
+        - items
+        - total
+        - limit
+        - offset
+    UserGovernanceResultResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: 用户主键。
+        status:
+          type: string
+          enum: *ref_18
+          description: 迁移后的新状态。
+      required:
+        - userId
+        - status
     SuspendUserDto:
       type: object
       properties:
         reason:
           type: string
           description: Free-text suspension reason (audit trail)
+    PostResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: UUIDv7。
+        title:
+          type: string
+        content:
+          type:
+            - string
+            - 'null'
+        published:
+          type: boolean
+        organizationId:
+          type: string
+          description: 所属租户（ALS 盖章，body 不接受）。
+        workspaceId:
+          type:
+            - string
+            - 'null'
+          description: 所属工作区；NULL = 未分区。
+        createdAt:
+          format: date-time
+          type: string
+        updatedAt:
+          format: date-time
+          type: string
+      required:
+        - id
+        - title
+        - content
+        - published
+        - organizationId
+        - workspaceId
+        - createdAt
+        - updatedAt
+    PostCursorPageResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostResponse'
+        hasMore:
+          type: boolean
+          description: 是否还有下一页。
+        nextCursor:
+          type: string
+          description: 不透明游标（hasMore=false 时缺省）。
+      required:
+        - items
+        - hasMore
     CreatePostDto:
       type: object
       properties:
@@ -1220,6 +2261,58 @@ components:
           example: false
       required:
         - title
+    WorkspaceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: UUIDv7。
+        name:
+          type: string
+        slug:
+          type: string
+        organizationId:
+          type: string
+          description: 所属租户（仓储盖章）。
+        ownerId:
+          type:
+            - string
+            - 'null'
+          description: 实例属主；NULL/缺省 = 不属任何人（owner-column 片语义）。
+        createdAt:
+          format: date-time
+          type: string
+        updatedAt:
+          format: date-time
+          type: string
+      required:
+        - id
+        - name
+        - slug
+        - organizationId
+        - createdAt
+        - updatedAt
+    WorkspacePageResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceResponse'
+        total:
+          type: number
+          description: 全量行数。
+        limit:
+          type: number
+          description: 回显页宽。
+        offset:
+          type: number
+          description: 回显偏移。
+      required:
+        - items
+        - total
+        - limit
+        - offset
     CreateWorkspaceDto:
       type: object
       properties:
@@ -1323,6 +2416,36 @@ components:
           example: org_1
       required:
         - organizationId
+    SubscriptionResponse:
+      type: object
+      properties:
+        hasSubscription:
+          type: boolean
+          description: 是否已有生效订阅。
+        plan:
+          type: string
+          description: 生效档位 plan key（缺订阅回落 FREE_PLAN）。
+        seatsLimit:
+          type: number
+          description: 座位上限。
+        used:
+          type: number
+          description: 已用座位（= 成员数·实时算）。
+        remaining:
+          type: number
+          description: 剩余座位。
+        providerCustomerId:
+          type:
+            - string
+            - 'null'
+          description: 支付通道 customer id；无订阅 = null。
+      required:
+        - hasSubscription
+        - plan
+        - seatsLimit
+        - used
+        - remaining
+        - providerCustomerId
     CreateSubscriptionDto:
       type: object
       properties:
@@ -1349,6 +2472,151 @@ components:
       required:
         - plan
         - customerEmail
+    FileUploadResultDto:
+      type: object
+      properties:
+        key:
+          type: string
+          description: File unique identifier
+        url:
+          type: string
+          description: File access URL
+        etag:
+          type: string
+          description: File ETag value
+        size:
+          type: number
+          description: File size (bytes)
+        mimetype:
+          type: string
+          description: File MIME type
+        originalname:
+          type: string
+          description: Original filename
+      required:
+        - key
+        - url
+        - size
+        - mimetype
+        - originalname
+    StorageDeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: 删除是否成功。
+      required:
+        - success
+    StorageUrlResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          description: 签名访问 URL。
+      required:
+        - url
+    PaymentStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+          description: 集成状态恒 "ok"。
+        selected:
+          type: string
+          enum: &ref_19
+            - stripe
+            - alipay
+            - wechat_pay
+          description: 当前选定通道。
+        available:
+          type: array
+          description: 可用通道集合。
+          items:
+            type: string
+            enum: *ref_19
+      required:
+        - status
+        - selected
+        - available
+    PaymentCustomerRefResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 通道侧 customer id。
+        providerId:
+          type: string
+          enum: *ref_19
+          description: 所属通道。
+        email:
+          type: string
+        raw:
+          type: object
+          additionalProperties: true
+          description: 通道原生载荷透传。
+      required:
+        - id
+        - providerId
+        - email
+        - raw
+    PaymentCheckoutRefResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: checkout / payment intent id。
+        providerId:
+          type: string
+          enum: *ref_19
+          description: 所属通道。
+        status:
+          type: string
+          description: 通道侧状态串。
+        clientSecret:
+          type: string
+          description: 客户端密钥（前端确认支付用）。
+        raw:
+          type: object
+          additionalProperties: true
+          description: 通道原生载荷透传。
+      required:
+        - id
+        - providerId
+        - raw
+    PaymentRefundRefResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: refund id。
+        providerId:
+          type: string
+          enum: *ref_19
+          description: 所属通道。
+        status:
+          type: string
+          description: 通道侧状态串。
+        amount:
+          type: number
+          description: 退款金额（最小货币单位）。
+        raw:
+          type: object
+          additionalProperties: true
+          description: 通道原生载荷透传。
+      required:
+        - id
+        - providerId
+        - raw
+    WebhookAckResponse:
+      type: object
+      properties:
+        received:
+          type: boolean
+          description: 回调是否已接收处理。
+      required:
+        - received
     CreateCustomerDto:
       type: object
       properties:
