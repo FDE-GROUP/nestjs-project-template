@@ -19,6 +19,11 @@ export const WORKSPACE_REPOSITORY = Symbol('WORKSPACE_REPOSITORY');
 export interface WorkspaceDraft {
   name: string;
   slug: string;
+  /**
+   * 实例属主（module-workspace-owner-column·人裁③ additive 可选）：由 handler 侧从可信会话（ALS userId）
+   *盖章，** controller body 不接受**；缺省/无上下文 → 列落 NULL（受限 grant 下 fail-closed 不可见）。
+   */
+  ownerId?: string;
 }
 
 /** A persisted workspace row (includes its owning tenant for transparency). */
@@ -27,6 +32,8 @@ export interface WorkspaceRecord {
   name: string;
   slug: string;
   organizationId: string;
+  /** 实例属主；NULL/undefined = 不属任何人（存量未回填·人裁②）。 */
+  ownerId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

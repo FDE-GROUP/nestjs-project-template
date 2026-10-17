@@ -19,10 +19,15 @@ export const WORKSPACE_META: TableMeta = {
     ['organizationId', { k: 'fk', target: 'Organization', onDelete: 'cascade' }],
     ['name', { k: 'text' }],
     ['slug', { k: 'text' }],
+    // 实例属主（module-workspace-owner-column·人裁①②）：可空·NULL=不属任何人（受限 grant 下
+    // fail-closed 不可见）·存量不回填；create 链由 handler 侧 ALS 盖章，不接受 body 伪造。
+    ['ownerId', { k: 'text', nullable: true }],
     ['createdAt', { k: 'datetime', defaultNow: true }],
     ['updatedAt', { k: 'datetime' }],
   ],
   uniques: [{ name: 'workspace_org_slug_idx', properties: ['organizationId', 'slug'] }],
+  // query 级 `where` 支下推的真实查询面（人裁④）。
+  indexes: [{ name: 'workspace_org_owner_idx', properties: ['organizationId', 'ownerId'] }],
 };
 
 export const USER_STATUS_META: TableMeta = {
@@ -118,6 +123,8 @@ export interface Workspace {
   organizationId: string;
   name: string;
   slug: string;
+  /** 实例属主（module-workspace-owner-column）：NULL=不属任何人（受限 grant 下 fail-closed 不可见）。 */
+  ownerId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

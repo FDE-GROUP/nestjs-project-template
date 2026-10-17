@@ -51,7 +51,9 @@ export class MikroTenantRbacRepository implements TenantRbacRepository {
     if (missing.length === 0) return;
     const now = new Date();
     const roleRows: TenantRoleRow[] = [];
-    const grantRows: TenantRoleGrantRow[] = [];
+    // bigintAutoPk 不显传 id：传 0 会被视为已设主键——同批多行经 identity map 坍缩只剩一行
+    // （真库实跑自捕：seed 30+ grant 行仅落 1 行），交给序列表自增。
+    const grantRows: Omit<TenantRoleGrantRow, 'id'>[] = [];
     for (const seed of missing) {
       const id = randomUUID();
       roleRows.push({
@@ -66,7 +68,6 @@ export class MikroTenantRbacRepository implements TenantRbacRepository {
       for (const grant of seed.grants) {
         for (const action of grant.actions) {
           grantRows.push({
-            id: 0,
             roleId: id,
             subject: grant.subject,
             action,
@@ -76,10 +77,12 @@ export class MikroTenantRbacRepository implements TenantRbacRepository {
         }
       }
     }
-    em.persist([
-      ...roleRows.map((r) => em.create(TenantRole, r)),
-      ...grantRows.map((g) => em.create(TenantRoleGrant, g)),
-    ]);
+    // 两段 flush：运行时扁平实体的 roleId 是普通 string 列（无 relation 依赖边），
+    // 同批 persist 会被归入同一条 nativeInsertMany 批，grant 先于 role 即 FK 抢跑（真库实跑自捕：
+    // seed 整滚失败→checker.can catch 归静默 false）；角色行先落库后再补授权行。
+    em.persist(roleRows.map((r) => em.create(TenantRole, r)));
+    await em.flush();
+    em.persist(grantRows.map((g) => em.create(TenantRoleGrant, g)));
     await em.flush();
   }
 
@@ -190,7 +193,6 @@ export class MikroTenantRbacRepository implements TenantRbacRepository {
       return 'duplicate';
     }
     em.create(TenantRoleGrant, {
-      id: 0,
       roleId: role.id,
       subject: entry.subject,
       action: entry.action,
@@ -244,7 +246,6 @@ export class MikroTenantRbacRepository implements TenantRbacRepository {
     now: Date,
   ): Promise<void> {
     em.create(TenantRoleAudit, {
-      id: 0,
       organizationId,
       actorId,
       action,

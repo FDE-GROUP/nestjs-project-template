@@ -1,4 +1,4 @@
-import { Workspace } from '@app/database/mikro/four-tables';
+import { WORKSPACE_META, Workspace } from '@app/database/mikro/four-tables';
 import type { MikroOrmService } from '@app/database/mikro/mikro-orm.service';
 import type { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
 import type { EntityManager } from '@mikro-orm/core';
@@ -104,7 +104,18 @@ describe('MikroWorkspaceRepository · tenant isolation (S3 · FR-5 choke-point)'
     const page = await repo.list({ limit: 10, offset: 5 });
 
     expect(page).toEqual({
-      items: [{ id: 'w1', name: 'A', slug: 'a', organizationId: 'orgA', createdAt, updatedAt }],
+      // toRecord 恒带 ownerId 键（入参 entities 无该列 → null·module-workspace-owner-column 接线后信封形）。
+      items: [
+        {
+          id: 'w1',
+          name: 'A',
+          slug: 'a',
+          organizationId: 'orgA',
+          ownerId: null,
+          createdAt,
+          updatedAt,
+        },
+      ],
       total: 42,
       limit: 10,
       offset: 5,
@@ -118,6 +129,24 @@ describe('MikroWorkspaceRepository · tenant isolation (S3 · FR-5 choke-point)'
     expect(data.organizationId).toBe('orgA');
     expect(spies.persist).toHaveBeenCalled();
     expect(spies.flush).toHaveBeenCalled();
+  });
+
+  // 实例属主接线（module-workspace-owner-column 切片 α）：值透传/缺省落 NULL，与租户盖章互不干扰。
+  it('create() 透传 draft.ownerId（可信会话盖章值·非 body 面）', async () => {
+    const { repo, spies } = makeRepo('orgA');
+    const record = await repo.create({ name: 'Design', slug: 'design', ownerId: 'u9' });
+    const data = spies.create.mock.calls[0][1] as Record<string, unknown>;
+    expect(data.ownerId).toBe('u9');
+    expect(data.organizationId).toBe('orgA');
+    expect(record.ownerId).toBe('u9');
+  });
+
+  it('create() 无 ownerId → 列落 null（人裁② fail-closed 语义·非缺键）', async () => {
+    const { repo, spies } = makeRepo('orgA');
+    const record = await repo.create({ name: 'Design', slug: 'design' });
+    const data = spies.create.mock.calls[0][1] as Record<string, unknown>;
+    expect(data.ownerId).toBeNull();
+    expect(record.ownerId).toBeNull();
   });
 
   it('update() scopes by BOTH id and tenant → foreign id resolves null → returns null', async () => {
@@ -177,4 +206,26 @@ describe('MikroWorkspaceRepository · tenant isolation (S3 · FR-5 choke-point)'
     spies.nativeDelete.mockResolvedValueOnce(0);
     expect(await repo.remove('foreign')).toBe(false);
   });
+});
+
+describe('WORKSPACE_META · 实例属主列单一源派生（module-workspace-owner-column 切片 α）', () => {
+  it('列定义含 ownerId（text·可空）且复合索引 (organizationId, ownerId) 就位', () => {
+    const owner = WORKSPACE_META.columns.find(([name]) => name === 'ownerId');
+    expect(owner).toBeDefined();
+    expect(owner?.[1]).toEqual({ k: 'text', nullable: true });
+    expect(WORKSPACE_META.indexes).toContainEqual({
+      name: 'workspace_org_owner_idx',
+      properties: ['organizationId', 'ownerId'],
+    });
+    // 既有唯一索引不受扰动（人裁④）。
+    expect(WORKSPACE_META.uniques).toContainEqual({
+      name: 'workspace_org_slug_idx',
+      properties: ['organizationId', 'slug'],
+    });
+  });
+
+  // 派生保真不在本例集内做运行时自省（EntitySchema 无公开 introspection API）：
+  // 运行时实体形状由 companion `interface Workspace.ownerId` + TS 编译闸兜（本文件上方
+  // create 透传两例即消费面实证），迁移变体同源性由 `migration-entities.ts` 消费同一
+  // WORKSPACE_META 的结构事实 + 切片 α 生成工件的 DDL 对拍兼顾（module-workspace-owner-column）。
 });

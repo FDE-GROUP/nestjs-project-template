@@ -66,7 +66,10 @@ describe('MikroTenantRbacRepository', () => {
       expect(h.createdOf(TenantRoleGrant)).toHaveLength(40);
       expect(h.createdOf(TenantRole).map((c) => c.row.key)).toEqual(['owner', 'admin', 'member']);
       expect(h.created.every((c) => c.row.isSystem !== false)).toBe(true);
-      expect(h.spies.flush).toHaveBeenCalledTimes(1);
+      // 两段 flush（module-workspace-owner-column 真库实跑自捕后修形）：角色行先落库再补授权行，
+      // 扁平实体无 relation 依赖序·同批会 grant FK 抢跑；grant 行另不再显传 id=0（identity map 坍缩）。
+      expect(h.spies.flush).toHaveBeenCalledTimes(2);
+      expect(h.createdOf(TenantRoleGrant).every((c) => !('id' in c.row))).toBe(true);
     });
 
     it('三角色已在 → 零写入零 flush（幂等）', async () => {

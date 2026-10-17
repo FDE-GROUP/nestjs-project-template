@@ -48,6 +48,7 @@ export class MikroWorkspaceRepository implements WorkspaceRepository {
       name: entity.name,
       slug: entity.slug,
       organizationId: entity.organizationId,
+      ownerId: entity.ownerId ?? null,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     };
@@ -88,6 +89,8 @@ export class MikroWorkspaceRepository implements WorkspaceRepository {
       name: draft.name,
       slug: draft.slug,
       organizationId,
+      // 属主值经 handler 从可信会话盖章（人裁③）；无上下文落 NULL（人裁② fail-closed 语义）。
+      ownerId: draft.ownerId ?? null,
       createdAt: now,
       updatedAt: now,
     });
