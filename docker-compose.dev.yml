@@ -22,10 +22,33 @@ services:
       retries: 5
       start_period: 15s
 
+  # 本地开发调试用的数据库 Web UI（仅 dev compose·不入 prod·不参与数据驻留守卫）。
+  # UI: http://localhost:5050 · 登录 admin@example.com / admin（dev 占位口令·非真实凭证）。
+  # 经 servers.json 自动登记上方 postgres（主机名走 nestjs-network-dev 服务名解析）。
+  pgadmin:
+    container_name: pgadmin4-dev
+    image: dpage/pgadmin4:8
+    restart: always
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    volumes:
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json
+      - pgadmin-data-dev:/var/lib/pgadmin
+    networks:
+      - nestjs-network-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 networks:
   nestjs-network-dev:
     driver: bridge
 
 volumes:
   postgres-data-dev:
+    driver: local
+  pgadmin-data-dev:
     driver: local
