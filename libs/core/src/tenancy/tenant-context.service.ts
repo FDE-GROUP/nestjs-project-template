@@ -39,6 +39,15 @@ export class TenantContextService {
     return tenantStorage.getStore()?.role;
   }
 
+  /**
+   * 当前会话用户 id（module-rbac-query-level-filtering 切片 C·ALS 预注入字段补读取面）。
+   * undefined = 未解析出会话——`listPredicate` 的 `{{userId}}` 模板解析输入，缺省时
+   * 转换器留字面模板 = DB 匹配落空（保守 deny·与 check 级同向）。
+   */
+  get userId(): string | undefined {
+    return tenantStorage.getStore()?.userId;
+  }
+
   /** Run `fn` within the given tenant context (used by the middleware / tests). */
   run<T>(ctx: TenantContext, fn: () => T): T {
     return tenantStorage.run(ctx, fn);

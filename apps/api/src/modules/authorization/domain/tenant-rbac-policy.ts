@@ -24,10 +24,12 @@ export function isValidRoleKey(key: string): boolean {
 }
 
 /**
- * conditions 白名单（S1 期）：**平铺等值对象**——键为字段名（`\w`），值为原始量
- * （string/number/boolean/null）。`'{{userId}}'` 形模板串合法（S4 建 ability 前解析为实值）。
- * 拒绝：空对象（语义含混·要整 subject 级就传 null）、数组、嵌套对象（mongo 运算符
- * `$in/$gt` 等——S4 扩白名单时再放，闸先紧后松防旁逸）、函数/undefined（JSON 不可达值）。
+ * conditions 白名单（S1 期锁平铺等值 · query 级片 v0.2.0·人裁①扩 `$in`）：**顶层非空对象**——键为
+ * 字段名（`\w`），每个值 ∈ ① **原始量**（string/number/boolean/null·等值·`'{{userId}}'` 模板串合法）
+ * 或 ② `{ $in: [原始量, ...] }`（**非空数组·元素皆原始量·允许 `{{userId}}` 模板元素**）。
+ * 拒绝：空对象（语义含混·要整 subject 级就传 null）、直接数组值、其它嵌套对象（`$gt/$regex` 等
+ * 非-$in 运算符、多键对象）、空 `$in`、函数/undefined（JSON 不可达值）。
+ * 与读侧转换器 `instance-predicate.ts` **共用同一 grammar**（防存得进、读译不出的漂移）。
  */
 export function isValidGrantConditions(conditions: unknown): conditions is Record<string, unknown> {
   if (typeof conditions !== 'object' || conditions === null || Array.isArray(conditions)) {
@@ -37,17 +39,28 @@ export function isValidGrantConditions(conditions: unknown): conditions is Recor
   if (entries.length === 0) return false;
   for (const [field, value] of entries) {
     if (!FIELD_PATTERN.test(field)) return false;
-    // `$` 前缀字段名已被 FIELD_PATTERN 拒；此处再锁值面原始量类型。
-    if (
-      value !== null &&
-      typeof value !== 'string' &&
-      typeof value !== 'number' &&
-      typeof value !== 'boolean'
-    ) {
-      return false;
+    if (isPrimitiveValue(value)) continue;
+    // 仅放 `$in`：单键对象且值为非空原始量数组；其余嵌套形一律拒。
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      const keys = Object.keys(value);
+      if (keys.length === 1 && keys[0] === '$in') {
+        const arr = (value as Record<string, unknown>).$in;
+        if (Array.isArray(arr) && arr.length > 0 && arr.every(isPrimitiveValue)) continue;
+      }
     }
+    return false;
   }
   return true;
+}
+
+/** 原始量判定（等值面与 $in 元素共判·与 instance-predicate 同口径）。 */
+function isPrimitiveValue(value: unknown): boolean {
+  return (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  );
 }
 
 /** revoke/grant 等值比较口径：JSON 规范化串（键序稳定化后比较·同格多条件行的精确撤除依据）。 */

@@ -269,3 +269,161 @@ describe('CaslTenantPermissionChecker（S4·check 级实例判定）', () => {
     expect(findGrants).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('CaslTenantPermissionChecker（query 级列表过滤·listPredicate 切片 B）', () => {
+  // fixture subject 取词汇表内合法值（'Workspace'）——checker 测的是裁决机制本身，与切片 C 生产接入端点选型解耦。
+  const base = {
+    organizationId: 'orgA',
+    role: 'editor',
+    action: 'read' as const,
+    subject: 'Workspace' as const,
+  };
+
+  it('无租户 / 无角色 → none（fail-closed·不触规则源）', async () => {
+    const { checker, findGrants } = makeChecker(() => [
+      grant('Workspace', 'read', { ownerId: '{{userId}}' }),
+    ]);
+    await expect(checker.listPredicate({ ...base, organizationId: undefined })).resolves.toEqual({
+      kind: 'none',
+    });
+    await expect(checker.listPredicate({ ...base, role: undefined })).resolves.toEqual({
+      kind: 'none',
+    });
+    expect(findGrants).not.toHaveBeenCalled();
+  });
+
+  it('无任何匹配 action/subject 行 → none（该角色无此 read 权）', async () => {
+    const { checker } = makeChecker(() => [grant('Member', 'read', null)]);
+    await expect(checker.listPredicate(base)).resolves.toEqual({ kind: 'none' });
+  });
+
+  it('存在 conditions=null 类型级行 → all（无条件全量·$or 并入 TRUE 支·与 check 级同解）', async () => {
+    const { checker } = makeChecker(() => [grant('Workspace', 'read', null)]);
+    await expect(checker.listPredicate(base)).resolves.toEqual({ kind: 'all' });
+  });
+
+  it('类型级行与受限行共存 → all（无条件行优先·不因受限行收窄）', async () => {
+    const { checker } = makeChecker(() => [
+      grant('Workspace', 'read', { ownerId: '{{userId}}' }),
+      grant('Workspace', 'read', null),
+    ]);
+    await expect(checker.listPredicate(base)).resolves.toEqual({ kind: 'all' });
+  });
+
+  it('单受限行 → where（省一层 $or·{{userId}} 按操作者解析）', async () => {
+    const { checker } = makeChecker(() => [grant('Workspace', 'read', { ownerId: '{{userId}}' })]);
+    await expect(checker.listPredicate({ ...base, userId: 'u9' })).resolves.toEqual({
+      kind: 'where',
+      where: { ownerId: 'u9' },
+    });
+  });
+
+  it('多受限行 → where $or 并语义（人裁②·任一 allow 即可见）', async () => {
+    const { checker } = makeChecker(() => [
+      grant('Workspace', 'read', { ownerId: '{{userId}}' }),
+      grant('Workspace', 'read', { teamId: { $in: ['t1', 't2'] } }),
+    ]);
+    await expect(checker.listPredicate({ ...base, userId: 'u9' })).resolves.toEqual({
+      kind: 'where',
+      where: { $or: [{ ownerId: 'u9' }, { teamId: { $in: ['t1', 't2'] } }] },
+    });
+  });
+
+  it('受限行含 grammar 外 conditions → none + 汰缓存（读侧双保险 fail-closed）', async () => {
+    const { checker, findGrants } = makeChecker(() => [
+      grant('Workspace', 'read', { n: { $gt: 1 } }),
+    ]);
+    await expect(checker.listPredicate(base)).resolves.toEqual({ kind: 'none' });
+    // 缓存已汰：下次再调重查（与加载失败同处理）
+    await checker.listPredicate(base);
+    expect(findGrants).toHaveBeenCalledTimes(2);
+  });
+
+  it('复用同 (org,key) 缓存·不逐请求查库', async () => {
+    const { checker, findGrants } = makeChecker(() => [
+      grant('Workspace', 'read', { ownerId: '{{userId}}' }),
+    ]);
+    await checker.listPredicate({ ...base, userId: 'u1' });
+    await checker.listPredicate({ ...base, userId: 'u2' });
+    expect(findGrants).toHaveBeenCalledTimes(1);
+  });
+
+  it('加载抛错 → none（绝不视同放行）', async () => {
+    const rbac = {
+      ensureSystemRoles: vi.fn().mockResolvedValue(undefined),
+      findGrants: vi.fn().mockRejectedValue(new Error('db down')),
+    } as unknown as TenantRbacRepository;
+    await expect(new CaslTenantPermissionChecker(rbac).listPredicate(base)).resolves.toEqual({
+      kind: 'none',
+    });
+  });
+});
+
+describe('一致性回归（query 级列表过滤 切片 C·「listPredicate 与逐行 can() 同解」）', () => {
+  /** 本测试自带的受限求值器：只解切片 A grammar 的形（等值 / $in / $or·与转换器输出同形）。 */
+  function matchesWhere(row: Record<string, unknown>, where: Record<string, unknown>): boolean {
+    return Object.entries(where).every(([key, cond]) => {
+      if (key === '$or')
+        return (cond as Record<string, unknown>[]).some((sub) => matchesWhere(row, sub));
+      if (key === '$and')
+        return (cond as Record<string, unknown>[]).every((sub) => matchesWhere(row, sub));
+      if (cond !== null && typeof cond === 'object' && '$in' in cond) {
+        return (cond as { $in: unknown[] }).$in.includes(row[key]);
+      }
+      return row[key] === cond;
+    });
+  }
+
+  const rows: Record<string, unknown>[] = [
+    { ownerId: 'u1', teamId: 't9' }, // 左支命中（ownerId 模板）
+    { ownerId: 'u2', teamId: 't1' }, // 右支命中（$in）
+    { ownerId: 'u1', teamId: 't1' }, // 双支皆命中
+    { ownerId: 'u3', teamId: 't2' }, // 仅右支命中
+    { ownerId: 'u3', teamId: 't7' }, // 两支都不命中
+  ];
+
+  it('受限行集：谓词过滤可见集 = 逐行 can() 允许集（写侧闸/转换器/CASL 三层共 grammar 锁形）', async () => {
+    const { checker } = makeChecker(() => [
+      grant('Workspace', 'read', { ownerId: '{{userId}}' }),
+      grant('Workspace', 'read', { teamId: { $in: ['t1', 't2'] } }),
+    ]);
+    const userId = 'u1';
+    const check = {
+      organizationId: 'orgA',
+      role: 'editor',
+      action: 'read' as const,
+      subject: 'Workspace' as const,
+      userId,
+    };
+
+    const predicate = await checker.listPredicate(check);
+    expect(predicate.kind).toBe('where'); // 防御断言：非 where 则下方取 where 必红
+    if (predicate.kind !== 'where') throw new Error('expected where');
+    const listVisible = rows.filter((row) => matchesWhere(row, predicate.where));
+
+    const perRow = await Promise.all(rows.map((row) => checker.can({ ...check, resource: row })));
+    const canVisible = rows.filter((_, i) => perRow[i]);
+
+    expect(listVisible).toEqual(canVisible);
+    // 钉牢非空平凡解：夹具确实同纳两支与排除行。
+    expect(listVisible).toHaveLength(4);
+  });
+
+  it('类型级行共存：listPredicate 归 all 时逐行 can() 恒全允许（无 instance 限制同解）', async () => {
+    const { checker } = makeChecker(() => [
+      grant('Workspace', 'read', { ownerId: '{{userId}}' }),
+      grant('Workspace', 'read', null),
+    ]);
+    const check = {
+      organizationId: 'orgA',
+      role: 'editor',
+      action: 'read' as const,
+      subject: 'Workspace' as const,
+      userId: 'u1',
+    };
+    await expect(checker.listPredicate(check)).resolves.toEqual({ kind: 'all' });
+    for (const row of rows) {
+      await expect(checker.can({ ...check, resource: row })).resolves.toBe(true);
+    }
+  });
+});

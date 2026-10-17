@@ -17,7 +17,7 @@ import type { TenantAction, TenantRole, TenantSubject } from './tenant-rules';
  * 形状扩展注记（dynamic-roles S4·乙裁「仅 check 级」·丁裁②契约）：
  *  - `resource` 可选——实例级判定的**逃生舱**：不带 = 类型级裁决（守卫路径·带 conditions 的行保守
  *    deny，承 S2 over-grant 防线）；带上 = 交出「先取资源再判」的应用层，适配侧纳入 conditions 行并按
- *    实例匹配（query 级列表过滤缓账另片）；
+ *    实例匹配（query 级列表过滤已由下方 `listPredicate` 兑现·module-rbac-query-level-filtering）；
  *  - `userId` 可选——绑定 grant conditions 里的 `{{userId}}` 模板为当前操作者实值（缺省即模板不可解析 → 保守 deny）。
  */
 
@@ -40,12 +40,42 @@ export interface TenantPermissionCheck {
   readonly userId?: string;
 }
 
+/** `listPredicate` 入参（query 级列表过滤·切片 B）：无 resource（非单资源判定），以 userId 解模板。 */
+export interface TenantListPredicateRequest {
+  /** ALS 活动租户（规则分区键）；undefined = 无租户上下文（适配侧必归 none）。 */
+  readonly organizationId?: string;
+  /** ALS 预注入的活动租户成员角色 key；undefined = 无/封禁/非法值（必归 none）。 */
+  readonly role?: TenantRole;
+  readonly action: TenantAction;
+  readonly subject: TenantSubject;
+  /** 绑定 grant conditions 中 `{{userId}}` 模板的当前操作者 id（缺省则模板不可解析 → 该谓词落空）。 */
+  readonly userId?: string;
+}
+
+/** `listPredicate` 三态返回（见 `TenantPermissionChecker.listPredicate` 文档）。 */
+export type TenantListPredicate =
+  | { readonly kind: 'all' }
+  | { readonly kind: 'where'; readonly where: Record<string, unknown> }
+  | { readonly kind: 'none' };
+
 export interface TenantPermissionChecker {
   /**
    * 纯裁决：是否放行。异步签名（S2·规则源 DB）——deny 由守卫落 403（fail-closed）；
    * 适配器对「查无角色/无租户/词汇外」恒拒，绝不因加载失败视同放行。
    */
   can(check: TenantPermissionCheck): Promise<boolean>;
+
+  /**
+   * query 级列表过滤谓词（module-rbac-query-level-filtering 切片 B·dynamic-roles §2.4 缓账兑现·丁裁契约 additive）。
+   *
+   * 与 `can` 同源同口径：同一角色 + 同一 userId 下，列表可见集 = 逐条 `can()` 允许集（「列表 ⊆ 逐条」）。
+   * 三态返回（消费方=应用层列表面 handler·见参考应用 `ListWorkspacesQueryHandler`·人裁⑤）：
+   *  - `{ kind: 'all' }`：该角色对此 action/subject 存在**无条件类型级授权**（conditions=null 行）
+   *    ⇒ 列表按 tenantFilter 全量（承 S2 类型级·无 instance 限制）；
+   *  - `{ kind: 'where', where }`：仅带 conditions 的授权 ⇒ 实例谓词（$or 并语义·人裁②），由消费方 AND 进 tenantFilter；
+   *  - `{ kind: 'none' }`：无任何匹配 grant 行 / 不可解析 / 加载失败 / 无租户无角色 ⇒ **空集**（fail-closed·绝不回退全量）。
+   */
+  listPredicate(check: TenantListPredicateRequest): Promise<TenantListPredicate>;
 }
 
 /**

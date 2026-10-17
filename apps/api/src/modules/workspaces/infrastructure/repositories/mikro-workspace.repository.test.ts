@@ -75,6 +75,23 @@ describe('MikroWorkspaceRepository · tenant isolation (S3 · FR-5 choke-point)'
     });
   });
 
+  it('list() 合并授权谓词：固定展开序使 organizationId 不可被覆盖（切片 C·FR-5 卡点锁测）', async () => {
+    const { repo, spies } = makeRepo('orgA');
+    await repo.list(
+      { limit: 10, offset: 0 },
+      {
+        organizationId: 'orgEvil',
+        $or: [{ ownerId: 'u9' }, { teamId: { $in: ['t1', 't2'] } }],
+      },
+    );
+    const [, where] = spies.findAndCount.mock.calls[0] as [unknown, Record<string, unknown>];
+    // 盖章恒为最后键：授权侧伪造的 organizationId 被结构性覆盖，实例谓词原样保留。
+    expect(where).toEqual({
+      organizationId: 'orgA',
+      $or: [{ ownerId: 'u9' }, { teamId: { $in: ['t1', 't2'] } }],
+    });
+  });
+
   it('list() returns the Page<T> envelope via createPage (治理面同形)', async () => {
     const { repo, spies } = makeRepo('orgA');
     const createdAt = new Date('2026-01-01T00:00:00.000Z');

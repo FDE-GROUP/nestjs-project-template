@@ -3,7 +3,13 @@ import type {
   TenantRoleGrantView,
 } from '@app/modules/authorization/domain/repositories/tenant-rbac.repository';
 import { TENANT_RBAC_REPOSITORY } from '@app/modules/authorization/domain/repositories/tenant-rbac.repository';
+import {
+  mergePredicatesWithOr,
+  toMikroPredicate,
+} from '@core/saas-kit/authorization/instance-predicate';
 import type {
+  TenantListPredicate,
+  TenantListPredicateRequest,
   TenantPermissionCheck,
   TenantPermissionChecker,
   TenantPermissionInvalidator,
@@ -95,6 +101,38 @@ export class CaslTenantPermissionChecker
     const prefix = `${organizationId}\u0000`;
     for (const key of this.abilities.keys()) {
       if (key.startsWith(prefix)) this.abilities.delete(key);
+    }
+  }
+
+  /**
+   * query 级列表谓词（module-rbac-query-level-filtering 切片 B·dynamic-roles §2.4 缓账兑现）。
+   * 复用 `entryFor` 同一缓存（不逐请求查库）·与 `can` 同源同解：
+   *  - 无租户/无角色 → none（fail-closed·与 `can` 同前置）；
+   *  - action/subject 精确匹配行（词表无 manage/all 通配）：零行 → none；
+   *  - 存在任一 conditions=null 类型级行 → all（无条件全量·人裁②$or 并入 TRUE 支·与 CASL check 级同解）；
+   *  - 否则全带 conditions 行→切片 A 转换器→$or 合并 → where（单行省一层 $or）；
+   *  - 转换器 grammar 外抛错 / 加载抛错 → catch 归 none + 汰缓存（fail-closed 双保险）。
+   */
+  async listPredicate(check: TenantListPredicateRequest): Promise<TenantListPredicate> {
+    const { organizationId, role, action, subject } = check;
+    if (!organizationId || !role) return { kind: 'none' };
+    const cacheKey = `${organizationId}\u0000${role}`;
+    try {
+      const entry = await this.entryFor(cacheKey, organizationId, role);
+      const matched = entry.grants.filter((g) => g.action === action && g.subject === subject);
+      if (matched.length === 0) return { kind: 'none' };
+      // 人裁②：存在无条件类型级行 ⇒ 该角色对此 action/subject 有无条件全量授权。
+      if (matched.some((g) => (g.conditions ?? null) === null)) return { kind: 'all' };
+      // 全部带 conditions 行 → 逐行译词 → $or 合并（matched 已排 conditions=null，故非 null）。
+      const rowPredicates = matched.map((g) =>
+        toMikroPredicate(g.conditions as Record<string, unknown>, check.userId),
+      );
+      const merged = mergePredicatesWithOr(rowPredicates);
+      return merged ? { kind: 'where', where: merged } : { kind: 'none' };
+    } catch {
+      // 不可解析/加载失败绝不回退全量：汰缓存 + 归空集（fail-closed）。
+      this.abilities.delete(cacheKey);
+      return { kind: 'none' };
     }
   }
 

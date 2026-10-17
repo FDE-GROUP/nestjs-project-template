@@ -48,10 +48,29 @@ describe('isValidGrantConditions（平铺等值白名单·S1 期）', () => {
     expect(isValidGrantConditions(null)).toBe(false);
     expect(isValidGrantConditions(undefined)).toBe(false);
     expect(isValidGrantConditions('ownerId')).toBe(false);
-    // mongo 运算符嵌套（$in/$gt）与 $ 前缀字段名：S4 扩白再放，现闸拒。
-    expect(isValidGrantConditions({ ownerId: { $in: ['u1', 'u2'] } })).toBe(false);
     expect(isValidGrantConditions({ $field: 'x' })).toBe(false);
     expect(isValidGrantConditions({ a: { nested: 1 } })).toBe(false);
+  });
+
+  // query 级片 v0.2.0·人裁①：$in 白名单已放宽放行（与读侧 instance-predicate 同 grammar）。
+  it('$in 多值过闸（含 {{userId}} 模板元素）', () => {
+    expect(isValidGrantConditions({ ownerId: { $in: ['u1', 'u2'] } })).toBe(true);
+    expect(isValidGrantConditions({ ownerId: '{{userId}}' })).toBe(true);
+    expect(isValidGrantConditions({ role: { $in: ['{{userId}}', 'admin'] } })).toBe(true);
+    expect(isValidGrantConditions({ n: { $in: [1, 2] } })).toBe(true);
+  });
+
+  it('$in 之外与非规范形仍拒', () => {
+    // 其它 mongo 运算符
+    expect(isValidGrantConditions({ n: { $gt: 1 } })).toBe(false);
+    // 直接数组值
+    expect(isValidGrantConditions({ tags: ['a', 'b'] })).toBe(false);
+    // 空 $in
+    expect(isValidGrantConditions({ role: { $in: [] } })).toBe(false);
+    // $in 元素非原始量
+    expect(isValidGrantConditions({ role: { $in: [{ x: 1 }] } })).toBe(false);
+    // 多键嵌套
+    expect(isValidGrantConditions({ a: { $in: ['x'], $gt: 1 } })).toBe(false);
   });
 });
 
