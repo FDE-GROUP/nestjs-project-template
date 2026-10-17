@@ -70,6 +70,20 @@ Domain 纯净性由 `pnpm run ci` 里的 **fallow 架构边界佐证**守住（`
 `@EventsHandler` 订阅。`auth`、`stripe`、`storage` 目前保持为薄适配层；`auth` 是
 后续在不影响 `users` 模式的前提下进行 DDD/ES 化的指定位置。
 
+## 上下文边界：认证（authentication）↔ 用户（users）
+
+`authentication`（宪法名·现目录 `modules/auth`）断言**你是谁**：凭证、会话、因子、
+OAuth 渠道——Better Auth 适配面，`session-resolver.ts` 为每请求会话唯一解析面。
+`users` 持有**身份主体**：资料聚合 + PIPL 自助面——慢变、合规敏感。
+
+表属主（SSOT：`apps/api/src/database/table-ownership.ts`）：`user` → **users**；
+`account`/`session`/`verification` → **authentication**。两上下文的接缝是用户↔成员关系：
+`member`（user × organization）是 `tenants` 的联结实体——角色挂成员而非全局用户，
+同一用户在不同租户可持不同角色。
+
+挂载在认证面上的治理钩子（`seats-quota.hook.ts`）是 Better Auth 挂载点的传送带胶水；
+席位裁决本体在 `tenancy/quota`（`QuotaService`）——挂载位置不得误读为属主。
+
 ## 常量契约归属
 
 常量的落点由**资格**决定，不由「复用次数」决定。判据三条：

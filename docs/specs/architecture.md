@@ -75,6 +75,23 @@ expressed as domain events subscribed via `@EventsHandler`. `auth`, `stripe` and
 `storage` are kept as thin adapters today; `auth` is the designated slot to be
 DDD/ES-ified later without disturbing the `users` pattern.
 
+## Context Boundary: Authentication ↔ Users
+
+`authentication` (constitution name; current directory `modules/auth`) asserts **who you
+are**: credentials, sessions, factors, OAuth channels — the Better Auth adapter plane, with
+`session-resolver.ts` as the single per-request session resolution surface. `users` owns the
+**identity subject**: profile aggregate + PIPL self-service — slow-changing and compliance-sensitive.
+
+Table ownership (SSOT: `apps/api/src/database/table-ownership.ts`): `user` → **users**;
+`account`/`session`/`verification` → **authentication**. The seam between the two contexts is
+the user↔member relation: `member` (user × organization) is a joining entity of `tenants` —
+roles attach to the member, never to the global user, so the same user may hold different
+roles in different tenants.
+
+Governance hooks mounted on the authentication plane (`seats-quota.hook.ts`) are transport
+glue at the Better Auth mount point; the seat ruling itself lives in `tenancy/quota`
+(`QuotaService`) — a mounting location must not be read as ownership.
+
 ## Constant Contract Placement
 
 A constant's home is decided by its **qualification as a contract**, not by reuse count:
