@@ -31,20 +31,23 @@ pnpm run test              # 测试（Vitest）；check = Biome（lint+format）
 pnpm run ci                # L1 门禁：check → build → test（+ fallow 佐证）
 pnpm run ci:quick          # 轻量：check + test
 pnpm run ci:db             # 带 DB 全链：check → test → Testcontainers 一次性 PG 跑 gated e2e + BA 一致性套件（用完即焚）
+pnpm run test:fullstack    # 只跑上述 DB 段（编排器 = scripts/ci-fullstack.ts）
 pnpm run verify:prod-boot  # prod 回归防线：构建后真起服验 /health 200
 pnpm run migration:generate / migration:run / db:setup   # 迁移/数据
 ```
 
 ## 4. 门禁与提交
 - **L1 = 本地 CI**（`pnpm run ci`，不走远程 CI）；husky：`pre-commit`→`lint:fix`、`commit-msg`→commitlint、`pre-push`→`ci`。禁 `--no-verify`。
+- 新增 **gated e2e**（`*.e2e.test.ts`·env-gated 真库）必须同步登记 `scripts/ci-fullstack.ts` 的 `GATED_E2E_FILES`；清单/实存恒等校验已机制 fail-loud（漏登/stale/豁免腐烂三向）——手动单跑绿≠在链。
 - **提交**：Conventional Commits + **内联身份**（不改全局）——
-  `git -c user.name='FDE Team' -c user.email='fde.team@example.com' commit ...`；header/body 每行 ≤100。
+  `git -c user.name='FDE Team' -c user.email='fde.team@example.com' commit ...`；header/body 每行 ≤100；subject 勿以大写拉丁字母/大写缩写开头（如「B1 …」触 commitlint subject-case，中文或小写开头即可）。
 
 ## 5. 目录地图
-pnpm workspace 双包：`libs/core/src`（@core 共享内核：`shared-kernel` + `tenancy` 契约 + `modules/{subscriptions,workspaces}` 领域层）与 `apps/api/src`（参考应用·目录名取行业惯例：`modules/<上下文>/{domain,application,infrastructure,api}`（users/auth/tenants/workspaces/payment/storage/subscriptions/posts）+ `tenancy/` 边界层 + `{common,config,database,i18n,logger,mailer}`）；文档四区 `docs/{specs,plans,research,recycle}`（`recycle/` 只进不出）。
+pnpm workspace 双包：`libs/core/src`（@core 共享内核：`shared-kernel` + `tenancy`/`authorization`/`platform` 契约 + `modules/{subscriptions,workspaces}` 领域层）与 `apps/api/src`（参考应用·目录名取行业惯例：`modules/<上下文>/{domain,application,infrastructure,api}`（users/auth/authorization/tenants/workspaces/platform/payment/storage/subscriptions/posts）+ `tenancy/` 边界层 + `{common,config,database,i18n,logger,mailer}`）；文档四区 `docs/{specs,plans,research,recycle}`（`recycle/` 只进不出）。
 
 ## 6. 地域与语言
 面向**中国大陆**用户：依赖镜像 `npmmirror` / Docker 国内源；第三方选型见 [global-cn-adaptation](./docs/plans/global-cn-adaptation.md)；**文档 / 注释中文优先**。
 
 ## 7. 遇到边界
 需求不清 / 越界 → **停下**：回改对应 `plan` 留痕或向人提问，**不臆测**、不用启发式掩盖结构缺陷（机制修复不逐模块特判）。
+**事实/推断/未知三分**：结论须带取证（代码实存 / 实跑输出）；取不到证时显式标注「推断/未验证」，不得把推测写成事实。
