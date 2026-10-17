@@ -84,7 +84,7 @@
   - `PlatformOperatorGuard` 判定语义未动（FR-13 email 命中 config 硬判）；平台 scope RBAC 化不在本片。
   - **验收存照**：`pnpm run ci` PASSED·build TSC 0×2·Biome 净·**481 passed / 30 skipped（基线 480→481 只增不减·+⑤ 锁测）**·旧路径零残留（仅 docstring 历史溯源注）。
 
-- **C 片已落地（2026-10-17）**：
+- **C 片已落地（2026-10-17·commit `35efec0`·待推送）**：
   - 宪法 ±zh 目录树重写为实存九上下文 + `tenancy/` 横切机制层条目（删陈旧 `stripe/` 行·补 posts/subscriptions 实存行）；各新增「Bounded Context Map & the Multi-Tenancy Mechanism Layer / 限界上下文地图与多租户机制层」节：术语纪律（租户=业务概念·多租户=隔离机制·不可混住）、authorization=独立支撑域服务两类消费者、platform=无聚合治理门面、workspace=subject 非角色作用域、弱耦合纪律（string 列+published ports）、三层权限链。
   - `global-tenancy.md` §9.3 补「领域细化定态」条（tenancy 消费 authorization 裁决端口·经 A 不住 checker、经 D 不住平台治理）+ 演变表 0.23.0 行 + 头部版本推进。
   - `table-ownership.ts` 头注释复核仍自洽（`tenancy/**` 归 tenants），补定态语境注（三表已翻 authorization·platform 无自有表不在清单出现）。
