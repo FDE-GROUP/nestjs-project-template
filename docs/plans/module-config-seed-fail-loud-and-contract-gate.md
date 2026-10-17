@@ -58,7 +58,8 @@ config 片（module-config-env-surface-contract·已验收·结项 v0.3）把两
   （Seed 段仅注释 5 行改 6 行文案；取证探针 `PROBE_DEAD_KEY` 已 `git checkout` 还原·提交面 diff 零键变更）
 - [x] `pnpm run ci` 全绿（基线 ≥483 只增不减）+ Biome 净
   （**Local CI PASSED**·基线 510→**513 passed / 30 skipped**·+3 只增不减；fallow 零边界违规）
-- [ ] README 索引 + 本 plan 演变对账，人类验收后结项
+- [x] README 索引 + 本 plan 演变对账，人类验收后结项
+  （人验收 2026-10-17：双签「验收结项」+ roadmap 同批签核在案·实现 `564bdc6` + 落案 `5426ed6` + 结项账行均在 origin/main）
 
 ## 6. 演变记录
 
@@ -67,8 +68,9 @@ config 片（module-config-env-surface-contract·已验收·结项 v0.3）把两
 | 2026-10-17 | 0.1.0 | 人裁「2」→ AskUserQuestion 双问定档（生产 fail-loud + 非生产 warn / 独立 verify 脚本）后依「无已审方案不写码」起草 | 首版（零代码·只提议）：切片 E seed 裁决单点 + 切片 F 三判据静态脚本（承 config 片切片 C 既有设计与口径教训）；三条非目标继续挂账显式排除 |
 | 2026-10-17 | 0.2.0 | 审计门签核：人就「GO/分两轮/整改再审」三选答「你定」（授权执行方择档·问责归人记录在案）→ 采推荐档 **GO·E→F 连做·锁测 +3 默认档** | 实施前事实复核落定：① fail-loud 非「生产禁跑 seed」——生产配齐两键照常可跑，缺键才拒，与 install&run.md L54「空库/CI/生产再 db:seed」不冲突，按 §3 预案该文档补一行「生产跑 seed 须先配两键」提示；② seed.ts L24「兜底逐字不变」旧注释系 config 片保障·本片行为变更须同步改形留痕；正文零改判 |
 | 2026-10-17 | 0.3.0 | 切片 E/F 实施完成·全部判据实测落地 | 切片 E：`enforceSeedPasswordPolicy` 裁决单点（main 先于建连调用·env 可注入供锁测直调）+ seed.ts 保真律注释改形 + `.env.example` Seed 段/`install&run.md` 文案两处；切片 F：`scripts/verify-config-contract.ts`（三判据+双模式扫描+四角存照+白名单 4 键）+ `verify:config-contract` 命令（`ci.ts` 零改动）；取证：拒跑 EXIT=1 / 正跑 PASSED / 人造违规 ×3 EXIT=1 / L1 **513/30**；口径如实订正两处（Joi 键脚本内源解析非复用 dist；首跑自捕口径注释自匹配）；**取证事故如实登记**：V1 探针还原用 `git checkout .env.example` 连带冲掉同文件未提交的 Seed 段文案，提交面 diff 清点自捕（feat commit 仅 5 文件）后重做文案并以未推送本地 amend 补齐（终形 6 文件·`564bdc6`）——教训：同文件探针应用独立副本还原，不用 checkout；待人类验收 |
+| 2026-10-17 | 0.3.1 | 人类验收·结项（AskUserQuestion 签「验收 seed-fail-loud 片·结项」） | §5 末框勾齐；README 行翻「已验收·结项」——config 片「缓行/另案」两项人裁（seed fail-loud + 四角对拍门禁化）彻底闭环；本片零后续待裁项；同批人签 event-sourcing-roadmap 整篇视同已审计（另file另账行）|
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.3.0 变更（切片 E/F 实施完成·判据实测入账·口径两处如实订正），以当前正文内容为准。
+正文已于 2026-10-17 / v0.3.0 实体变更（切片 E/F 实施完成·判据实测入账），v0.3.1 仅结项戳与验收翻账不改实体；以当前正文内容为准。

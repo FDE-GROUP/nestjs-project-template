@@ -78,6 +78,7 @@ CREATE INDEX event_aggregate_idx ON event (aggregate_type, aggregate_id);
 
 | 日期 | 变更 |
 |------|------|
+| 2026-10-17 | 人签核（AskUserQuestion）：本路线图文档**整篇视同已审计**——方向确证（人澄清 2026-10-14）+ Phase A/B 各切片均已逐个过审计门落地·路线自身无待裁项；后续新切片仍逐片过审计门；README 索引行审计列同步翻牌 |
 | 2026-10-17 | 账目卫生扫描（事实订正留痕）：Phase A「本仓库现状」段三行引用路径校准至现布局（`packages/core→libs/core`·`apps/reference→apps/api`·逐条磁盘实存坐实）；第 4 条「什么都不持久化」现状句与 Phase B 已落地事实自相矛盾，改为带时点口径的如实描述（历史演变行不改写） |
 | 2026-10-17 | 消费者兑现留痕（module-es-first-real-consumer 治理档）：首个真实业务消费者（治理→订阅终态收敛·幂等真库实证）；附带应用生成 id 切 UUIDv7 |
 | 2026-10-17 | Phase B 后半（outbox 同事务化 + relay）落地留痕（第五切片引用段）；消费者幂等硬要求显式声明；「当前明确不做」段校准（event store/outbox 移出·补无独立死信表口径） |
