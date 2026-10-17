@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as WorkspacesRouteImport } from './routes/workspaces'
+import { Route as SettingsMembersRouteImport } from './routes/settings.members'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +24,49 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspacesRoute = WorkspacesRouteImport.update({
+  id: '/workspaces',
+  path: '/workspaces',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsMembersRoute = SettingsMembersRouteImport.update({
+  id: '/settings/members',
+  path: '/settings/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/workspaces': typeof WorkspacesRoute
+  '/settings/members': typeof SettingsMembersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/workspaces': typeof WorkspacesRoute
+  '/settings/members': typeof SettingsMembersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/workspaces': typeof WorkspacesRoute
+  '/settings/members': typeof SettingsMembersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login'
+  fullPaths: '/' | '/login' | '/workspaces' | '/settings/members'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login'
-  id: '__root__' | '/' | '/login'
+  to: '/' | '/login' | '/workspaces' | '/settings/members'
+  id: '__root__' | '/' | '/login' | '/workspaces' | '/settings/members'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  WorkspacesRoute: typeof WorkspacesRoute
+  SettingsMembersRoute: typeof SettingsMembersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +85,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspaces': {
+      id: '/workspaces'
+      path: '/workspaces'
+      fullPath: '/workspaces'
+      preLoaderRoute: typeof WorkspacesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/members': {
+      id: '/settings/members'
+      path: '/settings/members'
+      fullPath: '/settings/members'
+      preLoaderRoute: typeof SettingsMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  WorkspacesRoute: WorkspacesRoute,
+  SettingsMembersRoute: SettingsMembersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
