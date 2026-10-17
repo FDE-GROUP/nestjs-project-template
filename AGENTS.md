@@ -32,6 +32,7 @@ pnpm run ci                # L1 门禁：check → build → test（+ fallow 佐
 pnpm run ci:quick          # 轻量：check + test
 pnpm run ci:db             # 带 DB 全链：check → test → Testcontainers 一次性 PG 跑 gated e2e + BA 一致性套件（用完即焚）
 pnpm run test:fullstack    # 只跑上述 DB 段（编排器 = scripts/ci-fullstack.ts）
+pnpm run dev:web / build:web  # 前端（apps/web·Vite dev :5173 反代→7009·tooling §4.12）
 pnpm run verify:prod-boot  # prod 回归防线：构建后真起服验 /health 200
 pnpm run migration:generate / migration:run / db:setup   # 迁移/数据
 ```
@@ -43,7 +44,7 @@ pnpm run migration:generate / migration:run / db:setup   # 迁移/数据
   `git -c user.name='FDE Team' -c user.email='fde.team@example.com' commit ...`；header/body 每行 ≤100；subject 勿以大写拉丁字母/大写缩写开头（如「B1 …」触 commitlint subject-case，中文或小写开头即可）。
 
 ## 5. 目录地图
-pnpm workspace 双包：`libs/core/src`（@core 共享内核：`shared-kernel` + `tenancy`/`authorization`/`platform` 契约 + `modules/{subscriptions,workspaces}` 领域层）与 `apps/api/src`（参考应用·目录名取行业惯例：`modules/<上下文>/{domain,application,infrastructure,api}`（users/auth/authorization/tenants/workspaces/platform/payment/storage/subscriptions/posts）+ `tenancy/` 边界层 + `{common,config,database,i18n,logger,mailer}`）；文档四区 `docs/{specs,plans,research,recycle}`（`recycle/` 只进不出）。
+pnpm workspace 三包：`libs/core/src`（@core 共享内核：`shared-kernel` + `tenancy`/`authorization`/`platform` 契约 + `modules/{subscriptions,workspaces}` 领域层）、`apps/api/src`（参考应用·目录名取行业惯例：`modules/<上下文>/{domain,application,infrastructure,api}`（users/auth/authorization/tenants/workspaces/platform/payment/storage/subscriptions/posts）+ `tenancy/` 边界层 + `{common,config,database,i18n,logger,mailer}`）与 `apps/web`（前端壳·React+Vite·global-frontend-adoption F0）；文档四区 `docs/{specs,plans,research,recycle}`（`recycle/` 只进不出）。
 
 ## 6. 地域与语言
 面向**中国大陆**用户：依赖镜像 `npmmirror` / Docker 国内源；第三方选型见 [global-cn-adaptation](./docs/plans/global-cn-adaptation.md)；**文档 / 注释中文优先**。

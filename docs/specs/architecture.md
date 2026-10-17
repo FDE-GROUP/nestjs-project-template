@@ -45,6 +45,17 @@ src/
 ├── logger/  mailer/  common/  i18n/   # Cross-cutting infrastructure
 ```
 
+### Workspace-level layout
+
+The tree above lives inside `apps/api/src`. At repo root the three-zone taxonomy covers the frontend as-is (adopted 2026-10-17, vision §4.7):
+
+```
+apps/api            # deployable: reference backend application
+apps/web            # deployable: frontend shell (React + Vite) — F0 skeleton
+libs/core           # private shared: @core/saas-kit domain/contracts
+packages/api-client # exchangeable artifact: typed client generated from openapi.yaml (F1)
+```
+
 ## The `users` Context (reference flow)
 
 ```
@@ -160,6 +171,7 @@ directory centralization.
 - **Authorization**: CASL (`@casl/ability` v7) — the sole tenant-level RBAC ruling engine. **The authorization-fact SSOT lives in DB grant rows** (`tenant_role`/`tenant_role_grant`·per-tenant dynamic roles·module-rbac-dynamic-roles ruling C supersedes the old "`tenant-rules` TS table is the SSOT" ruling); **the code vocabulary `tenant-rules` is the language SSOT** (compile-time `TenantSubject/TenantAction` type domain only); **CASL rules are the runtime projection** (the checker lazily projects per-tenant via the repository port + in-process version cache·`invalidateTenant` for hot reload). Endpoints declare `@Can(action, subject)` and `TenantPermissionGuard` rules from an ALS-preinjected role (no scattered special-casing); instance-level authorization runs at check level (`TenantPermissionCheck.resource` + condition rows matched by CASL mongo after resolving the `{{userId}}` template); query-level list filtering is its same-source extension (`TenantPermissionChecker.listPredicate` pushes restricted grant rows down into the list read chain as an instance predicate merged with the tenant filter under a fixed spread order·module-rbac-query-level-filtering)
 - **Testing**: Vitest (+ `unplugin-swc` for decorator metadata)
 - **Linting/Formatting**: Biome
+- **Frontend (adopted 2026-10-17, phased per [global-frontend-adoption](../plans/global-frontend-adoption.md))**: React 19 + Vite 8 + TanStack Router + Tailwind CSS 4 with shadcn-style on-demand primitives (cva/clsx/tailwind-merge/lucide/sonner); same repo & workspace, dev-time same-origin reverse proxy (vite proxy → :7009, no CORS). The typed consumption surface is `packages/api-client`, generated from the OpenAPI contract. **No reverse penetration**: the backend never depends on frontend artifacts; Biome/pnpm/Vitest tooling standards apply unchanged.
 
 ## Validation Note
 

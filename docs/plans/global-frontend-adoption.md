@@ -20,7 +20,7 @@ okee = pnpm workspace 单仓多包前端：`apps/okee`（壳应用）+ `packages
 | 层 | okee 实存选型 | 版本锚 |
 |---|---|---|
 | 框架 | React + react-dom | ~19.2 |
-| 构建 | Vite + @vitejs/plugin-react + tsc --noEmit 门禁 | vite 6 代 |
+| 构建 | Vite + @vitejs/plugin-react + tsc --noEmit 门禁 | **vite ^8.0.12（实测复勘修正·呈审「6 代」系 package.json 截半阅读之推断误）** |
 | 路由 | TanStack Router（文件式）+ devtools | ^1.130 |
 | 样式 | Tailwind CSS 4（@tailwindcss/vite）| ^4.3 |
 | 组件基元 | shadcn 家族：components.json + class-variance-authority + clsx + tailwind-merge + lucide-react（icons）+ cmdk + sonner(toast) + @floating-ui/react-dom | — |
@@ -38,7 +38,7 @@ okee = pnpm workspace 单仓多包前端：`apps/okee`（壳应用）+ `packages
 
 ### 2.2 落地分片（每片独立过验收，本片只承诺 F0）
 
-1. **F0 · 骨架片（本 plan 批准即实施）**：`apps/web` 脚手架（Vite 6 + React 19 + Tailwind 4 + TanStack Router）+ 根 Biome 覆盖 tsx + 根 vitest projects 收纳 web 单测 + vite dev proxy `/api/v1 → localhost:7009`（okee 同源约定的本地形）+ **最小登录闭环页**（BA email+password 登录/登出·显示当前会话用户）。完成判据：`pnpm run ci`（L1）含 web 面全绿；登录页对 dev 后端真跑 200。
+1. **F0 · 骨架片（本 plan 批准即实施）**：`apps/web` 脚手架（Vite 8 + React 19 + Tailwind 4 + TanStack Router）+ 根 Biome 覆盖 tsx + 根 vitest projects 收纳 web 单测 + vite dev proxy `/api/v1 → localhost:7009`（okee 同源约定的本地形）+ **最小登录闭环页**（BA email+password 登录/登出·显示当前会话用户）。完成判据：`pnpm run ci`（L1）含 web 面全绿；登录页对 dev 后端真跑 200。
 2. **F1 · api-client 片**：`packages/api-client` 从 `openapi/openapi.yaml` 生成 typed client（复用 openapi-codegen 链）+ errorCode 码表做实（错误契约 plan 既有预留）。
 3. **F2 · 租户自助面片**：workspace/成员/订阅可见与操作 UI（vision 阶段 3 自助管理首段）。
 - F0→F1→F2 严格串行；每片完成才呈下一片，不并车。
@@ -48,7 +48,7 @@ okee = pnpm workspace 单仓多包前端：`apps/okee`（壳应用）+ `packages
 - **① Playwright 是否采**（e2e 面）：okee 采且链路成熟；采则入 tooling §2 矩阵，浏览器二进制经 npmmirror 镜像安装。**推荐：F0 暂不采**（Vitest 组件测先行），F2 时重呈。
 - **② 组件基元深度**：仅 shadcn 式按需复制（推荐·okee 同款）vs 引成品组件库（如 Element Plus·React 生态弱）。**推荐：shadcn 式按需**。
 - **③ 包名/目录名**：`apps/web`（推荐·对应 apps/=可部署语义）vs `apps/console`。api-client 名 **@saas/api-client**（推荐）待定名。
-- **④ React 19/Vite 6 在 npmmirror 的可得性**：实施首日对拍 registry（本仓有 npmmirror 滞后先例），滞后则降版本并登记 §6。
+- **④ React 19/Vite 8 在 npmmirror 的可得性**：实施首日对拍 registry（本仓有 npmmirror 滞后先例），滞后则降版本并登记 §6。
 
 ## 3. 影响面与风险
 
@@ -61,17 +61,17 @@ okee = pnpm workspace 单仓多包前端：`apps/okee`（壳应用）+ `packages
 
 > 无已审方案不写码。全局 / 修宪 → 人签核。
 
-- 结论：**（待裁）** 人令三点已构成方向授权；本 plan 请裁：① 宪法修正措辞（§2.1）放行与否；② §2.3 四待裁点；③ F0 范围认否。
-- 未决项：上三组。
-- 审计人 / 日期：待。
+- 结论：**已审计·放行**——人 2026-10-17 令「同意」：① §2.1 修宪措辞原样批准；② §2.3 四待裁点按推荐档裁（Playwright 缓采 F2 重呈 / shadcn 式按需 / `apps/web`+`@saas/api-client` / registry 对拍自跑）；③ F0 范围认可即刻实施。
+- 未决项：无（F2 时 Playwright 重呈为既定期限，非未决）。
+- 审计人 / 日期：人 / 2026-10-17。
 
 ## 5. 完成判据（可核验 + 穷尽）
 
-- [ ] §2.3 四待裁点获人裁定
-- [ ] 宪法三处修正落入 specs 正文（vision/architecture/tooling 各补演变行）
-- [ ] F0：`pnpm run ci` 全绿（check 覆盖 apps/web tsx + web 单测入根 vitest）
-- [ ] F0：dev 后端起 7009 → 浏览器登录页真调 BA 登录 → 会话可见 → 登出，实跑取证
-- [ ] README 索引翻「已审计·实施中」→ F0 完成后翻待验收
+- [x] §2.3 四待裁点获人裁定（令「同意」= 推荐档全采）
+- [x] 宪法三处修正落入 specs 正文（vision/architecture/tooling 各补演变行）
+- [x] F0：`pnpm run ci` 全绿（biome 392 文件含 tsx·新基线 **529 passed/31 skipped·90 files**（+6 web 测）·EXIT=0）
+- [x] F0：实跑取证——vite dev :5173 反代打穿 BA 面四步闭环：sign-up 200 → sign-in 200（cookie 落 jar）→ get-session 带出 user → sign-out（带 Origin 头·BA CSRF 语义）200 → get-session 收敛 `200+null`；两实机真值已注记源码（登出面非 401 是 200+null；sign-out 需 origin）
+- [x] README 索引翻「已完成·待人类验收」
 - [ ] 人类验收后结项
 
 ## 6. 演变记录
@@ -79,8 +79,10 @@ okee = pnpm workspace 单仓多包前端：`apps/okee`（壳应用）+ `packages
 | 日期 | 版本 | 变更原因 | 内容修订 |
 |------|------|----------|----------|
 | 2026-10-17 | 0.1.0 | 人令三点（修宪/参考 okee 栈/工具 SSOT 沿用）→ 起草呈审 | 首版：okee 实读勘察 + 修宪拟稿 §2.1 + F0–F2 分片 + 四待裁点 |
+| 2026-10-17 | 0.2.0 | 人令「同意」过审计门 | §4 结论翻「已审计·放行」（措辞原样批准·四裁点按推荐档·F0 即刻实施）；§5 前两框勾齐；戳翻实施中。 |
+| 2026-10-17 | 0.3.0 | F0 落地 + 三笔自捕登记 | ①**install 引出的真回归**：本次 pnpm install 修剪了 root node_modules 历史幽灵链接，`verify:prod-boot` 红拓出 root deps 两漏宣（@nestjs/throttler·@casl/ability 此前靠幽灵存活）——按「依赖 hoist 于根」既有纪律补 root 声明修复，防线设计目标兑现（CI 绿≠prod 起服可跑）；②fetchStub 形状自捕两例（json 属性名冲突把 payload 函数当值返回）；③sign-out 403=BA CSRF 缺 Origin 头（curl 语义差非应用缺陷，浏览器自动携带）。AGENTS §5 目录地图同步 apps/web。 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.1.0 起草（**呈审稿·待审计**——人令三点为方向授权，措辞与待裁点归人放行后方动宪法与代码）；发现登 §6 不入正文。
+正文已于 2026-10-17 / v0.3.0 更新（**已完成·待人类验收——F0 骨架落地·闭环取证与三笔自捕在案**）；发现登 §6 不入正文。

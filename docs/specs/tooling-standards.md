@@ -46,6 +46,9 @@
 | 密码哈希 | **bcryptjs** | ^3.0.3 | 纯 JS、免原生编译 | 强制 |
 | 支付 | **stripe**（现行）+ 微信支付 / 支付宝（待落地） | ^23.0.0 | 经统一 `PaymentProvider` 多通道抽象（见 §2.1 / [global-cn-adaptation](../plans/global-cn-adaptation.md)） | 领域相关 |
 | AI 编码入口（L4） | **AGENTS.md** | — | 面向 agent 的统一项目指令 / 约束入口，与 `.claude/settings.local.json` 并存（定位见 workflow §4 / §9.5） | 推荐 |
+| 前端框架/构建 | **React + Vite** | react ~19.3 / vite ^8 | `apps/web` 壳应用：@vitejs/plugin-react + tsc --noEmit 门禁 + vite build（参考栈 OdooThink okee·global-frontend-adoption F0） | 强制（前端面） |
+| 前端路由/样式/基元 | **TanStack Router + Tailwind CSS 4 + shadcn 式按需基元** | router ^1.130 / tailwind ^4.3 | 文件式路由；@tailwindcss/vite；组件按需复制（cva/clsx/tailwind-merge/lucide/sonner），**不引整库** | 强制（前端面） |
+| 前端测试 | **Vitest + jsdom + @testing-library/react** | 同主仓 Vitest ^5 | web 单测入根 vitest projects 统一跑；Playwright e2e **缓采**（F2 重呈，人裁 2026-10-17） | 强制（前端面） |
 
 ### 2.1 地域适配选型（中国大陆）· 状态标注
 
@@ -73,6 +76,7 @@
 - **禁止** 用 `--no-verify` 绕过 husky/commitlint；**禁止** 修改全局 git 身份（提交用内联身份，见 §6）。
 - **禁止** 依赖远程 CI 做质量门禁 —— 本仓库 GitHub Actions 仅部署 Swagger Pages，不跑测试/构建；门禁一律在本地经 `pnpm run ci`（pre-push 强制，见 §4.8）。
 - **禁止** 把未真跑对拍的部署声明当作可用 —— `Dockerfile`/compose/HEALTHCHECK/workflows 属可执行契约，须以实跑结果（build→run→`/health` 200→`healthy`）存照，且镜像内不得保留产物实际不支持的能力（见 §4.10）。
+- **禁止** 前端引入 CRA / webpack 存量工具链与第二 CSS 框架混用 —— 前端统一 Vite + Tailwind 单源（§2 前端行·global-frontend-adoption）；§3 既有 pnpm/Biome/Vitest 全局红线对前端面天然适用。
 
 ## 4. 使用规范
 
@@ -152,6 +156,13 @@
 - **新列表端点缺省用游标**（兑现 [global-readiness-error-pagination](../plans/global-readiness-error-pagination.md) 切 B·立 readiness §4-④「游标默认」标准）：键集分页基于确定性全序 `(createdAt DESC, id DESC)`，`nextCursor` 为排序键的**不透明 base64url**（防实现细节泄漏·**非授权替代**·租户守卫照旧）。`Page<T>`（offset）仅作需全量计数/任意跳页的治理面例外，不删除。
 - **只经 `createPage` / `createCursorPage` 构造**（唯一形状纪律点·对 `items` 浅复制）；入参走应用侧 `ListPageDto`/`ListCursorDto`（校验/默认值属 class-validator 依赖·core 不引），port 只收已裁决的 `PageRequest`/`CursorPageRequest`。
 - **畸形游标 = 400**：DTO 先闸 base64url 字符集，适配层 `decodeCursor` 再拦「合法编码但载荷不合法」→`BadRequestException`（先于取 em、不查库）。
+
+### 4.12 前端使用规范（apps/web · 2026-10-17 入宪）
+- **同源反代免 CORS**：dev 期 vite proxy 将 `/api/*` 与 `/api/auth/*`（Better Auth）转发至后端 :7009，前端代码只写相对路径；生产部署面（静态服务/同域反代）另片裁定，未裁定前不得声称前端可 prod 部署。
+- **Biome 覆盖**：根 `biome.json` 含 tsx（linter 开 react hooks 规则组）；前端不受 §4.3 装饰器约束，但 `useImportType` 对前端无危害可默认。
+- **npm registry 可得性对拍**：React 19/Vite 8 等新基线安装首日须实查 npmmirror 可得性（本仓有滞后先例），滞后则降版本并在 plan 登记。
+- **后端不得 import 前端制品**（vision §4.7 不反向渗透），前端消费后端只经 HTTP 契约（F1 后为 `@saas/api-client`）。
+- **会话认证面**：Cookie + DB Session（与后端既有语义一致），禁自造 token 存取侧机制；email+password 仅限非生产（既有裁点）。
 
 ## 5. Biome 规范
 
