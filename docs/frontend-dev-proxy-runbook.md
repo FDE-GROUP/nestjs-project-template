@@ -12,6 +12,7 @@
 | 后端端口 / 全局前缀 | `:7009` · `/api/v1` | `.env` `PORT=7009` · `main.ts` |
 | 前端 dev 端口 / 反代 | `:5173` · `/api` → `http://localhost:7009` | `apps/web/vite.config.ts` |
 | Postgres（dev） | `postgres:16-alpine` @ `5432` · db `nestjs_practice` · user/pass `postgres` | `docker-compose.dev.yml` |
+| pgadmin 调试台 | `dpage/pgadmin4:8` @ `:5050` · UI 登录 `admin@example.com`/`admin` · 连库口令 `postgres` | `docker-compose.dev.yml` + `docker/pgadmin/servers.json` |
 | 连接串 | `postgres://postgres:postgres@localhost:5432/nestjs_practice` | `.env` `DATABASE_URL` |
 | seed 兜底账号（仅开发） | `admin@example.com` / `admin123` · `user{i}@example.com` / `user123` | `apps/api/src/database/seed.ts` |
 | BA 会话面 | `/api/v1/auth/{sign-in,email}` · `/sign-up/email` · `/get-session`（Cookie+DB Session） | `apps/web/src/lib/auth.ts` |
@@ -33,6 +34,18 @@ docker compose -f docker-compose.dev.yml ps postgres   # 等 healthcheck = healt
 pnpm run db:setup                                        # mikro-migrate + db:seed
 # 首跑 warn「弱口令兜底 admin123/user123（仅开发）」属预期
 ```
+
+## 2b. pgadmin 调试台（可选·直观看库）
+
+```bash
+docker compose -f docker-compose.dev.yml up -d        # 一并拉起 pg16 + pgadmin
+# 浏览器开 http://localhost:5050
+```
+
+- **两套口令别混**：pgadmin **Web 登录** = `admin@example.com` / `admin`；点服务器连**数据库**时弹的口令 = `postgres`（PG user 口令）。报 `password authentication failed` 基本是连库口令错填成了 `admin`。
+- **Host 用服务名 `postgres`**（compose DNS 可解·容器名 `postgres-dev` 亦可解），**不可**填网络名 `nestjs-network-dev`（不可解析 →「地址不对」）。
+- **先跑 §2 `db:setup` 建表再连**：pg16 的 `nestjs_practice` 初始为空库，不建 schema 则展开无表可看。
+- **servers.json 只播种一次**：`docker/pgadmin/servers.json` 仅在 `pgadmin-data-dev` 卷**为空**时自动登记那条 `nestjs_practice-dev`；此后 UI 改动存于卷内 `pgadmin4.db`，重启不覆盖。若被改乱想回正：`docker volume rm nestjs-project-template_pgadmin-data-dev` 后重 `up -d pgadmin` 即按 servers.json 重播种。
 
 ## 3. 起后端（终端 A）
 
