@@ -34,7 +34,7 @@
 **切片**（每片独立可验）：
 1. ✅ **S1（已交付·L1 绿）** 三表实体+迁移+seed 静态死数据/lazy-ensure + `tenant-rules` 矩阵删净（留词汇）+ 仓储/domain（角色 CRUD·grant/revoke·conditions 白名单校验）——判据：迁移链纯 additive·seed 数据与旧矩阵逐格对拍测（一次性锁）。
 2. ✅ **S2（已交付·L1 绿）** checker 规则源 DB 化 + per-tenant 缓存/失效——判据：既有 guard/matrix/门面测最小改绿 + 热改生效测（缓存失效后重查锁测）。缓存形与 over-grant 防线见 §4.1。
-3. ⏳ S3 角色/授权管理门面 + 审计表落行 + DTO/reader 校验改形——判据：@Can 新格矩阵锁测 + 成员挂自定义角色往返；门面写后调 `checker.invalidateTenant(org)`（S2 已开公开失效面）。
+3. ✅ **S3（已交付·L1 绿）** 角色/授权管理门面 + 审计表落行 + DTO/reader 校验改形——**controller `TenantsRbacAdminController`（`/tenants/roles`·7 端点各声明 `@Can(<动作>, 'Role'|'RoleGrant')`·`@UseGuards(TenantScopeGuard, TenantPermissionGuard)`）+ 应用服务 `TenantRbacAdminService`（ALS 取租户/actor·委派仓储·领域结果码转译 HTTP·写成功后调 `invalidateTenant` 失效投影）**；**审计行**：`MikroTenantRbacRepository` create/rename/delete/grant/revoke **每变更同 `em` fork·flush 前落 `tenant_role_audit`（who/what/before/after/tenant·同事务）**；**DTO/reader 校验改形（丙裁连锁）**：成员改角色/邀请 DTO `@IsIn(SYSTEM_ROLE_KEYS)` 放宽为非空串，存在性收 `isRoleAssignable`（系统三 key 词汇短路 ∪ 本租户在库自定义角色·查库 fail-closed）经 org-admin `assertRoleAssignable` 前置闸；契约新增 `TENANT_PERMISSION_INVALIDATOR` 端口（读写分治·CASL 适配类 `useExisting` 兼实现 checker+invalidator）·core 词汇表补运行时数组 `TENANT_SUBJECT_VALUES`/`TENANT_ACTION_VALUES`（DTO `@IsIn` 值域单源·防类型/值双源漂移）。判据达成：@Can 新格矩阵元数据锁测（controller.test·Role 4 格 + RoleGrant 3 格 + S9 值导入锁）+ invalidateTenant 写成功才失效测（service.test·失败不失效）+ 成员挂自定义角色存在性往返（service+facade 测·不可挂载角色 400 且 BA 数据面不触达）·落定偏差见 §4.1。
 4. ⏳ S4 check 级实例 conditions（端口增形 resource·模板解析·**消费 conditions 行**）——判据：ownerId 模板 allow/deny 锁测；query 级缓账不动仓储。
 5. ⏳ S5 文档三面（architecture 授权条款/§9.3/CASL 片旧裁互引订正）+ L1 + 提交推送。
 
@@ -61,16 +61,18 @@
 - **缓存形落定 `Map<"${org}\u0000${key}", Promise<TenantCaslAbility>>`**（§2.3 拟案为 `Map<org,{version,abilityByKey}>`）：以在途 Promise 缓存防并发重入（同 (org,key) 首查归一），加载失败即时淘汰条目（下次重试·绝不缓存 rejected Promise 视同放行）；本阶段单实例事件未接，`invalidateTenant(org)` 为同步失效面（S3 门面写后调用）。
 - **表所有权纪律**：`tenant_role`/`tenant_role_grant`/`tenant_role_audit` 三表在 `table-ownership.ts` 登记属 `tenants` 上下文（camelCase 键）；`MikroTenantRbacRepository` 为唯一写通道。
 - **seed 归属随表属主迁移**：`system-role-seed.ts` 由 `tenancy/infrastructure` 迁入 `modules/tenants/domain`（三表属主为 tenants 上下文）。
+- **S3 门面形态＝应用服务直调（非 CQRS CommandBus）**：RBAC 管理面为纯 CRUD·无跨聚合事件编排需求，审计行在仓储同事务落·故采 `@Injectable TenantRbacAdminService` + controller `@Can`，不与治理命令（command handler）同形——非改判，仅落点择形。
+- **S3 存在性闸系统 key 词汇短路**：`isRoleAssignable` 对 `SYSTEM_ROLE_KEYS`（owner/admin/member）先行返 true 不查库（租户尚未 lazy-ensure 时 `findRole` 会查无·而系统 key 恒可挂），仅自定义 key 走查库 fail-closed；service.test 锁此短路语义。
 
 ## 5. 完成判据（可核验 + 穷尽）
 
-- [ ] 自建角色端点 + 授权勾选端点可用且 @Can 裁决（管理职权仅 owner/admin 或挂 Role subject 规则）
-- [ ] 热改即生效（改授权后下一请求裁决变化·无需重启·缓存失效测锁）
-- [ ] 审计留痕每变更一记录（who/what/before/after/tenant）
-- [ ] 实例级（乙裁仅 check 级）：带 conditions 规则下单资源 allow/deny 正确；列表面不过滤如实登记（query 级缓账另片）
-- [ ] 内置三角色 seed 死数据与旧 TENANT_RULES 矩阵逐格对拍锁测（一次性）；既有 CASL 片全链测最小改绿
-- [ ] BA schema 零改动（member.role 复用列实锤）·迁移纯 additive 走 generate+migrate
-- [ ] `pnpm run ci` 全绿·基线 426/30 只增不减；文档三面落文
+- [x] 自建角色端点 + 授权勾选端点可用且 @Can 裁决（管理职权仅 owner/admin 或挂 Role subject 规则）·**S3**
+- [x] 热改即生效（改授权后下一请求裁决变化·无需重启·缓存失效测锁）·**S3**（invalidateTenant 写成功才失效·service.test 锁）
+- [x] 审计留痕每变更一记录（who/what/before/after/tenant）·**S3**（仓储 create/rename/delete/grant/revoke 同事务落 `tenant_role_audit`）
+- [ ] 实例级（乙裁仅 check 级）：带 conditions 规则下单资源 allow/deny 正确；列表面不过滤如实登记（query 级缓账另片）·**待 S4**
+- [x] 内置三角色 seed 死数据与旧 TENANT_RULES 矩阵逐格对拍锁测（一次性）；既有 CASL 片全链测最小改绿·**S1**
+- [x] BA schema 零改动（member.role 复用列实锤）·迁移纯 additive 走 generate+migrate·**S1**（`0 applied` 账目闭环）
+- [ ] `pnpm run ci` 全绿·基线 426/30 只增不减；文档三面落文·**待 S5**（本阶段随 S3 基线已 474/30·文档三面未落）
 
 ## 6. 演变记录
 
@@ -79,8 +81,9 @@
 | 2026-10-17 | 0.1.0 | 人裁三需求成立立项 | 首版·待审计门 |
 | 2026-10-17 | 0.2.0 | 审计门四裁落案 | 甲三表（行式 grant+审计表）/乙仅 check 级（query 级缓账·仓储不动）/丙全 DB 化 TENANT_RULES 矩阵删净（含 reader/DTO 连锁改形）/丁高危三项随片签；切片重排 S1–S5 |
 | 2026-10-17 | 0.3.0 | S1+S2 交付对拍 | S1（三表实体+迁移落库账目闭环+seed 死数据+矩阵删净+仓储/domain+策略闸）与 S2（checker DB 规则源异步形+per-tenant Promise 缓存+invalidateTenant 失效面+over-grant 防线+四处测试适配）落地·L1 全绿 462/30（基线 426→456→462 只增）·build 绿·迁移纯 additive `0 applied` 闭环；新登 §4.1 偏差留痕八项 |
+| 2026-10-17 | 0.4.0 | S3 交付对拍 | S3（角色/授权管理门面 controller+应用服务·7 端点 `@Can('Role'\|'RoleGrant')`·仓储写侧同事务落审计行·`TENANT_PERMISSION_INVALIDATOR` 契约端口·core 词汇运行时数组·org-admin 存在性前置闸）落地·L1 全绿 474/30（基线 462→470→474 只增）·build 0·Biome 净；新登 §4.1 两条（门面非 CQRS·系统 key 短路）·§5 判据 1/2/3/5/6 打钩·剩 S4（check 级实例 conditions）/S5（文档三面） |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.3.0 变更，以当前正文内容为准。
+正文已于 2026-10-17 / v0.4.0 变更，以当前正文内容为准。

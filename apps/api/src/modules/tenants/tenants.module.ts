@@ -4,6 +4,7 @@ import { PlatformTenantsController } from './api/platform-tenants.controller';
 import { PlatformUsersController } from './api/platform-users.controller';
 import { TenantsController } from './api/tenants.controller';
 import { TenantsOrgAdminController } from './api/tenants-org-admin.controller';
+import { TenantsRbacAdminController } from './api/tenants-rbac-admin.controller';
 import { TenantsSelfController } from './api/tenants-self.controller';
 import { ApproveTenantCommandHandler } from './application/commands/handlers/approve-tenant.command-handler';
 import { DeleteTenantCommandHandler } from './application/commands/handlers/delete-tenant.command-handler';
@@ -19,6 +20,7 @@ import { GetPlatformTenantQueryHandler } from './application/queries/handlers/ge
 import { GetTenantDiagnosticsQueryHandler } from './application/queries/handlers/get-tenant-diagnostics.query-handler';
 import { ListPlatformTenantsQueryHandler } from './application/queries/handlers/list-platform-tenants.query-handler';
 import { ListPlatformUsersQueryHandler } from './application/queries/handlers/list-platform-users.query-handler';
+import { TenantRbacAdminService } from './application/tenant-rbac-admin.service';
 import { TENANT_GOVERNANCE_REPOSITORY } from './domain/repositories/tenant-governance.repository';
 import { TENANT_PROVISIONING_REPOSITORY } from './domain/repositories/tenant-provisioning.repository';
 import { TENANT_RBAC_REPOSITORY } from './domain/repositories/tenant-rbac.repository';
@@ -60,6 +62,7 @@ const QueryHandlers = [
   controllers: [
     TenantsController,
     TenantsOrgAdminController,
+    TenantsRbacAdminController,
     TenantsSelfController,
     PlatformTenantsController,
     PlatformUsersController,
@@ -80,6 +83,9 @@ const QueryHandlers = [
     // module-rbac-dynamic-roles S1：授权事实 SSOT 仓储（DB 是角色/授权行属主·MikroORM 唯一实现）。
     // export 供 S2 checker（tenancy 边界层）跨模块注入投影源。
     { provide: TENANT_RBAC_REPOSITORY, useClass: MikroTenantRbacRepository },
+    // module-rbac-dynamic-roles S3：角色/授权管理门面应用服务（写侧过闸+审计+写后失效投影·
+    // 依赖 TENANT_RBAC_REPOSITORY（本模块）+ TENANT_PERMISSION_INVALIDATOR（全局 Tenancy））。
+    TenantRbacAdminService,
   ],
   exports: [TENANT_RBAC_REPOSITORY],
 })

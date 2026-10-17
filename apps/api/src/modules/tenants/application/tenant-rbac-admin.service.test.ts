@@ -1,0 +1,119 @@
+import type { TenantPermissionInvalidator } from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
+import type { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TenantRbacRepository } from '../domain/repositories/tenant-rbac.repository';
+import { TenantRbacAdminService } from './tenant-rbac-admin.service';
+
+/**
+ * 角色/授权管理门面应用服务测（module-rbac-dynamic-roles S3·§2.5/§2.6）。
+ * 锁三件事：① 领域结果码 → HTTP 语义转译（invalidKey→400/duplicate→409/notFound→404/
+ * systemRoleProtected→409/invalidConditions→400）；② **写成功后才失效投影缓存**（热改生效面·
+ * 失败不失效）；③ 成员挂载存在性闸（系统 key 短路不查库·自定义查库 fail-closed）。
+ * @Can 授权裁决归守卫链（另片锁测），本测只覆盖服务自身的转译与失效编排。
+ */
+
+function makeHarness() {
+  const rbac: Record<string, ReturnType<typeof vi.fn>> = {
+    listRoles: vi.fn().mockResolvedValue([{ id: 'r1', key: 'editor', name: 'E', isSystem: false }]),
+    listRoleKeys: vi.fn().mockResolvedValue(['editor']),
+    findRole: vi.fn().mockResolvedValue(null),
+    findGrants: vi.fn().mockResolvedValue([]),
+    createRole: vi.fn().mockResolvedValue('created'),
+    renameRole: vi.fn().mockResolvedValue('ok'),
+    deleteRole: vi.fn().mockResolvedValue('ok'),
+    grant: vi.fn().mockResolvedValue('granted'),
+    revoke: vi.fn().mockResolvedValue('revoked'),
+  };
+  const invalidateTenant = vi.fn();
+  const ctx = {
+    requireTenantId: vi.fn().mockReturnValue('orgA'),
+    get: vi.fn().mockReturnValue({ tenantId: 'orgA', userId: 'u1' }),
+  } as unknown as TenantContextService;
+  const svc = new TenantRbacAdminService(
+    rbac as unknown as TenantRbacRepository,
+    { invalidateTenant } as unknown as TenantPermissionInvalidator,
+    ctx,
+  );
+  return { svc, rbac, invalidateTenant };
+}
+
+describe('TenantRbacAdminService', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('createRole 成功 → 落库后回查视图 + 失效投影（actor 取 ALS userId）', async () => {
+    const h = makeHarness();
+    h.rbac.findRole.mockResolvedValueOnce({
+      id: 'r1',
+      key: 'editor',
+      name: 'Editor',
+      isSystem: false,
+    });
+    const view = await h.svc.createRole('editor', 'Editor');
+    expect(view).toMatchObject({ key: 'editor', isSystem: false });
+    expect(h.rbac.createRole).toHaveBeenCalledWith('orgA', 'editor', 'Editor', 'u1');
+    expect(h.invalidateTenant).toHaveBeenCalledWith('orgA');
+  });
+
+  it('createRole：invalidKey→400·duplicate→409·均不失效缓存', async () => {
+    const h = makeHarness();
+    h.rbac.createRole.mockResolvedValueOnce('invalidKey');
+    await expect(h.svc.createRole('Owner', 'x')).rejects.toBeInstanceOf(BadRequestException);
+    h.rbac.createRole.mockResolvedValueOnce('duplicate');
+    await expect(h.svc.createRole('editor', 'x')).rejects.toBeInstanceOf(ConflictException);
+    expect(h.invalidateTenant).not.toHaveBeenCalled();
+  });
+
+  it('rename/delete：systemRoleProtected→409·notFound→404·ok→失效', async () => {
+    const h = makeHarness();
+    h.rbac.renameRole.mockResolvedValueOnce('systemRoleProtected');
+    await expect(h.svc.renameRole('owner', 'Boss')).rejects.toBeInstanceOf(ConflictException);
+    h.rbac.deleteRole.mockResolvedValueOnce('notFound');
+    await expect(h.svc.deleteRole('ghost')).rejects.toBeInstanceOf(NotFoundException);
+    await h.svc.deleteRole('editor');
+    expect(h.invalidateTenant).toHaveBeenCalledWith('orgA');
+  });
+
+  it('grant：invalidConditions→400·roleNotFound→404·duplicate→409·granted→失效', async () => {
+    const h = makeHarness();
+    const entry = { subject: 'Workspace' as const, action: 'update' as const, conditions: null };
+    h.rbac.grant.mockResolvedValueOnce('invalidConditions');
+    await expect(h.svc.grant('editor', entry)).rejects.toBeInstanceOf(BadRequestException);
+    h.rbac.grant.mockResolvedValueOnce('roleNotFound');
+    await expect(h.svc.grant('ghost', entry)).rejects.toBeInstanceOf(NotFoundException);
+    h.rbac.grant.mockResolvedValueOnce('duplicate');
+    await expect(h.svc.grant('editor', entry)).rejects.toBeInstanceOf(ConflictException);
+    await h.svc.grant('editor', entry);
+    expect(h.invalidateTenant).toHaveBeenCalledWith('orgA');
+  });
+
+  it('revoke：roleNotFound/notFound→404·revoked→失效', async () => {
+    const h = makeHarness();
+    h.rbac.revoke.mockResolvedValueOnce('roleNotFound');
+    await expect(h.svc.revoke('ghost', 'Workspace', 'update', null)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    h.rbac.revoke.mockResolvedValueOnce('notFound');
+    await expect(h.svc.revoke('editor', 'Workspace', 'update', null)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await h.svc.revoke('editor', 'Workspace', 'update', null);
+    expect(h.invalidateTenant).toHaveBeenCalledWith('orgA');
+  });
+
+  it('getGrants 查无角色（null）→ 404', async () => {
+    const h = makeHarness();
+    h.rbac.findGrants.mockResolvedValueOnce(null);
+    await expect(h.svc.getGrants('ghost')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('isRoleAssignable：系统 key 短路（不查库）·自定义 key 查库 fail-closed', async () => {
+    const h = makeHarness();
+    await expect(h.svc.isRoleAssignable('owner')).resolves.toBe(true);
+    expect(h.rbac.findRole).not.toHaveBeenCalled();
+    h.rbac.findRole.mockResolvedValueOnce({ id: 'r1', key: 'editor', name: 'E', isSystem: false });
+    await expect(h.svc.isRoleAssignable('editor')).resolves.toBe(true);
+    h.rbac.findRole.mockResolvedValueOnce(null);
+    await expect(h.svc.isRoleAssignable('ghost')).resolves.toBe(false);
+  });
+});

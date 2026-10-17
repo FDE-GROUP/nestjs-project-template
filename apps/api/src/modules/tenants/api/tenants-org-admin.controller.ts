@@ -5,6 +5,7 @@ import { Can } from '@core/saas-kit/tenancy/rbac/can.decorator';
 import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -17,6 +18,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { TenantRbacAdminService } from '../application/tenant-rbac-admin.service';
 import { mapBaError } from './ba-error.mapping';
 import {
   CreateInvitationDto,
@@ -53,7 +55,10 @@ interface TenantOrgApi {
 @Controller('tenants')
 @UseGuards(TenantScopeGuard, TenantPermissionGuard)
 export class TenantsOrgAdminController {
-  constructor(@Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance) {}
+  constructor(
+    @Inject(AuthInstanceInjectKey) private readonly authInstance: InjectAuthInstance,
+    @Inject(TenantRbacAdminService) private readonly rbacAdmin: TenantRbacAdminService,
+  ) {}
 
   private ba(): TenantOrgApi {
     const auth = this.authInstance.get();
@@ -62,6 +67,18 @@ export class TenantsOrgAdminController {
         errorCode: ERROR_CODES.AUTH_PROVIDER_UNAVAILABLE,
       });
     return auth.api as unknown as TenantOrgApi;
+  }
+
+  /**
+   * 角色可挂载存在性闸（module-rbac-dynamic-roles S3·§2.5）：`role` 须 ∈ 系统三 key ∪ 本租
+   * 在库自定义角色——严格在库 fail-closed，词汇外角色不得挂成员/邀请（DTO 仅校形态）。
+   */
+  private async assertRoleAssignable(role: string): Promise<void> {
+    if (!(await this.rbacAdmin.isRoleAssignable(role))) {
+      throw new BadRequestException(`Role not assignable in this tenant: ${role}`, {
+        errorCode: ERROR_CODES.TENANCY_ROLE_NOT_FOUND,
+      });
+    }
   }
 
   @Get('members')
@@ -87,6 +104,7 @@ export class TenantsOrgAdminController {
     @Headers() headers: Record<string, unknown>,
     @Body() dto: UpdateMemberRoleDto,
   ): Promise<unknown> {
+    await this.assertRoleAssignable(dto.role);
     try {
       return await this.ba().updateMemberRole({ headers, body: dto });
     } catch (err) {
@@ -134,6 +152,7 @@ export class TenantsOrgAdminController {
     @Headers() headers: Record<string, unknown>,
     @Body() dto: CreateInvitationDto,
   ): Promise<unknown> {
+    await this.assertRoleAssignable(dto.role);
     try {
       return await this.ba().createInvitation({ headers, body: dto });
     } catch (err) {

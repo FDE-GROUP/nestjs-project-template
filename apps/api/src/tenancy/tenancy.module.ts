@@ -11,7 +11,10 @@ import { QuotaGuard } from '@core/saas-kit/tenancy/quota/quota.guard';
 import { QuotaService } from '@core/saas-kit/tenancy/quota/quota.service';
 import { QUOTA_STORE } from '@core/saas-kit/tenancy/quota/quota.store';
 import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
-import { TENANT_PERMISSION_CHECKER } from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
+import {
+  TENANT_PERMISSION_CHECKER,
+  TENANT_PERMISSION_INVALIDATOR,
+} from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
 import { SESSION_READER } from '@core/saas-kit/tenancy/session/request-session.port';
 import { TenantMiddleware } from '@core/saas-kit/tenancy/tenant.middleware';
 import { TenantContextService } from '@core/saas-kit/tenancy/tenant-context.service';
@@ -52,6 +55,8 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
   imports: [TenantsModule],
   providers: [
     TenantContextService,
+    // module-rbac-dynamic-roles S3：CASL 适配单实例兼实现读侧 checker 与写侧 invalidator（下方两 token useExisting 归一）。
+    CaslTenantPermissionChecker,
     TenantStatusService,
     UserStatusService,
     TenantPermissionGuard,
@@ -68,7 +73,8 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
     { provide: PLATFORM_IDENTITY_LOOKUP, useClass: MikroPlatformIdentityLookup },
     // §9.5.4①B · P1b 会话端口倒置：core 经端口消费会话/RBAC，Better Auth 实例适配由参考应用装配。
     { provide: SESSION_READER, useClass: AuthSessionReader },
-    { provide: TENANT_PERMISSION_CHECKER, useClass: CaslTenantPermissionChecker },
+    { provide: TENANT_PERMISSION_CHECKER, useExisting: CaslTenantPermissionChecker },
+    { provide: TENANT_PERMISSION_INVALIDATOR, useExisting: CaslTenantPermissionChecker },
     // §9.5.3 热点③ · P1c 配置端口：core 经端口消费平台配置，`ConfigService` 适配留参考应用。
     { provide: PLATFORM_SETTINGS, useClass: ConfigPlatformSettings },
     // S11 · 高危#4 复合全局：全局租户墙（deny-by-default）。TenantScopeGuard 已在本模块 provide，
@@ -94,6 +100,7 @@ import { MikroUserStatusStore } from './infrastructure/mikro-user-status.store';
     PLATFORM_IDENTITY_LOOKUP,
     SESSION_READER,
     TENANT_PERMISSION_CHECKER,
+    TENANT_PERMISSION_INVALIDATOR,
     PLATFORM_SETTINGS,
   ],
 })

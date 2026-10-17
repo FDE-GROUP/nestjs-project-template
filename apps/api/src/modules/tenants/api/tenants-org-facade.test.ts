@@ -1,18 +1,26 @@
 import type { InjectAuthInstance } from '@app/modules/auth/auth.interface';
-import { ForbiddenException, HttpException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
+import type { TenantRbacAdminService } from '../application/tenant-rbac-admin.service';
 import { TenantsOrgAdminController } from './tenants-org-admin.controller';
 import { TenantsSelfController } from './tenants-self.controller';
 
 /**
- * 成员/邀请门面单测（module-rbac-casl §2.3.1·甲裁严格拆·DoD「门面端点」单元面）：
+ * 成员/邀请门面单测（module-rbac-casl §2.3.1·甲裁严格拆 · module-rbac-dynamic-roles S3 存在性闸）：
  * 门面对 BA 服务端窄门面的**委派形状**（headers/body/query 透传）与 BA 错误归一
- * （4xx 透传状态·未知/5xx 原样上抛不伪装）。@Can 授权裁决由 guard 链锁测覆盖
- * （tenant-permission.guard.test / three-layer-permission.matrix.test），此处不重复。
+ * （4xx 透传状态·未知/5xx 原样上抛不伪装），以及 S3 新增的**角色可挂载存在性闸**
+ * （不可挂载→400 且不触 BA）。@Can 授权裁决由 guard 链锁测覆盖，此处不重复。
  */
 
 function instanceWith(api: Record<string, unknown>): InjectAuthInstance {
   return { get: () => ({ api }) as never, set: () => {} } as unknown as InjectAuthInstance;
+}
+
+/** RBAC 门面桩（默认一切角色可挂载，透传至 BA）。 */
+function rbacStub(assignable = true): TenantRbacAdminService {
+  return {
+    isRoleAssignable: vi.fn().mockResolvedValue(assignable),
+  } as unknown as TenantRbacAdminService;
 }
 
 const HEADERS = { cookie: 'session=abc' };
@@ -20,7 +28,7 @@ const HEADERS = { cookie: 'session=abc' };
 describe('TenantsOrgAdminController（管理门面·委派 + BA 错误归一）', () => {
   it('listMembers 透传 headers 直调 BA 服务端数据面', async () => {
     const listMembers = vi.fn().mockResolvedValue([{ id: 'm1' }]);
-    const ctrl = new TenantsOrgAdminController(instanceWith({ listMembers }));
+    const ctrl = new TenantsOrgAdminController(instanceWith({ listMembers }), rbacStub());
     await expect(ctrl.listMembers(HEADERS)).resolves.toEqual([{ id: 'm1' }]);
     expect(listMembers).toHaveBeenCalledWith({ headers: HEADERS });
   });
@@ -31,6 +39,7 @@ describe('TenantsOrgAdminController（管理门面·委派 + BA 错误归一）'
     });
     const ctrl = new TenantsOrgAdminController(
       instanceWith({ removeMember: vi.fn().mockRejectedValue(apiError) }),
+      rbacStub(),
     );
     await expect(ctrl.removeMember(HEADERS, { memberId: 'm1' } as never)).rejects.toThrow(
       HttpException,
@@ -44,6 +53,7 @@ describe('TenantsOrgAdminController（管理门面·委派 + BA 错误归一）'
     const boom = new Error('db exploded');
     const ctrl = new TenantsOrgAdminController(
       instanceWith({ createInvitation: vi.fn().mockRejectedValue(boom) }),
+      rbacStub(),
     );
     await expect(
       ctrl.createInvitation(HEADERS, { email: 'a@b.c', role: 'member' } as never),
@@ -51,9 +61,18 @@ describe('TenantsOrgAdminController（管理门面·委派 + BA 错误归一）'
   });
 
   it('auth 实例未就绪 → ForbiddenException(AUTH_PROVIDER_UNAVAILABLE)', async () => {
-    const ctrl = new TenantsOrgAdminController({ get: () => undefined } as never);
+    const ctrl = new TenantsOrgAdminController({ get: () => undefined } as never, rbacStub());
     // 异步方法内抛错 → 以 rejected Promise 形态呈现（非同步 throw）。
     await expect(ctrl.listMembers(HEADERS)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('S3 存在性闸：不可挂载角色 → BadRequest(400) 且 BA 数据面不被触达', async () => {
+    const updateMemberRole = vi.fn();
+    const ctrl = new TenantsOrgAdminController(instanceWith({ updateMemberRole }), rbacStub(false));
+    await expect(
+      ctrl.updateMemberRole(HEADERS, { memberId: 'm1', role: 'ghost' } as never),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(updateMemberRole).not.toHaveBeenCalled();
   });
 });
 

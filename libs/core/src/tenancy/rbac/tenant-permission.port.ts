@@ -33,3 +33,18 @@ export interface TenantPermissionChecker {
    */
   can(check: TenantPermissionCheck): Promise<boolean>;
 }
+
+/**
+ * 租户授权投影失效端口（module-rbac-dynamic-roles §2.3·S3 热改生效面·丁裁②契约新增）。
+ *
+ * 读写分治：`TenantPermissionChecker` 是读侧裁决（守卫消费），本端口是**写侧缓存失效**
+ * （管理门面消费）。角色/授权经仓储变更后，同租户的 ability 投影即过时——门面调用本方法
+ * 淘汰该租户全部缓存条目，下一请求重新 lazy 投影（单实例内存自洽；多实例一致性留
+ * Redis pub/sub 缓账·见 plan §3）。参考应用侧由同一 CASL 适配类兼实现两端口。
+ */
+export const TENANT_PERMISSION_INVALIDATOR = Symbol('TENANT_PERMISSION_INVALIDATOR');
+
+export interface TenantPermissionInvalidator {
+  /** 失效某租户的全部角色 ability 投影（同步·幂等·无对应缓存条目时为空操作）。 */
+  invalidateTenant(organizationId: string): void;
+}

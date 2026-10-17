@@ -3,6 +3,7 @@ import { TENANT_RBAC_REPOSITORY } from '@app/modules/tenants/domain/repositories
 import type {
   TenantPermissionCheck,
   TenantPermissionChecker,
+  TenantPermissionInvalidator,
 } from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
 import { Inject, Injectable } from '@nestjs/common';
 import { buildTenantAbility, type TenantCaslAbility } from './casl-ability.factory';
@@ -22,7 +23,9 @@ import { buildTenantAbility, type TenantCaslAbility } from './casl-ability.facto
  * conditions 行的消费推迟到 S4 实例判定（check 级），本片按 deny-from-type-level 保守投影。
  */
 @Injectable()
-export class CaslTenantPermissionChecker implements TenantPermissionChecker {
+export class CaslTenantPermissionChecker
+  implements TenantPermissionChecker, TenantPermissionInvalidator
+{
   constructor(@Inject(TENANT_RBAC_REPOSITORY) private readonly rbac: TenantRbacRepository) {}
 
   /** `(org,key)` 复合键 → 在途/已决 ability Promise（防并发重入·加载失败即时淘汰）。 */
@@ -43,7 +46,7 @@ export class CaslTenantPermissionChecker implements TenantPermissionChecker {
     }
   }
 
-  /** 失效本租户全部角色投影（热改生效·S3 门面写后调用）。 */
+  /** 失效本租户全部角色投影（写侧热改生效面·实现 `TenantPermissionInvalidator`·S3 门面写后调用）。 */
   invalidateTenant(organizationId: string): void {
     const prefix = `${organizationId}\u0000`;
     for (const key of this.abilities.keys()) {

@@ -46,6 +46,8 @@ export interface TenantRbacRepository {
   findRole(organizationId: string, key: string): Promise<TenantRoleView | null>;
   /** 本租户全部角色 key（存在性校验面 · S3）。 */
   listRoleKeys(organizationId: string): Promise<string[]>;
+  /** 本租户全部角色读模型（管理门面列表 · S3·含 name/isSystem）。 */
+  listRoles(organizationId: string): Promise<TenantRoleView[]>;
   /** 角色的授权行（null = 查无角色；空数组 = 有角色零授权，两者消费侧皆 deny，但语义供缓存/门面区分）。 */
   findGrants(organizationId: string, roleKey: string): Promise<TenantRoleGrantView[] | null>;
   createRole(

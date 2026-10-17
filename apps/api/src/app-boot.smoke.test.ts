@@ -3,6 +3,10 @@ import { SessionGuard } from '@app/modules/auth/guards/session.guard';
 import { PostsController } from '@app/modules/posts/api/posts.controller';
 import { PlatformOperatorGuard } from '@core/saas-kit/tenancy/platform/platform-operator.guard';
 import { TenantPermissionGuard } from '@core/saas-kit/tenancy/rbac/tenant-permission.guard';
+import {
+  TENANT_PERMISSION_CHECKER,
+  TENANT_PERMISSION_INVALIDATOR,
+} from '@core/saas-kit/tenancy/rbac/tenant-permission.port';
 import { TenantScopeGuard } from '@core/saas-kit/tenancy/tenant-scope.guard';
 import { Test } from '@nestjs/testing';
 import { describe, expect, it } from 'vitest';
@@ -34,5 +38,10 @@ describe('全 AppModule boot 冒烟（DI 图整树可解析 · DB-free · 进 CI
     expect(moduleRef.get(PostsController)).toBeInstanceOf(PostsController);
     // 全局配置面也在图中就绪（ConfigModule 为 @Global，供跨模块 getter 解析）。
     expect(moduleRef.get(ConfigModule)).toBeInstanceOf(ConfigModule);
+    // module-rbac-dynamic-roles S3 热改正确性不变量：读侧 checker 与写侧 invalidator 必须解析到
+    // **同一单例**（useExisting 归一）——否则门面失效作用不到守卫裁决命中的缓存，热改不生效。
+    expect(moduleRef.get(TENANT_PERMISSION_INVALIDATOR)).toBe(
+      moduleRef.get(TENANT_PERMISSION_CHECKER),
+    );
   });
 });

@@ -25,14 +25,20 @@ export type TenantRole = string;
 export const SYSTEM_ROLE_KEYS = ['owner', 'admin', 'member'] as const;
 export type SystemRoleKey = (typeof SYSTEM_ROLE_KEYS)[number];
 
-/** 可授权资源（本表即资源词汇唯一源；新增资源先入这里，授权事实入 DB grant 行）。 */
-export type TenantSubject =
-  | 'Organization'
-  | 'Member'
-  | 'Invitation'
-  | 'Workspace'
-  | 'Role'
-  | 'RoleGrant';
+/**
+ * 可授权资源词汇表（本表即资源语言 SSOT 唯一源；新增资源先入这里，授权事实入 DB grant 行）。
+ * 运行时数组 + 类型同源（S3 门面 DTO `@IsIn` 需运行时值域·防类型/值双源漂移）。
+ */
+export const TENANT_SUBJECT_VALUES = [
+  'Organization',
+  'Member',
+  'Invitation',
+  'Workspace',
+  'Role',
+  'RoleGrant',
+] as const;
+export type TenantSubject = (typeof TENANT_SUBJECT_VALUES)[number];
 
-/** 动作词汇表（与 CASL can(action, subject) 第一元组参一致）。 */
-export type TenantAction = 'create' | 'read' | 'update' | 'delete' | 'cancel';
+/** 动作词汇表（与 CASL can(action, subject) 第一元组参一致·运行时数组供 DTO 值域校验）。 */
+export const TENANT_ACTION_VALUES = ['create', 'read', 'update', 'delete', 'cancel'] as const;
+export type TenantAction = (typeof TENANT_ACTION_VALUES)[number];

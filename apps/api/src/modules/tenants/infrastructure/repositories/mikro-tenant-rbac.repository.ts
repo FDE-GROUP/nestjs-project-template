@@ -95,6 +95,12 @@ export class MikroTenantRbacRepository implements TenantRbacRepository {
     return rows.map((r) => r.key);
   }
 
+  async listRoles(organizationId: string): Promise<TenantRoleView[]> {
+    const em = await this.mikro.fork();
+    const rows = await em.find(TenantRole, { organizationId });
+    return rows.map(toView);
+  }
+
   async findGrants(organizationId: string, roleKey: string): Promise<TenantRoleGrantView[] | null> {
     const em = await this.mikro.fork();
     const role = await em.findOne(TenantRole, { organizationId, key: roleKey });
