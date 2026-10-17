@@ -161,7 +161,7 @@ gated('BA HTTP 面全链 e2e（真·原生端点经真 HTTP·env-gated）', () =
 
 /*
  * 本地跑法（沿用租户隔离 e2e 的专用 nestjs_e2e 库先例）：
- *   docker exec nestjs-pg-dev psql -U postgres -c "CREATE DATABASE nestjs_e2e;"          # 若不存在
+ *   docker exec postgres-dev psql -U postgres -c "CREATE DATABASE nestjs_e2e;"          # 若不存在
  *   DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e pnpm run migration:run -- --fresh
  *   E2E_DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
  *     DATABASE_URL=postgres://postgres:postgres@localhost:5432/nestjs_e2e \
