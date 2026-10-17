@@ -103,3 +103,4 @@
 | 2026-10-17 | v0.5 | C 片落地·整 plan 四片入库 | tenancy 定型横切机制层入宪（±zh 树重写+上下文地图节·§9.3 定态+演变 0.23.0·table-ownership 语境注·树↔目录对拍）·ci 全绿 481/30 不动·高危 #3 完成·推送归人·未决项 4/5 仍挂账另片 |
 | 2026-10-17 | v0.6 | 收口后命名质疑裁定（未决项 6 落定） | 人问「tenancy 改名 multi-tenancy 是否更合理」→ Agent 建议不改·人「同意」：tenancy 即业界机制名·歧义由宪法术语纪律消解·改名触高危 #3 churn；落点加宪法指针 docstring·优先序＝未决项 4 机制层提纯另片 |
 | 2026-10-17 | v0.7 | 未决项 4 另片落地（回灌定态） | `module-tenancy-lifecycle-quota-relocation` 实现入库：lifecycle→tenants、quota→subscriptions（core 契约 + api 适配/装配/测试全迁·两归宿模块升 @Global·宪法 ±zh 同步）·本 plan §1/§4 未决项 4 翻账·基线 481→483 只增不减 |
+| 2026-10-17 | v0.8 | 整 plan 人类验收·结项 | 人「同意」签核：A/B/D/C 四片 + 未决项 4 另片全部验收通过（实跑链已坐实：四片 commit 均 in origin/main·relocation `9eec820` CI 483/30·fallow 零违规）·未决项 1–6 全闭（5 默认档维持·平台角色表化另案；6 不改名已裁）·README 索引同步翻「已人类验收·结项」 |

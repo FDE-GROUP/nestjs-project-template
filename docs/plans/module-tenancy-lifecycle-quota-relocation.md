@@ -86,8 +86,9 @@
 |------|------|----------|----------|
 | 2026-10-17 | 0.1.0 | 起草（主线「继续推进 plan」） | 首版：未决项 4 落地立项。现状直查钉死（lifecycle/quota 契约与适配驻留清单、约 57 触点、两归宿模块已 @Global 的 DI 保形事实、QuotaGuard 无全局墙、table-ownership `tenancy/**` 推导源）；四切片（取证/core 迁址/装配归位/宪法同步）；甲乙丙待裁；高危 #2 双片 + #3 压 D 片。 |
 | 2026-10-17 | 0.2.0 | 人「按建议自裁」→ 甲乙丙落定并全片实现 | **取证事实订正**：起草时「两归宿模块均已 @Global」系 grep 误读（命中 docstring 提及非装饰器）——实非 @Global；保形改道为两模块新贴 @Global+exports（沿 Authorization/Platform 先例·语义等价）。落地：core 契约迁 `modules/tenants/lifecycle`・`modules/subscriptions/quota`（含 tenant-plans）；api 三适配/五单测/两 e2e 归位；TenancyModule 摘至纯机制（context/guard/middleware/session/APP_GUARD）；两新家 wiring 锁测（整树 DB-free）。实现期 tsc 两轮校正相对深度（handlers 实为 3 档非 4）；Biome check:fix 后逐处甄别 `import type` 转换均为纯类型位（类值注入面零触动）。验收：`pnpm run ci` 全绿 **483/30（+2 只增不减）**·ownership 守卫零改动绿·fallow `✓ No issues found`。 |
+| 2026-10-17 | 0.3.0 | 人「同意」→ 人类验收·结项 | 验收签核入库：提交 `9eec820`（含 amend 剔除误纳临时消息文件·强推归人裁档）已推 origin/main；README 索引同步翻「已验收·结项」；主 plan global-domain-context-refactor 追 v0.8 整案结项行。 |
 
 ---
 
 <!-- 变更戳 -->
-正文已于 2026-10-17 / v0.2.0 变更，以当前正文内容为准。
+正文已于 2026-10-17 / v0.3.0 变更，以当前正文内容为准。
