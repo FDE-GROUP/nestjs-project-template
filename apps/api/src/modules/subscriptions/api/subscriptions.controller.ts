@@ -15,8 +15,15 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiEnvelope,
+  ApiErrorResponse,
+  apiEnvelopeShape,
+  apiError,
+} from '../../../common/contracts/api-contracts';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
+import { SubscriptionResponse } from './response/subscription.response';
 
 /**
  * Tenant subscription slice (global-tenancy S7 · FR-7/FR-8/D5).
@@ -32,6 +39,7 @@ import { CreateSubscriptionDto } from './dto/create-subscription.dto';
  * customer mapping (FR-8). Quota超限拒绝 (FR-7) is enforced via `QuotaService`/`QuotaGuard`;
  * the production member-add attach point (Better Auth route) is deferred to a later slice.
  */
+@ApiExtraModels(ApiEnvelope, ApiErrorResponse, SubscriptionResponse)
 @ApiTags('subscriptions')
 @Controller('subscriptions')
 export class SubscriptionsController {
@@ -45,11 +53,12 @@ export class SubscriptionsController {
   @ApiOperation({
     summary: 'Current tenant subscription: plan, seat quota, usage, customer mapping',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Effective subscription snapshot for the active tenant.',
-  })
-  @ApiResponse({ status: 403, description: 'No active tenant context.' })
+  @ApiResponse(
+    apiEnvelopeShape(SubscriptionResponse, {
+      description: 'Effective subscription snapshot for the active tenant.',
+    }),
+  )
+  @ApiResponse(apiError(403, 'No active tenant context.'))
   getCurrent(): Promise<TenantSubscriptionView> {
     return this.queryBus.execute<GetSubscriptionQuery, TenantSubscriptionView>(
       new GetSubscriptionQuery(),
@@ -63,9 +72,14 @@ export class SubscriptionsController {
   @ApiOperation({
     summary: 'Provision/upgrade the tenant subscription (creates the provider customer)',
   })
-  @ApiResponse({ status: 201, description: 'Subscription created; returns the updated snapshot.' })
-  @ApiResponse({ status: 403, description: 'Not allowed to update the organization.' })
-  @ApiResponse({ status: 503, description: 'No payment provider configured.' })
+  @ApiResponse(
+    apiEnvelopeShape(SubscriptionResponse, {
+      status: 201,
+      description: 'Subscription created; returns the updated snapshot.',
+    }),
+  )
+  @ApiResponse(apiError(403, 'Not allowed to update the organization.'))
+  @ApiResponse(apiError(503, 'No payment provider configured.'))
   create(@Body() dto: CreateSubscriptionDto): Promise<TenantSubscriptionView> {
     return this.commandBus.execute<CreateSubscriptionCommand, TenantSubscriptionView>(
       new CreateSubscriptionCommand(

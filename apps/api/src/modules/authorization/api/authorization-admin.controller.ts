@@ -13,7 +13,14 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiEnvelope,
+  ApiErrorResponse,
+  apiEnvelopeShape,
+  apiError,
+  apiOkArray,
+} from '../../../common/contracts/api-contracts';
 import { TenantRbacAdminService } from '../application/tenant-rbac-admin.service';
 import type {
   TenantRoleGrantView,
@@ -26,6 +33,7 @@ import {
   RenameRoleDto,
   RevokeRolePermissionDto,
 } from './dto/authorization.dto';
+import { TenantRoleGrantViewResponse, TenantRoleViewResponse } from './response/role.response';
 
 /**
  * 角色/授权**管理门面**（module-rbac-dynamic-roles §2.5·S3·甲裁自建角色 + 丁裁随片授权面）。
@@ -38,6 +46,7 @@ import {
  * `@Can` 落点与 seed 一致：owner/admin 持 `Role`(create/read/update/delete) + `RoleGrant`
  * (create/read/delete)，member 无 → 非管理员请求由守卫 403（fail-closed）。
  */
+@ApiExtraModels(ApiEnvelope, ApiErrorResponse, TenantRoleViewResponse, TenantRoleGrantViewResponse)
 @ApiTags('tenants')
 @Controller('tenants/roles')
 @UseGuards(TenantScopeGuard, TenantPermissionGuard)
@@ -47,8 +56,8 @@ export class AuthorizationAdminController {
   @Get()
   @Can('read', 'Role')
   @ApiOperation({ summary: 'List roles of the active tenant (system + custom)' })
-  @ApiResponse({ status: 200, description: 'Role views.' })
-  @ApiResponse({ status: 403, description: 'CASL deny (no Role read).' })
+  @ApiResponse(apiOkArray(TenantRoleViewResponse, 'Role views.'))
+  @ApiResponse(apiError(403, 'CASL deny (no Role read).'))
   listRoles(): Promise<TenantRoleView[]> {
     return this.rbac.listRoles();
   }
@@ -57,9 +66,9 @@ export class AuthorizationAdminController {
   @Can('create', 'Role')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Create a custom role (owner/admin)' })
-  @ApiResponse({ status: 200, description: 'Created role view.' })
-  @ApiResponse({ status: 400, description: 'Invalid/reserved role key.' })
-  @ApiResponse({ status: 409, description: 'Role key already exists.' })
+  @ApiResponse(apiEnvelopeShape(TenantRoleViewResponse, { description: 'Created role view.' }))
+  @ApiResponse(apiError(400, 'Invalid/reserved role key.'))
+  @ApiResponse(apiError(409, 'Role key already exists.'))
   createRole(@Body() dto: CreateRoleDto): Promise<TenantRoleView> {
     return this.rbac.createRole(dto.key, dto.name);
   }
@@ -69,8 +78,8 @@ export class AuthorizationAdminController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Rename a custom role (system roles protected)' })
   @ApiResponse({ status: 200, description: 'Renamed.' })
-  @ApiResponse({ status: 404, description: 'Role not found.' })
-  @ApiResponse({ status: 409, description: 'System role protected.' })
+  @ApiResponse(apiError(404, 'Role not found.'))
+  @ApiResponse(apiError(409, 'System role protected.'))
   async renameRole(@Body() dto: RenameRoleDto): Promise<void> {
     await this.rbac.renameRole(dto.key, dto.name);
   }
@@ -80,8 +89,8 @@ export class AuthorizationAdminController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete a custom role (grants cascade; system roles protected)' })
   @ApiResponse({ status: 200, description: 'Deleted.' })
-  @ApiResponse({ status: 404, description: 'Role not found.' })
-  @ApiResponse({ status: 409, description: 'System role protected.' })
+  @ApiResponse(apiError(404, 'Role not found.'))
+  @ApiResponse(apiError(409, 'System role protected.'))
   async deleteRole(@Body() dto: DeleteRoleDto): Promise<void> {
     await this.rbac.deleteRole(dto.key);
   }
@@ -89,8 +98,8 @@ export class AuthorizationAdminController {
   @Get('grants')
   @Can('read', 'RoleGrant')
   @ApiOperation({ summary: 'List grant rows of a role (echo checked state)' })
-  @ApiResponse({ status: 200, description: 'Grant views (subject/action/conditions).' })
-  @ApiResponse({ status: 404, description: 'Role not found.' })
+  @ApiResponse(apiOkArray(TenantRoleGrantViewResponse, 'Grant views (subject/action/conditions).'))
+  @ApiResponse(apiError(404, 'Role not found.'))
   listGrants(@Query('roleKey') roleKey?: string): Promise<TenantRoleGrantView[]> {
     if (!roleKey) {
       throw new BadRequestException('roleKey query param is required');
@@ -103,9 +112,9 @@ export class AuthorizationAdminController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Grant a permission cell to a role (multi-condition rows = OR union)' })
   @ApiResponse({ status: 200, description: 'Granted.' })
-  @ApiResponse({ status: 400, description: 'Invalid conditions (whitelist-only).' })
-  @ApiResponse({ status: 404, description: 'Role not found.' })
-  @ApiResponse({ status: 409, description: 'Duplicate grant.' })
+  @ApiResponse(apiError(400, 'Invalid conditions (whitelist-only).'))
+  @ApiResponse(apiError(404, 'Role not found.'))
+  @ApiResponse(apiError(409, 'Duplicate grant.'))
   async grant(@Body() dto: GrantRolePermissionDto): Promise<void> {
     await this.rbac.grant(dto.roleKey, {
       subject: dto.subject,
@@ -121,7 +130,7 @@ export class AuthorizationAdminController {
     summary: 'Revoke a grant (conditions null = whole-subject row; object = exact row)',
   })
   @ApiResponse({ status: 200, description: 'Revoked.' })
-  @ApiResponse({ status: 404, description: 'Role or matching grant not found.' })
+  @ApiResponse(apiError(404, 'Role or matching grant not found.'))
   async revoke(@Body() dto: RevokeRolePermissionDto): Promise<void> {
     await this.rbac.revoke(dto.roleKey, dto.subject, dto.action, dto.conditions ?? null);
   }

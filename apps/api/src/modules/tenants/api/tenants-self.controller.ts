@@ -17,7 +17,13 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiEnvelope,
+  ApiErrorResponse,
+  apiError,
+  apiOkPassthrough,
+} from '../../../common/contracts/api-contracts';
 import { mapBaError } from './ba-error.mapping';
 import { InvitationIdDto, LeaveTenantDto, SetActiveTenantDto } from './dto/tenants-org.dto';
 
@@ -47,6 +53,7 @@ interface TenantSelfApi {
   }): Promise<unknown>;
 }
 
+@ApiExtraModels(ApiEnvelope, ApiErrorResponse)
 @ApiTags('tenants')
 // 入组前/无租户态的合法个人操作（成员资格列表、接受/拒绝邀请）→ 类级豁免租户墙，登录仍必需。
 @TenantExempt()
@@ -66,8 +73,13 @@ export class TenantsSelfController {
   @Get()
   @UseGuards(SessionGuard)
   @ApiOperation({ summary: 'List organizations the current user belongs to (personal channel)' })
-  @ApiResponse({ status: 200, description: 'Membership organizations (data from Better Auth).' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid session.' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Membership organizations (data from Better Auth)',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(401, 'Missing or invalid session.'))
   async listMyOrganizations(@Headers() headers: Record<string, unknown>): Promise<unknown> {
     try {
       return await this.ba().listOrganizations({ headers });
@@ -80,9 +92,14 @@ export class TenantsSelfController {
   @UseGuards(SessionGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Switch the session's active organization (must be a member)" })
-  @ApiResponse({ status: 200, description: 'Session activated organization updated.' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid session.' })
-  @ApiResponse({ status: 403, description: 'Not a member of the target organization (BA).' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Session activated organization updated',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(401, 'Missing or invalid session.'))
+  @ApiResponse(apiError(403, 'Not a member of the target organization (BA).'))
   async setActive(
     @Headers() headers: Record<string, unknown>,
     @Body() dto: SetActiveTenantDto,
@@ -98,12 +115,14 @@ export class TenantsSelfController {
   @UseGuards(SessionGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Leave a tenant (self-service · last-owner cannot leave)' })
-  @ApiResponse({ status: 200, description: 'Membership removed.' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid session.' })
-  @ApiResponse({
-    status: 400,
-    description: 'Not a member / sole owner leaving the tenant (BA data guard).',
-  })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Membership removed',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(401, 'Missing or invalid session.'))
+  @ApiResponse(apiError(400, 'Not a member / sole owner leaving the tenant (BA data guard).'))
   async leave(
     @Headers() headers: Record<string, unknown>,
     @Body() dto: LeaveTenantDto,
@@ -119,12 +138,16 @@ export class TenantsSelfController {
   @UseGuards(SessionGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Accept an invitation addressed to the current user' })
-  @ApiResponse({ status: 200, description: 'Invitation accepted; membership created.' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid session.' })
-  @ApiResponse({
-    status: 400,
-    description: 'Invitation not found/expired/not the invitee/seat cap (BA guards + hooks).',
-  })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Invitation accepted; membership created',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(401, 'Missing or invalid session.'))
+  @ApiResponse(
+    apiError(400, 'Invitation not found/expired/not the invitee/seat cap (BA guards + hooks).'),
+  )
   async acceptInvitation(
     @Headers() headers: Record<string, unknown>,
     @Body() dto: InvitationIdDto,
@@ -140,9 +163,14 @@ export class TenantsSelfController {
   @UseGuards(SessionGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reject an invitation addressed to the current user' })
-  @ApiResponse({ status: 200, description: 'Invitation rejected.' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid session.' })
-  @ApiResponse({ status: 400, description: 'Invitation not found/expired/not the invitee (BA).' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Invitation rejected',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(401, 'Missing or invalid session.'))
+  @ApiResponse(apiError(400, 'Invitation not found/expired/not the invitee (BA).'))
   async rejectInvitation(
     @Headers() headers: Record<string, unknown>,
     @Body() dto: InvitationIdDto,
@@ -157,8 +185,13 @@ export class TenantsSelfController {
   @Get('invitations/mine')
   @UseGuards(SessionGuard)
   @ApiOperation({ summary: 'List pending invitations addressed to the current user' })
-  @ApiResponse({ status: 200, description: 'Invitation list (data from Better Auth).' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid session.' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Invitation list (data from Better Auth)',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(401, 'Missing or invalid session.'))
   async listMyInvitations(
     @Headers() headers: Record<string, unknown>,
     @CurrentUser() user: SessionUser,

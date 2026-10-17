@@ -21,7 +21,13 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiEnvelope,
+  ApiErrorResponse,
+  apiError,
+  apiOkPassthrough,
+} from '../../../common/contracts/api-contracts';
 import { mapBaError } from './ba-error.mapping';
 import {
   CreateInvitationDto,
@@ -54,6 +60,7 @@ interface TenantOrgApi {
   cancelInvitation(p: { headers: Record<string, unknown>; body: unknown }): Promise<unknown>;
 }
 
+@ApiExtraModels(ApiEnvelope, ApiErrorResponse)
 @ApiTags('tenants')
 @Controller('tenants')
 @UseGuards(TenantScopeGuard, TenantPermissionGuard)
@@ -88,8 +95,13 @@ export class TenantsOrgAdminController {
   @Get('members')
   @Can('read', 'Member')
   @ApiOperation({ summary: 'List members of the active tenant (all roles · CASL read)' })
-  @ApiResponse({ status: 200, description: 'Member list (membership data from Better Auth).' })
-  @ApiResponse({ status: 403, description: 'No active tenant / CASL deny / not a member.' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Member list (membership data from Better Auth)',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(403, 'No active tenant / CASL deny / not a member.'))
   async listMembers(@Headers() headers: Record<string, unknown>): Promise<unknown> {
     try {
       return await this.ba().listMembers({ headers });
@@ -102,8 +114,13 @@ export class TenantsOrgAdminController {
   @Can('update', 'Member')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update a member role (owner/admin · CASL update)' })
-  @ApiResponse({ status: 200, description: 'Updated member.' })
-  @ApiResponse({ status: 403, description: 'CASL deny (member role) / last-owner guard (BA).' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Updated member',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(403, 'CASL deny (member role) / last-owner guard (BA).'))
   async updateMemberRole(
     @Headers() headers: Record<string, unknown>,
     @Body() dto: UpdateMemberRoleDto,
@@ -120,8 +137,13 @@ export class TenantsOrgAdminController {
   @Can('delete', 'Member')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remove a member (owner/admin · CASL delete)' })
-  @ApiResponse({ status: 200, description: 'Removed member.' })
-  @ApiResponse({ status: 403, description: 'CASL deny (member role) / self-removal guard (BA).' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Removed member',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(403, 'CASL deny (member role) / self-removal guard (BA).'))
   async removeMember(
     @Headers() headers: Record<string, unknown>,
     @Body() dto: RemoveMemberDto,
@@ -136,8 +158,13 @@ export class TenantsOrgAdminController {
   @Get('invitations')
   @Can('read', 'Invitation')
   @ApiOperation({ summary: 'List pending invitations of the active tenant (all roles)' })
-  @ApiResponse({ status: 200, description: 'Invitation list (data from Better Auth).' })
-  @ApiResponse({ status: 403, description: 'No active tenant / CASL deny / not a member.' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Invitation list (data from Better Auth)',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(403, 'No active tenant / CASL deny / not a member.'))
   async listInvitations(@Headers() headers: Record<string, unknown>): Promise<unknown> {
     try {
       return await this.ba().listInvitations({ headers });
@@ -150,8 +177,13 @@ export class TenantsOrgAdminController {
   @Can('create', 'Invitation')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Invite a member to the active tenant (owner/admin · CASL create)' })
-  @ApiResponse({ status: 200, description: 'Created invitation.' })
-  @ApiResponse({ status: 403, description: 'CASL deny (member role).' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Created invitation',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(403, 'CASL deny (member role).'))
   async createInvitation(
     @Headers() headers: Record<string, unknown>,
     @Body() dto: CreateInvitationDto,
@@ -168,8 +200,13 @@ export class TenantsOrgAdminController {
   @Can('cancel', 'Invitation')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cancel an invitation (owner/admin · CASL cancel)' })
-  @ApiResponse({ status: 200, description: 'Cancelled invitation.' })
-  @ApiResponse({ status: 403, description: 'CASL deny (member role) / not cancellable (BA).' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Cancelled invitation',
+      ssotHint: 'Better Auth auth.api.*（服务端直调透传）',
+    }),
+  )
+  @ApiResponse(apiError(403, 'CASL deny (member role) / not cancellable (BA).'))
   async cancelInvitation(
     @Headers() headers: Record<string, unknown>,
     @Body() dto: InvitationIdDto,

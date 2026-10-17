@@ -12,11 +12,33 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
-import type { FileUploadResultDto } from '../dto/file-upload.dto';
+import {
+  ApiEnvelope,
+  ApiErrorResponse,
+  apiEnvelopeShape,
+} from '../../../common/contracts/api-contracts';
+import { FileUploadResultDto } from '../dto/file-upload.dto';
 import { StorageService } from '../services/storage.service';
+import { StorageDeleteResponse, StorageUrlResponse } from './response/storage.response';
 
+@ApiExtraModels(
+  ApiEnvelope,
+  ApiErrorResponse,
+  FileUploadResultDto,
+  StorageDeleteResponse,
+  StorageUrlResponse,
+)
 @ApiTags('storage')
 // S11 复合全局：storage 属用户级（上传/下载·不经租户仓储 requireTenantId）→ 类级豁免全局租户墙（仍靠会话墙）。
 @TenantExempt()
@@ -41,6 +63,9 @@ export class StorageController {
       },
     },
   })
+  @ApiResponse(
+    apiEnvelopeShape(FileUploadResultDto, { status: 201, description: 'Uploaded file result.' }),
+  )
   async uploadFile(@Req() req: FastifyRequest): Promise<FileUploadResultDto> {
     // Handle raw multipart upload using Fastify's built-in multipart support
     if (!req.isMultipart()) {
@@ -78,6 +103,7 @@ export class StorageController {
   @Delete(':key')
   @ApiOperation({ summary: 'Delete a file' })
   @ApiParam({ name: 'key', description: 'Unique identifier of the file' })
+  @ApiResponse(apiEnvelopeShape(StorageDeleteResponse, { description: 'Delete result.' }))
   async deleteFile(@Param('key') key: string): Promise<{ success: boolean }> {
     this.logger.log(`Deleting file with key: ${key}`);
     const result = await this.storageService.deleteFile(key);
@@ -93,6 +119,7 @@ export class StorageController {
     description: 'Expiration time for URL (seconds)',
     type: Number,
   })
+  @ApiResponse(apiEnvelopeShape(StorageUrlResponse, { description: 'Signed URL payload.' }))
   async getFileUrl(
     @Param('key') key: string,
     @Query('expiresIn') expiresIn?: number,

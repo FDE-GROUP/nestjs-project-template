@@ -35,8 +35,22 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiEnvelope,
+  ApiErrorResponse,
+  apiEnvelopeShape,
+  apiError,
+  apiOkPassthrough,
+} from '../../../common/contracts/api-contracts';
+import { TenantApplicationResponse } from '../../tenants/api/response/tenant-application.response';
 import { ListPlatformTenantsDto } from './dto/list-platform-tenants.dto';
+import {
+  PlatformTenantPageResponse,
+  PlatformTenantRowResponse,
+  TenantDiagnosticsResponse,
+  TenantHardDeleteResultResponse,
+} from './response/governance.response';
 
 /**
  * Platform operator governance slice (global-tenancy S5 · FR-6/FR-11①/FR-13).
@@ -50,6 +64,15 @@ import { ListPlatformTenantsDto } from './dto/list-platform-tenants.dto';
  * choke-point, §9.4 state machine): suspend (active→suspended), resume (suspended→active),
  * delete (soft→deleted terminal). Each success/failure emits a structured audit line (FR-6).
  */
+@ApiExtraModels(
+  ApiEnvelope,
+  ApiErrorResponse,
+  PlatformTenantPageResponse,
+  PlatformTenantRowResponse,
+  TenantDiagnosticsResponse,
+  TenantHardDeleteResultResponse,
+  TenantApplicationResponse,
+)
 @ApiTags('platform')
 // S11 复合全局：跨租平台治理（列表/详情/诊断/suspend·resume·delete）无关单一租户上下文 → 类级豁免租户墙。
 @TenantExempt()
@@ -63,8 +86,12 @@ export class PlatformTenantsController {
 
   @Get()
   @ApiOperation({ summary: 'List all tenants across the platform (operator only)' })
-  @ApiResponse({ status: 200, description: 'A page of tenants with lifecycle status.' })
-  @ApiResponse({ status: 403, description: 'Not the platform operator.' })
+  @ApiResponse(
+    apiEnvelopeShape(PlatformTenantPageResponse, {
+      description: 'A page of tenants with lifecycle status.',
+    }),
+  )
+  @ApiResponse(apiError(403, 'Not the platform operator.'))
   list(@Query() dto: ListPlatformTenantsDto): Promise<PlatformTenantPage> {
     return this.queryBus.execute<ListPlatformTenantsQuery, PlatformTenantPage>(
       new ListPlatformTenantsQuery(dto.limit, dto.offset, dto.search),
@@ -73,8 +100,8 @@ export class PlatformTenantsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get one tenant (operator only)' })
-  @ApiResponse({ status: 200, description: 'Tenant row.' })
-  @ApiResponse({ status: 404, description: 'Tenant not found.' })
+  @ApiResponse(apiEnvelopeShape(PlatformTenantRowResponse, { description: 'Tenant row.' }))
+  @ApiResponse(apiError(404, 'Tenant not found.'))
   async detail(@Param('id') id: string): Promise<PlatformTenantRow> {
     const row = await this.queryBus.execute<GetPlatformTenantQuery, PlatformTenantRow | null>(
       new GetPlatformTenantQuery(id),
@@ -86,8 +113,8 @@ export class PlatformTenantsController {
 
   @Get(':id/diagnostics')
   @ApiOperation({ summary: 'Per-tenant diagnostics: member/invitation/workspace/post counts' })
-  @ApiResponse({ status: 200, description: 'Diagnostics bundle.' })
-  @ApiResponse({ status: 404, description: 'Tenant not found.' })
+  @ApiResponse(apiEnvelopeShape(TenantDiagnosticsResponse, { description: 'Diagnostics bundle.' }))
+  @ApiResponse(apiError(404, 'Tenant not found.'))
   async diagnostics(@Param('id') id: string): Promise<TenantDiagnostics> {
     const diag = await this.queryBus.execute<GetTenantDiagnosticsQuery, TenantDiagnostics | null>(
       new GetTenantDiagnosticsQuery(id),
@@ -99,11 +126,13 @@ export class PlatformTenantsController {
 
   @Get(':id/export')
   @ApiOperation({ summary: 'Export all tenant-owned data as a single JSON payload (NFR-6)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Six-section tenant data export (credentials excluded).',
-  })
-  @ApiResponse({ status: 404, description: 'Tenant not found.' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Six-section tenant data export (credentials excluded)',
+      ssotHint: 'TenantDataExport（bulk-export·六段聚合）',
+    }),
+  )
+  @ApiResponse(apiError(404, 'Tenant not found.'))
   async exportData(@Param('id') id: string): Promise<TenantDataExport> {
     const payload = await this.queryBus.execute<ExportTenantDataQuery, TenantDataExport | null>(
       new ExportTenantDataQuery(id),
@@ -115,9 +144,9 @@ export class PlatformTenantsController {
 
   @Patch(':id/suspend')
   @ApiOperation({ summary: 'Suspend an active tenant (active → suspended · fail-closed失能)' })
-  @ApiResponse({ status: 200, description: 'Tenant suspended.' })
-  @ApiResponse({ status: 404, description: 'Tenant not found.' })
-  @ApiResponse({ status: 409, description: 'Illegal transition for the current status.' })
+  @ApiResponse(apiEnvelopeShape(TenantApplicationResponse, { description: 'Tenant suspended.' }))
+  @ApiResponse(apiError(404, 'Tenant not found.'))
+  @ApiResponse(apiError(409, 'Illegal transition for the current status.'))
   async suspend(
     @Param('id') id: string,
     @CurrentUser() user: SessionUser,
@@ -133,9 +162,9 @@ export class PlatformTenantsController {
 
   @Patch(':id/resume')
   @ApiOperation({ summary: 'Resume a suspended tenant (suspended → active)' })
-  @ApiResponse({ status: 200, description: 'Tenant resumed.' })
-  @ApiResponse({ status: 404, description: 'Tenant not found.' })
-  @ApiResponse({ status: 409, description: 'Illegal transition for the current status.' })
+  @ApiResponse(apiEnvelopeShape(TenantApplicationResponse, { description: 'Tenant resumed.' }))
+  @ApiResponse(apiError(404, 'Tenant not found.'))
+  @ApiResponse(apiError(409, 'Illegal transition for the current status.'))
   async resume(
     @Param('id') id: string,
     @CurrentUser() user: SessionUser,
@@ -152,9 +181,11 @@ export class PlatformTenantsController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft-delete a tenant (→ deleted terminal · row kept for export)' })
-  @ApiResponse({ status: 200, description: 'Tenant marked deleted.' })
-  @ApiResponse({ status: 404, description: 'Tenant not found.' })
-  @ApiResponse({ status: 409, description: 'Already deleted (illegal transition).' })
+  @ApiResponse(
+    apiEnvelopeShape(TenantApplicationResponse, { description: 'Tenant marked deleted.' }),
+  )
+  @ApiResponse(apiError(404, 'Tenant not found.'))
+  @ApiResponse(apiError(409, 'Already deleted (illegal transition).'))
   async remove(
     @Param('id') id: string,
     @CurrentUser() user: SessionUser,
@@ -174,15 +205,13 @@ export class PlatformTenantsController {
     summary:
       'Hard-delete a deleted-terminal tenant (irreversible · FK cascade + event purge · NFR-6)',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Tenant rows purged; payload carries purgedEvents for audit核对.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Tenant not found (or already hard-deleted · idempotent).',
-  })
-  @ApiResponse({ status: 409, description: 'Not in deleted terminal state — soft-delete first.' })
+  @ApiResponse(
+    apiEnvelopeShape(TenantHardDeleteResultResponse, {
+      description: 'Tenant rows purged; payload carries purgedEvents for audit核对.',
+    }),
+  )
+  @ApiResponse(apiError(404, 'Tenant not found (or already hard-deleted · idempotent).'))
+  @ApiResponse(apiError(409, 'Not in deleted terminal state — soft-delete first.'))
   async permanentRemove(
     @Param('id') id: string,
     @CurrentUser() user: SessionUser,

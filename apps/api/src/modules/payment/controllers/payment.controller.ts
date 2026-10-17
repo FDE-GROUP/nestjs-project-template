@@ -2,13 +2,42 @@ import { Public } from '@core/saas-kit/tenancy/public.decorator';
 import { TenantExempt } from '@core/saas-kit/tenancy/tenant-exempt.decorator';
 import type { RawBodyRequest } from '@nestjs/common';
 import { Body, Controller, Get, Headers, Inject, Param, Post, Req } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiHeader,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
+import {
+  ApiEnvelope,
+  ApiErrorResponse,
+  apiEnvelopeShape,
+  apiError,
+} from '../../../common/contracts/api-contracts';
 import { CreateCheckoutDto } from '../dto/create-checkout.dto';
 import { CreateCustomerDto } from '../dto/create-customer.dto';
 import { RefundPaymentDto } from '../dto/refund-payment.dto';
 import { PaymentService } from '../services/payment.service';
+import {
+  PaymentCheckoutRefResponse,
+  PaymentCustomerRefResponse,
+  PaymentRefundRefResponse,
+  PaymentStatusResponse,
+  WebhookAckResponse,
+} from './response/payment.response';
 
+@ApiExtraModels(
+  ApiEnvelope,
+  ApiErrorResponse,
+  PaymentStatusResponse,
+  PaymentCustomerRefResponse,
+  PaymentCheckoutRefResponse,
+  PaymentRefundRefResponse,
+  WebhookAckResponse,
+)
 @ApiTags('payment')
 // S11 复合全局：payment 非 webhook 属用户级（Stripe customer/checkout·不经租户仓储）→ 类级豁免租户墙（仍需会话）；
 // webhook 方法级 @Public 自动兼豁免会话+租户墙。
@@ -19,22 +48,36 @@ export class PaymentController {
 
   @Get('test')
   @ApiOperation({ summary: 'Payment integration status' })
-  @ApiResponse({ status: 200, description: 'Current provider selection and available channels' })
+  @ApiResponse(
+    apiEnvelopeShape(PaymentStatusResponse, {
+      description: 'Current provider selection and available channels',
+    }),
+  )
   test() {
     return { status: 'ok', ...this.payment.describe() };
   }
 
   @Post('customers')
   @ApiOperation({ summary: 'Create a payment customer' })
-  @ApiResponse({ status: 201, description: 'Customer created successfully' })
+  @ApiResponse(
+    apiEnvelopeShape(PaymentCustomerRefResponse, {
+      status: 201,
+      description: 'Customer created successfully',
+    }),
+  )
   async createCustomer(@Body() createCustomerDto: CreateCustomerDto) {
     return this.payment.createCustomer(createCustomerDto);
   }
 
   @Post('checkouts')
   @ApiOperation({ summary: 'Create a checkout (payment intent)' })
-  @ApiResponse({ status: 201, description: 'Checkout created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse(
+    apiEnvelopeShape(PaymentCheckoutRefResponse, {
+      status: 201,
+      description: 'Checkout created successfully',
+    }),
+  )
+  @ApiResponse(apiError(400, 'Bad request'))
   async createCheckout(@Body() createCheckoutDto: CreateCheckoutDto) {
     return this.payment.createCheckout(createCheckoutDto);
   }
@@ -42,16 +85,25 @@ export class PaymentController {
   @Get('checkouts/:id')
   @ApiOperation({ summary: 'Retrieve a checkout' })
   @ApiParam({ name: 'id', description: 'Checkout (payment intent) ID' })
-  @ApiResponse({ status: 200, description: 'Checkout retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Checkout not found' })
+  @ApiResponse(
+    apiEnvelopeShape(PaymentCheckoutRefResponse, {
+      description: 'Checkout retrieved successfully',
+    }),
+  )
+  @ApiResponse(apiError(404, 'Checkout not found'))
   async retrieveCheckout(@Param('id') id: string) {
     return this.payment.retrieveCheckout(id);
   }
 
   @Post('refunds')
   @ApiOperation({ summary: 'Refund a checkout' })
-  @ApiResponse({ status: 201, description: 'Refund created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse(
+    apiEnvelopeShape(PaymentRefundRefResponse, {
+      status: 201,
+      description: 'Refund created successfully',
+    }),
+  )
+  @ApiResponse(apiError(400, 'Bad request'))
   async refund(@Body() refundPaymentDto: RefundPaymentDto) {
     return this.payment.refund(refundPaymentDto);
   }
@@ -61,8 +113,10 @@ export class PaymentController {
   @Public()
   @ApiOperation({ summary: 'Handle payment webhook events' })
   @ApiHeader({ name: 'stripe-signature', description: 'Payment provider webhook signature' })
-  @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid webhook signature' })
+  @ApiResponse(
+    apiEnvelopeShape(WebhookAckResponse, { description: 'Webhook processed successfully' }),
+  )
+  @ApiResponse(apiError(400, 'Invalid webhook signature'))
   async handleWebhook(
     @Req() request: RawBodyRequest<FastifyRequest>,
     @Headers('stripe-signature') signature: string,

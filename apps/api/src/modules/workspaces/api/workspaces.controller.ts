@@ -24,10 +24,17 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiEnvelope,
+  ApiErrorResponse,
+  apiEnvelopeShape,
+  apiError,
+} from '../../../common/contracts/api-contracts';
 import { ListPageDto } from '../../../common/dto/list-page.dto';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
+import { WorkspacePageResponse, WorkspaceResponse } from './response/workspace.response';
 
 /**
  * Workspace CRUD reference slice (global-tenancy S3 · D2/§9.1 / FR-4/FR-5).
@@ -41,6 +48,7 @@ import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
  * `workspace:create/update/delete` for owner+admin. Row scoping by tenant is enforced in
  * the repository — handlers/controllers never name a tenant id.
  */
+@ApiExtraModels(ApiEnvelope, ApiErrorResponse, WorkspaceResponse, WorkspacePageResponse)
 @ApiTags('workspaces')
 @Controller('workspaces')
 @UseGuards(TenantScopeGuard, TenantPermissionGuard)
@@ -53,8 +61,12 @@ export class WorkspacesController {
   @Get()
   @Can('read', 'Workspace')
   @ApiOperation({ summary: 'List workspaces in the active tenant' })
-  @ApiResponse({ status: 200, description: 'Workspaces owned by the active tenant.' })
-  @ApiResponse({ status: 403, description: 'No active tenant, or missing workspace:read.' })
+  @ApiResponse(
+    apiEnvelopeShape(WorkspacePageResponse, {
+      description: 'Workspaces owned by the active tenant (offset page).',
+    }),
+  )
+  @ApiResponse(apiError(403, 'No active tenant, or missing workspace:read.'))
   list(@Query() request: ListPageDto): Promise<Page<WorkspaceReadModel>> {
     return this.queryBus.execute<ListWorkspacesQuery, Page<WorkspaceReadModel>>(
       new ListWorkspacesQuery(request),
@@ -65,8 +77,13 @@ export class WorkspacesController {
   @HttpCode(HttpStatus.CREATED)
   @Can('create', 'Workspace')
   @ApiOperation({ summary: 'Create a workspace (owner/admin)' })
-  @ApiResponse({ status: 201, description: 'Created workspace stamped with the active tenant.' })
-  @ApiResponse({ status: 403, description: 'Missing workspace:create (members are rejected).' })
+  @ApiResponse(
+    apiEnvelopeShape(WorkspaceResponse, {
+      status: 201,
+      description: 'Created workspace stamped with the active tenant.',
+    }),
+  )
+  @ApiResponse(apiError(403, 'Missing workspace:create (members are rejected).'))
   create(@Body() dto: CreateWorkspaceDto): Promise<WorkspaceReadModel> {
     return this.commandBus.execute<CreateWorkspaceCommand, WorkspaceReadModel>(
       new CreateWorkspaceCommand(dto.name, dto.slug),
@@ -76,8 +93,8 @@ export class WorkspacesController {
   @Patch(':id')
   @Can('update', 'Workspace')
   @ApiOperation({ summary: 'Update a workspace (owner/admin)' })
-  @ApiResponse({ status: 200, description: 'Updated workspace.' })
-  @ApiResponse({ status: 404, description: 'Workspace not found in the active tenant.' })
+  @ApiResponse(apiEnvelopeShape(WorkspaceResponse, { description: 'Updated workspace.' }))
+  @ApiResponse(apiError(404, 'Workspace not found in the active tenant.'))
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateWorkspaceDto,
@@ -97,7 +114,7 @@ export class WorkspacesController {
   @Can('delete', 'Workspace')
   @ApiOperation({ summary: 'Delete a workspace (owner/admin)' })
   @ApiResponse({ status: 204, description: 'Workspace deleted.' })
-  @ApiResponse({ status: 404, description: 'Workspace not found in the active tenant.' })
+  @ApiResponse(apiError(404, 'Workspace not found in the active tenant.'))
   async remove(@Param('id') id: string): Promise<void> {
     const deleted = await this.commandBus.execute<DeleteWorkspaceCommand, boolean>(
       new DeleteWorkspaceCommand(id),

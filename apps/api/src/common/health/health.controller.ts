@@ -1,10 +1,11 @@
 import { Public } from '@core/saas-kit/tenancy/public.decorator';
 import { Controller, Get } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 // S9 铁律：HealthCheckService 为构造函数注入的类，必须值导入（import type 会擦除 design:paramtypes）
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 // 限流豁免（module-common-rate-limit 甲裁）：探活/CI verify-prod-boot 不得被锁。
 import { SkipThrottle } from '@nestjs/throttler';
+import { ApiEnvelope, ApiErrorResponse, apiOkPassthrough } from '../contracts/api-contracts';
 
 /**
  * 存活探针（module-common-health-probe · softkit 借鉴正向项 #1）：Dockerfile `HEALTHCHECK`
@@ -17,6 +18,7 @@ import { SkipThrottle } from '@nestjs/throttler';
  */
 @Public()
 @SkipThrottle()
+@ApiExtraModels(ApiEnvelope, ApiErrorResponse)
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
@@ -25,7 +27,12 @@ export class HealthController {
   @Get()
   @HealthCheck()
   @ApiOperation({ summary: 'Liveness probe (ping-only, no dependency checks)' })
-  @ApiResponse({ status: 200, description: 'Service is alive.' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Service is alive',
+      ssotHint: '@nestjs/terminus HealthCheckResult',
+    }),
+  )
   check() {
     return this.health.check([]);
   }

@@ -22,9 +22,19 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiEnvelope,
+  ApiErrorResponse,
+  apiEnvelopeShape,
+  apiError,
+} from '../../../common/contracts/api-contracts';
 import { ListPlatformUsersDto } from './dto/list-platform-users.dto';
 import { SuspendUserDto } from './dto/suspend-user.dto';
+import {
+  PlatformUserPageResponse,
+  UserGovernanceResultResponse,
+} from './response/governance.response';
 
 /**
  * Platform operator user-governance slice (global-tenancy S6 · FR-6/FR-10/FR-11①/FR-13).
@@ -36,6 +46,12 @@ import { SuspendUserDto } from './dto/suspend-user.dto';
  * suspend (active→suspended) additionally hard-invalidates the user's sessions (D4 · §159);
  * resume (suspended→active) lifts the deny-list. Each success/failure emits a structured audit line (FR-6).
  */
+@ApiExtraModels(
+  ApiEnvelope,
+  ApiErrorResponse,
+  PlatformUserPageResponse,
+  UserGovernanceResultResponse,
+)
 @ApiTags('platform')
 // S11 复合全局：跨租平台治理（operator 行动时无关租户上下文）→ 类级豁免租户墙（仍由 PlatformOperatorGuard 逐路由卡）。
 @TenantExempt()
@@ -49,8 +65,12 @@ export class PlatformUsersController {
 
   @Get()
   @ApiOperation({ summary: 'List all platform users with lifecycle status (operator only)' })
-  @ApiResponse({ status: 200, description: 'A page of users with suspension status.' })
-  @ApiResponse({ status: 403, description: 'Not the platform operator.' })
+  @ApiResponse(
+    apiEnvelopeShape(PlatformUserPageResponse, {
+      description: 'A page of users with suspension status.',
+    }),
+  )
+  @ApiResponse(apiError(403, 'Not the platform operator.'))
   list(@Query() dto: ListPlatformUsersDto): Promise<PlatformUserPage> {
     return this.queryBus.execute<ListPlatformUsersQuery, PlatformUserPage>(
       new ListPlatformUsersQuery(dto.limit, dto.offset, dto.search),
@@ -62,9 +82,9 @@ export class PlatformUsersController {
     summary:
       'Suspend a platform user (active → suspended · sessions invalidated · fail-closed失能)',
   })
-  @ApiResponse({ status: 200, description: 'User suspended.' })
-  @ApiResponse({ status: 404, description: 'User not found.' })
-  @ApiResponse({ status: 409, description: 'Illegal transition for the current status.' })
+  @ApiResponse(apiEnvelopeShape(UserGovernanceResultResponse, { description: 'User suspended.' }))
+  @ApiResponse(apiError(404, 'User not found.'))
+  @ApiResponse(apiError(409, 'Illegal transition for the current status.'))
   async suspend(
     @Param('id') id: string,
     @CurrentUser() user: SessionUser,
@@ -80,9 +100,9 @@ export class PlatformUsersController {
 
   @Patch(':id/resume')
   @ApiOperation({ summary: 'Resume a suspended platform user (suspended → active)' })
-  @ApiResponse({ status: 200, description: 'User resumed.' })
-  @ApiResponse({ status: 404, description: 'User not found.' })
-  @ApiResponse({ status: 409, description: 'Illegal transition for the current status.' })
+  @ApiResponse(apiEnvelopeShape(UserGovernanceResultResponse, { description: 'User resumed.' }))
+  @ApiResponse(apiError(404, 'User not found.'))
+  @ApiResponse(apiError(409, 'Illegal transition for the current status.'))
   async resume(
     @Param('id') id: string,
     @CurrentUser() user: SessionUser,

@@ -1,0 +1,24 @@
+import type { TenantStatus } from '@core/saas-kit/modules/tenants/lifecycle/tenant-lifecycle';
+import { ApiProperty } from '@nestjs/swagger';
+import type { TenantApplicationReadModel } from '../../application/read-models/tenant-application.read-model';
+
+/** 生命周期状态机取值（SSOT = @core TENANT_STATUS·枚举形为文档投影·与字段 union 同文法）。 */
+export const TENANT_STATUS_ENUM = ['pending_approval', 'active', 'suspended', 'deleted'] as const;
+
+/**
+ * 租户申请/生命周期响应契约（F1 甲①）——真相源 = `TenantApplicationReadModel`。
+ * 复用于 tenants apply/approve + platform suspend/resume/delete（同一读模型）。
+ */
+export class TenantApplicationResponse {
+  @ApiProperty({ description: 'organization 主键（= 租户 id）。' })
+  organizationId!: string;
+
+  @ApiProperty({ enum: TENANT_STATUS_ENUM, description: '生命周期状态。' })
+  status!: TenantStatus;
+}
+
+// —— 编译期双向对拍：response 类与真相源结构恒等，任一侧漂移则 tsc 红。——
+const _tfwd: TenantApplicationResponse = {} as TenantApplicationReadModel;
+const _tbwd: TenantApplicationReadModel = {} as TenantApplicationResponse;
+void _tfwd;
+void _tbwd;

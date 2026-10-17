@@ -10,7 +10,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiExtraModels, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiEnvelope,
+  ApiErrorResponse,
+  apiError,
+  apiOkPassthrough,
+} from '../../../common/contracts/api-contracts';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { SessionGuard, type SessionUser } from '../../auth/guards/session.guard';
 import { DeleteUserCommand } from '../application/commands/delete-user.command';
@@ -26,6 +32,7 @@ import type { UserDataExportReadModel } from '../application/read-models/user-da
  * （PlatformOperatorGuard），建号正道收口 better-auth sign-up。仅存用户自助面
  * （本人导出 / 本人删除，PIPL 正当通道），各挂 SessionGuard。
  */
+@ApiExtraModels(ApiEnvelope, ApiErrorResponse)
 @ApiTags('users')
 // S11 复合全局：users 全路由属用户级（不经租户仓储）·需登录但合法无租户 → 类级豁免全局租户墙。
 @TenantExempt()
@@ -41,8 +48,13 @@ export class UsersController {
   @Get('me/data-export')
   @UseGuards(SessionGuard)
   @ApiOperation({ summary: 'PIPL right-to-access: export current user personal data (C1 · FR-7)' })
-  @ApiResponse({ status: 200, description: 'Aggregated personal data (no credentials).' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid session.' })
+  @ApiResponse(
+    apiOkPassthrough({
+      description: 'Aggregated personal data (no credentials)',
+      ssotHint: 'UserDataExportReadModel（bulk-export·四段聚合）',
+    }),
+  )
+  @ApiResponse(apiError(401, 'Missing or invalid session.'))
   async exportMe(@CurrentUser() user: SessionUser): Promise<UserDataExportReadModel> {
     this.logger.log(`Exporting personal data for user ${user.id}`);
     return this.queryBus.execute<ExportUserDataQuery, UserDataExportReadModel>(
@@ -55,7 +67,7 @@ export class UsersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'PIPL right-to-erase: hard-delete current user (C1 · FR-7)' })
   @ApiResponse({ status: 204, description: 'User deleted; consent rows retained anonymously.' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid session.' })
+  @ApiResponse(apiError(401, 'Missing or invalid session.'))
   async deleteMe(@CurrentUser() user: SessionUser): Promise<void> {
     this.logger.log(`Deleting user ${user.id} (PIPL right-to-erase)`);
     await this.commandBus.execute<DeleteUserCommand, void>(new DeleteUserCommand(user.id));
