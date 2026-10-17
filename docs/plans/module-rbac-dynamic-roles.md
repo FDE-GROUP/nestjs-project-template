@@ -27,7 +27,7 @@
   - `tenant_role_audit`（id·organization_id·actor_id·action(create/update/delete/grant/revoke)·role_key·before/after jsonb·created_at——**变更可查留库**，结构化日志单点同步一响）。
   - 迁移走 Mikro 链 generate+migrate（纯 additive）；系统角色三角色 seed 为静态死数据（owner/admin/member 不可改不可删由 is_system 应屏）。
 - **§2.3 规则投影与热改（拟）**：checker 投影输入从 TS 表换「per-tenant 角色规则集」；缓存 `Map<organizationId, {version, abilityByKey}>`，授权变更同事务 bump version + 发领域事件失效（单实例内存自洽；多实例一致性留 Redis pub/sub 缓账）。deny 语义不变：词汇外 subject/action、查无角色 → 空规则全拒；lazy-ensure：租户首次解析时无角色行则 seed 三系统角色（幂等）。
-- **§2.4 实例级授权（乙裁）**：本阶段**仅 check 级**——`TenantPermissionCheck` 增可选 `resource?: Record<string,unknown>`，conditions 存 CASL mongo 形（`{ownerId: "{{userId}}"}` 模板），ability 原生判；端点形状：先取资源再判。**query 级（列表过滤）缓账另片**（需仓储 find 链条件转换，风险面独立）——登记：带 conditions 的授权在列表面不过滤（仅单资源写面护栏），审计/文档如实表述不粉饰。
+- **§2.4 实例级授权（乙裁）**：本阶段**仅 check 级**——`TenantPermissionCheck` 增可选 `resource?: Record<string,unknown>`，conditions 存 CASL mongo 形（`{ownerId: "{{userId}}"}` 模板），ability 原生判；端点形状：先取资源再判。**query 级（列表过滤）缓账另片**（需仓储 find 链条件转换，风险面独立）——登记：带 conditions 的授权在列表面不过滤（仅单资源写面护栏），审计/文档如实表述不粉饰。（**2026-10-17 本缓账已由 [module-rbac-query-level-filtering](./module-rbac-query-level-filtering.md) 兑现·列表面已按实例谓词下推·上述为乙裁当时历史快照不改写**）
 - **§2.5 门面与校验改形**：角色/授权管理端点挂 tenants 上下文（`@Can` 新 subject `Role`/`RoleGrant`·词汇表扩）；现 DTO `@IsIn(TENANT_ROLE_VALUES)`（成员改角色/邀请）改「内置三值 ∪ 本租户自定义角色存在性」校验；BA 内置 create-role/roles 端点维持封堵（甲裁不代建→本片自建）。
 - **§2.6 审计留痕（甲裁）**：角色/授权每次变更写 `tenant_role_audit` 行（who/what/before/after/tenant）+ 结构化日志单点（PlatformAuditService 先例同构）。
 
@@ -48,7 +48,7 @@
 ## 4. 审计记录
 
 - 结论：**已审计·GO**（人签核 2026-10-17·AskUserQuestion 四裁）——甲=《行式 grant 表 + 审计表》（三表全落库）；乙=《仅 check 级实例授权》（query 级列表过滤缓账另片，仓储 find 链不动）；丙=《全 DB 化删代码表》（TENANT_RULES 矩阵整表删净·seed 死数据双路·仅留编译期词汇表；连锁面：reader/DTO 存在性校验改形）；丁=《高危三项随片签》（schema 迁移+公共契约修订+specs 修宪）。被否备选：系统角色镜像保留（丙-1）·check+query 两层（乙-1）·JSON 列整存/仅日志审计（甲-2/3）。
-- 未决项：query 级列表过滤的端点清单与转换策略（缓账片·**2026-10-17 已另片立案 [module-rbac-query-level-filtering](./module-rbac-query-level-filtering.md) 起草·待审计签核**）；多实例缓存一致性（Redis pub/sub·缓账）。
+- 未决项：query 级列表过滤的端点清单与转换策略（缓账片·**2026-10-17 已另片立案 [module-rbac-query-level-filtering](./module-rbac-query-level-filtering.md) 兑现**——`listPredicate` 三态契约 + 写侧闸放宽 $in + conditions→Mikro 受限转换器已实施·列表面接入 Workspace 读链（人裁⑤：Post 非 RBAC subject 且无实例列→改靶）·待人类验收；实例属主列的端到端演示仍挂缓账）；多实例缓存一致性（Redis pub/sub·缓账）。
 - 审计人 / 日期：人（FDE·AskUserQuestion）· 2026-10-17
 
 ## 4.1 偏差留痕（实施中相对 §2 拟案的落定偏差·非改判）
