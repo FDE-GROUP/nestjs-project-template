@@ -48,7 +48,7 @@
 ## 4. 审计记录
 
 - 结论：**已审计·GO**（人签核 2026-10-17·AskUserQuestion 四裁）——甲=《行式 grant 表 + 审计表》（三表全落库）；乙=《仅 check 级实例授权》（query 级列表过滤缓账另片，仓储 find 链不动）；丙=《全 DB 化删代码表》（TENANT_RULES 矩阵整表删净·seed 死数据双路·仅留编译期词汇表；连锁面：reader/DTO 存在性校验改形）；丁=《高危三项随片签》（schema 迁移+公共契约修订+specs 修宪）。被否备选：系统角色镜像保留（丙-1）·check+query 两层（乙-1）·JSON 列整存/仅日志审计（甲-2/3）。
-- 未决项：query 级列表过滤的端点清单与转换策略（缓账片）；多实例缓存一致性（Redis pub/sub·缓账）。
+- 未决项：query 级列表过滤的端点清单与转换策略（缓账片·**2026-10-17 已另片立案 [module-rbac-query-level-filtering](./module-rbac-query-level-filtering.md) 起草·待审计签核**）；多实例缓存一致性（Redis pub/sub·缓账）。
 - 审计人 / 日期：人（FDE·AskUserQuestion）· 2026-10-17
 
 ## 4.1 偏差留痕（实施中相对 §2 拟案的落定偏差·非改判）
